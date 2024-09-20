@@ -1,40 +1,113 @@
-import ncbi_genome_download as ngd
+from typing import List, Union
+import re
+import os
+import gzip
+import json
+import requests
+from urllib.request import urlretrieve
+import shutil
+import logging
+import logging.config
+from pathlib import Path
+import concurrent.futures
+from functools import partial
+
+from rich.progress import track
+
+logger = logging.getLogger(__name__)
 
 
-def download(group, nb_try=0, max_try=5):
-    try:
-        ngd.download(
-            groups=group,
-            section="refseq",
-            output=output_path,
-            parallel=4,
-            file_formats="fasta",
-            progress_bar=True,
+def get_list_files(url: str) -> List[str]:
+    response = requests.get(url)
+    response.raise_for_status()
+    # Use a regex pattern to find all href links in the page
+    files = re.findall(r'href="([^"]+).fna.gz"', response.text)
+
+    return [f"{file}.fna.gz" for file in files]
+
+
+def download(url: str, path: str) -> str:
+    """
+    Download the md5 of the files
+    Download a file from the specified url.
+    Skip the downloading step if there exists a file satisfying the given MD5.
+
+    Parameters:
+        url (str): URL to download
+        path (str, optional): path to store the downloaded file. If not specify tmp file.
+        md5 (str, optional): MD5 of the file
+    """
+
+    if not os.path.exists(path):
+        logger.info("Downloading %s to %s" % (url, path))
+        path, _ = urlretrieve(url, path)
+    else:
+        logger.info("Skipping %s since already downloaded at %s" % (url, path))
+
+    return path
+
+
+def extract_file(archive_path: str, output_dir: os.PathLike[str]):
+    # pass .sdf.gz to .sdf
+    sdf_file_path = Path(output_dir) / Path(archive_path).with_suffix("").name
+    if sdf_file_path.exists():
+        logging.info(f"Skipping extraction of {sdf_file_path}, already exist")
+        return
+    logging.info(f"Extracting {archive_path} to {sdf_file_path}")
+    # Decompress the .gz file and save the result as .sdf
+    with gzip.open(archive_path, "rb") as f_in:
+        with open(sdf_file_path, "wb") as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+
+def download_refseq(output_dir: Union[str, os.PathLike[str]], num_worker: int):
+    base_url = "https://ftp.ncbi.nlm.nih.gov/refseq/release/complete/"
+    logger.info(f"Downloading PubMed from {base_url}")
+
+    output_dir = Path(output_dir)
+    download_dir = output_dir / "downloaded_files"
+    extracted_dir = output_dir / "extracted_files"
+
+    download_dir.mkdir(parents=True, exist_ok=True)
+    files = get_list_files(base_url)
+    urls = [os.path.join(base_url, file) for file in files]
+    paths = [os.path.join(download_dir, file) for file in files]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_worker) as executor:
+        archive_paths = list(
+            track(
+                executor.map(download, urls, paths),
+                total=len(urls),
+                description="Downloading...",
+            )
         )
-    except ConnectionError as e:
-        if nb_try < max_try:
-            print(f"ConnectionError Retrying ({nb_try + 1})")
-            return download(nb_try + 1)
-        else:
-            raise e
+
+    extracted_dir.mkdir(parents=True, exist_ok=True)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_worker) as executor:
+        func = partial(extract_file, output_dir=extracted_dir)
+        list(
+            track(
+                executor.map(func, archive_paths),
+                total=len(archive_paths),
+                description="Extracting...",
+            )
+        )
+
+
+def setup_logging(output_dir: str):
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    with open("./logging-config.json", "r") as file:
+        config = json.load(file)
+    logging_file = f"{output_dir}/logging.log"
+    config["handlers"]["file"]["filename"] = logging_file
+    if os.path.exists(logging_file):
+        os.remove(logging_file)
+    logging.config.dictConfig(config=config)
 
 
 if __name__ == "__main__":
-
-    output_path = "/nasa/datasets/riken/projects/fundamental_models_202407/"
-    groups = [
-        "archaea",
-        "bacteria",
-        "fungi",
-        "invertebrate",
-        "metagenomes",
-        "plant",
-        "protozoa",
-        "vertebrate_mammalian",
-        "vertebrate_other",
-        "viral",
-    ]
-    for group in groups:
-        download(group)
-
-    # ngd.download(section="refseq", output=output_path, parallel=4, progress_bar=True, format="fasta")
+    output_dir = "/nasa/datasets/riken/projects/fundamental_models_202407/refseq"
+    num_worker = 3  # Max with those server.
+    setup_logging(output_dir)
+    download_refseq(output_dir, num_worker)
