@@ -59,7 +59,7 @@ if __name__ == "__main__":
     )
     # base_path = Path("Zinc/")
     download_dir = base_path / "download_dir"
-    extract_dir = base_path / "extract_dir"
+    extract_dir = base_path / "extracted_dir"
 
     base_path.mkdir(exist_ok=True, parents=True)
     download_dir.mkdir(exist_ok=True)

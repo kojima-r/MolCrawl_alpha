@@ -100,8 +100,8 @@ def download_refseq(output_dir: Union[str, os.PathLike[str]], num_worker: int):
     logger.info(f"Downloading PubMed from {base_url}")
 
     output_dir = Path(output_dir)
-    download_dir = output_dir / "downloaded_files"
-    extracted_dir = output_dir / "extracted_files"
+    download_dir = output_dir / "download_dir"
+    extracted_dir = output_dir / "extracted_dir"
 
     download_dir.mkdir(parents=True, exist_ok=True)
     files = get_list_files(base_url)
