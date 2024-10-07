@@ -19,3 +19,4 @@ dependencies:
     - joblib
     - cellxgene_census
     - rich
+    - transformer=4.45.1

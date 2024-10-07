@@ -37,7 +37,7 @@ pubmed_fasta_url = {
     UniProtDatasetEnum.UniParc: "https://ftp.uniprot.org/pub/databases/uniprot/current_release/uniparc/fasta/active/",
 }
 
-pubmed_fasta_md5 = {
+uniproto_fasta_md5 = {
     UniProtDatasetEnum.UniprotKB_reviewed: "a867f9a037febd55ab00d788294439f9",
     UniProtDatasetEnum.UniprotKB_unreviewed: "d79a23ccdde970c705f71af9a1b906c3",
     UniProtDatasetEnum.UniRef100: "e220bcd8ad33a6f44d5ecb5c794d7a46",
@@ -46,7 +46,7 @@ pubmed_fasta_md5 = {
 }
 
 
-def download(url: str, path: str, md5: Optional[str] = None) -> str:
+def download(url: str, path: str, use_md5: bool, md5: Optional[str] = None) -> str:
     """
     Download the md5 of the files
     Download a file from the specified url.
@@ -58,13 +58,24 @@ def download(url: str, path: str, md5: Optional[str] = None) -> str:
         md5 (str, optional): MD5 of the file
     """
 
-    if not os.path.exists(path) or compute_md5(path) != md5:
+    if need_download(path, use_md5, md5):
         logger.info("Downloading %s to %s" % (url, path))
         path, _ = urlretrieve(url, path)
     else:
         logger.info("Skipping %s since already downloaded at %s" % (url, path))
 
     return path
+
+
+def need_download(path: str, use_md5: bool, md5: Optional[str] = None):
+    if md5 is not None and use_md5:
+        logger.info(f"Compute md5 of file {path}")
+        need_download = md5 == compute_md5(path)
+        if not need_download:
+            logger.warning(f"MD5 is different redownloading {path}")
+    else:
+        need_download = not os.path.exists(path)
+    return need_download
 
 
 def compute_md5(file_name: str, chunk_size: int = 65536) -> str:
@@ -86,15 +97,15 @@ def compute_md5(file_name: str, chunk_size: int = 65536) -> str:
 def unzip_file(archive_path: str, output_path: Path):
     if output_path.exists():
         logger.info(f"Skipping extraction, {output_path} already exist")
-        return
+        return output_path
     logger.info(f"Extracting {output_path}")
     with gzip.open(archive_path, "rt") as archive, open(output_path, "w") as file:
         file.write(archive.read())
 
+    return output_path
 
-def download_full_http_dir(
-    url: str, download_dir: Union[str, os.PathLike[str]], num_worker: int
-):
+
+def download_full_http_dir(url: str, download_dir: Union[str, os.PathLike[str]], num_worker: int):
     file_md5_dict = get_url_md5_mapping(url)
     urls = [os.path.join(url, file) for file in file_md5_dict.keys()]
     paths = [os.path.join(download_dir, file) for file in file_md5_dict.keys()]
@@ -133,20 +144,18 @@ def get_url_md5_mapping(url: str) -> Dict:
     return file_md5_dict
 
 
-def process_dataset(
-    dataset: str, output_dir: Union[str, os.PathLike[str]], num_worker: int
-):
+def process_dataset(dataset: str, output_dir: Union[str, os.PathLike[str]], num_worker: int, use_md5: bool):
     logging.info(f"Processing dataset {dataset}...")
     logging.info("Downloading archive from the server...")
+    output_dir = Path(output_dir)
     if dataset == UniProtDatasetEnum.UniParc:
-        output_dir = Path(output_dir) / "uniparc"
         download_dir = output_dir / "archive"
         download_dir.mkdir(parents=True, exist_ok=True)
-        archive_path = download_full_http_dir(
-            pubmed_fasta_url[dataset], download_dir, num_worker
-        )
+        archive_path = download_full_http_dir(pubmed_fasta_url[dataset], download_dir, num_worker)
 
-        paths = [output_dir / Path(path).with_suffix("").name for path in archive_path]
+        fasta_dir = output_dir / "fasta_files"
+        fasta_dir.mkdir(parents=True, exist_ok=True)
+        paths = [fasta_dir / Path(path).with_suffix("").name for path in archive_path]
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_worker) as executor:
             list(
                 track(
@@ -156,19 +165,18 @@ def process_dataset(
                 )
             )
     else:
+        output_dir.mkdir(parents=True, exist_ok=True)
         download_path = Path(output_dir) / Path(pubmed_fasta_url[dataset]).name
         download_path = download(
-            pubmed_fasta_url[dataset], str(download_path), md5=pubmed_fasta_md5[dataset]
+            pubmed_fasta_url[dataset], str(download_path), use_md5=use_md5, md5=uniproto_fasta_md5[dataset]
         )
         logging.info("Decompressing the archive...")
-        unzip_file(
-            download_path, Path(output_dir) / Path(download_path).with_suffix("").name
-        )
+        unzip_file(download_path, Path(output_dir) / Path(download_path).with_suffix("").name)
 
 
 def setup_logging(output_dir: str):
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    with open("./assets/logging-config.json", "r") as file:
+    with open("./assets/logging_config.json", "r") as file:
         config = json.load(file)
     logging_file = f"{output_dir}/logging.log"
     config["handlers"]["file"]["filename"] = logging_file
@@ -183,4 +191,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     cfg = ProteinSequenceConfig.from_file(args.config).data_preparation
     setup_logging(cfg.output_dir)
-    process_dataset(cfg.dataset, cfg.output_dir, cfg.num_worker)
+    process_dataset(cfg.dataset, cfg.output_dir, cfg.num_worker, cfg.use_md5)
