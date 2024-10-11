@@ -29,6 +29,10 @@ def download_zinc_files(num_parallel : int = 8):
             command_pieces[2] = str(osp.join(directory, command_pieces[2]))
             command_pieces[-1] = str(osp.join(directory, command_pieces[-1]))
 
+            if os.path.exists(command_pieces[-1]):
+                if os.path.getsize(command_pieces[-1]) > 0:
+                    continue
+
             line = " ".join(command_pieces)
             if line.startswith("mkdir") and "wget" in line:
                 commands.append(line)
