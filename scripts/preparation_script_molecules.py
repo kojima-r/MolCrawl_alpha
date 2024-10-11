@@ -55,4 +55,3 @@ if __name__ == "__main__":
         table=processed_organix13,
         file_path=cfg.save_path
     )
-
