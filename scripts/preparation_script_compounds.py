@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
 
     os.path.exists(cfg.raw_data_path) or os.makedirs(cfg.raw_data_path)
-    # download_datasets(cfg.raw_data_path, cfg.organix13_dataset)
+    download_datasets(cfg.raw_data_path, cfg.organix13_dataset)
 
     organix13_dataset = read_parquet(
         file_path=os.path.join(cfg.organix13_dataset, "OrganiX13.parquet")
