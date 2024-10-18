@@ -1,3 +1,8 @@
+import json
+import logging
+import os
+from pathlib import Path
+
 from abc import ABC, abstractmethod
 import pyarrow.parquet as pq
 import pyarrow as pa
@@ -17,7 +22,7 @@ class TrainableTokenizer(ABC):
         self.bulk_tokenizer_parquet = apply_fn_to_parqueet(self.tokenize_text)
 
     @abstractmethod
-    def tokenize_text(self):
+    def tokenize_text(self, text: str):
         pass
 
     @abstractmethod
@@ -65,7 +70,7 @@ def join_tables(chunks):
     return pa.concat_tables(chunks)
 
 
-def multiprocess_tokenization(func, table, column_name, new_column_name=None, processes=24):
+def multiprocess_tokenization(func, table, column_name, new_column_name=None, processes=48):
     split_tables = split_table(table, 10000)
     chunksize = len(split_tables) // processes if len(split_tables) // processes > 0 else 1
     
@@ -86,12 +91,29 @@ def apply_fn_to_parqueet(func):
 
         modified_column = pa.array([func(x.as_py()) for x in column_to_modify])
 
-        return table.set_column(
-            table.column_names.index(column_name),
-            column_name if new_column_name is None else new_column_name,
-            modified_column
-        )
+        if new_column_name is None:
+            return table.set_column(
+                table.column_names.index(column_name),
+                column_name,
+                modified_column
+            )
+        else:
+            return table.append_column(
+                new_column_name,
+                modified_column
+            )
 
     inner.__name__ = inner.__qualname__ = uuid.uuid4().hex
     setattr(sys.modules[inner.__module__], inner.__name__, inner)
     return inner
+
+
+def setup_logging(output_dir: str, logging_config: str = "assets/logging_config.json"):
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    with open(logging_config, "r") as file:
+        config = json.load(file)
+    logging_file = f"{output_dir}/logging.log"
+    config["handlers"]["file"]["filename"] = logging_file
+    if os.path.exists(logging_file):
+        os.remove(logging_file)
+    logging.config.dictConfig(config=config)
