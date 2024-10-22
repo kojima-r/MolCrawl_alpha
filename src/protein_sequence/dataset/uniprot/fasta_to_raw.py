@@ -25,12 +25,12 @@ def read_fasta_sequences(fasta_filepaths: List[Path]) -> Iterator[str]:
                 line = line.strip()
                 if line.startswith(">"):
                     if current_sequence:
-                        yield "".join(current_sequence)
+                        yield "".join(current_sequence) + "\n"
                         current_sequence = []
                 else:
                     current_sequence.append(line)
             if current_sequence:
-                yield "".join(current_sequence)
+                yield "".join(current_sequence) + "\n"
 
 
 def iterate_over_chunk_raw_files(fasta_filepaths: List[Path], max_lines_per_file: int) -> Iterator[list[str]]:
@@ -45,8 +45,7 @@ def iterate_over_chunk_raw_files(fasta_filepaths: List[Path], max_lines_per_file
 
 def write_chunk_file(path_file, chunk_sequence: list[str]):
     with open(path_file, "w") as raw_file:
-        for sequence in chunk_sequence:
-            raw_file.write(sequence + "\n")
+        raw_file.writelines(chunk_sequence)
 
 
 def parse_fasta_to_raw_sequence(fasta_dir, raw_dir, max_lines_per_file: int) -> None:
@@ -59,8 +58,6 @@ def parse_fasta_to_raw_sequence(fasta_dir, raw_dir, max_lines_per_file: int) -> 
     - max_lines_per_file: Maximum number of lines per output file.
     """
 
-    raw_dir = Path(fasta_dir) / "raw_files"
-    raw_dir.mkdir(parents=True, exist_ok=True)
     fasta_filepaths = [path for path in Path(fasta_dir).iterdir() if path.suffix == ".fasta"]
     chunk_content_iterator = iterate_over_chunk_raw_files(fasta_filepaths, max_lines_per_file=max_lines_per_file)
     for i, chunks in rich.progress.track(enumerate(chunk_content_iterator), "Reading and splitting fasta file in chunks..."):
