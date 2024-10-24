@@ -34,6 +34,38 @@ All task have a global script that can be found in the `scripts` folder. They ca
 The output will be multiple directory containing different step of the process.
 If necessary it is possible to rerun only part of the full script by selecting the proper python file. See below for details.
 
+
+# Dataset Statistics
+
+- <b>RNA</b> (scRNAseq expression data)
+
+    Samples: 35,822,843-
+
+    Tokens: 90,711,564,293
+
+- <b>Protein Sequence</b> (Uniref 50)
+
+    Samples: 66,000,000
+
+    Tokens: 19,182,955,286
+
+- <b>Compounds</b>:
+
+    Samples: 13,299,623
+
+    SMILES Tokens: 526,014,485
+
+    Scaffold Tokens: 350,007,581
+
+- <b>Molecule-related natural language</b>
+
+    Samples: 3,342,414
+
+    Tokens: 467,530,577
+
+- <b>Genome Sequence</b> (status: outstanding)
+
+
 <!-- ------------------------------------------------------------------------------------------------------------- -->
 ## Compounds
 
