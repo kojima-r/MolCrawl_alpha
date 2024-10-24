@@ -7,11 +7,12 @@ from tokenizers import Tokenizer
 from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Split
+import numpy as np
 
 from genome_sequence.utils.config import GenomeSequenceConfig
 
 
-def yield_raw_sequences(raw_filepaths: Iterator[Path], num_worker) -> Iterator[str]:
+def yield_raw_sequences(raw_filepaths: Iterator[str], num_worker) -> Iterator[str]:
     """
     Reads sequences from a FASTA file and yields them one by one.
 
@@ -48,7 +49,12 @@ if __name__ == "__main__":
     pattern = r"[^A-Z]"
     tokenizer.pre_tokenizer = Split(pattern, behavior="removed")
 
-    line_iterator = yield_raw_sequences([str(p) for p in path_dir.glob("*.raw")], cfg.num_worker)
+    files = [str(p) for p in path_dir.glob("*.raw")]
+    np.random.seed(42)
+    np.random.permutation(files)
+    files = files[:1200]
+
+    line_iterator = yield_raw_sequences(files, cfg.num_worker)
 
     # tokenizer.train(files, trainer)
     tokenizer.train_from_iterator(line_iterator, trainer)

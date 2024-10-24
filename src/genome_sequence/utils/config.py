@@ -8,7 +8,7 @@ class RefSeqPreparationConfig:
     # Output directory where the preparation will be made
     output_dir: str
     # Num of parallel worker to use, note that for download the worker are capped to 3
-    num_worker: int = 3
+    num_worker: int = 16
 
     max_lines_per_file: int = 10000
 
