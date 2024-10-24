@@ -1,4 +1,4 @@
-from src.compounds.utils.datasets import download
+from compounds.utils.datasets import download
 
 
 DATASETS_FROM_REPO = [

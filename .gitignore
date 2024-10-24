@@ -4,6 +4,8 @@ pyrightconfig.json
 
 __pycache__
 *.log
+*.arrow
+*.json
 
 download_dir
 extracted_dir
