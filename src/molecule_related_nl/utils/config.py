@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from utils.config import Config
+from core.config import Config
 
 
 @dataclass
@@ -9,6 +9,7 @@ class MoleculeNLPreparationConfig(Config):
 
     # Path to save the processed and tokenized dataset
     save_path: str = "outputs/molecule_related_natural_language_tokenized.parquet"
+
 
 @dataclass
 class MoleculeNLConfig(Config):

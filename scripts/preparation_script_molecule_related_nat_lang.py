@@ -5,7 +5,7 @@ import logging.config
 
 from pathlib import Path
 
-from utils.base import setup_logging
+from core.base import setup_logging
 from molecule_related_nl.dataset.download import download_hf_dataset
 from molecule_related_nl.utils.config import MoleculeNLConfig
 from molecule_related_nl.utils.general import read_dataset, count_number_of_tokens, save_dataset
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("config")
     args = parser.parse_args()
     cfg = MoleculeNLConfig.from_file(args.config).data_preparation
-    
+
     logging_dir = Path(cfg.save_path).parent / "molecule_related_natural_language_logs"
     os.path.exists(logging_dir) or os.makedirs(logging_dir)
     setup_logging(logging_dir)
@@ -36,12 +36,11 @@ if __name__ == "__main__":
     tokenizer = MoleculeNatLangTokenizer()
 
     logger.info(msg="Tokenizing Scaffolds...")
-    
+
     token_counts = {}
     for split in dataset.keys():
         dataset[split] = dataset[split].map(tokenizer.tokenize_dict)
         token_counts[split] = count_number_of_tokens(dataset[split])
-
 
     logger.info(msg="Dataset Statistics:")
     for split in token_counts.keys():

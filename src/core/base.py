@@ -13,7 +13,6 @@ from functools import partial
 
 from multiprocessing import Pool
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map, thread_map
 
 
 class TrainableTokenizer(ABC):
@@ -78,13 +77,16 @@ def join_tables(chunks):
 def multiprocess_tokenization(func, table, column_name, new_column_name=None, processes=48):
     split_tables = split_table(table, 10000)
     chunksize = len(split_tables) // processes if len(split_tables) // processes > 0 else 1
-    
+
     with Pool(processes) as pool:
-        tokenized_tables = [t for t in pool.map(
-            partial(func, column_name=column_name, new_column_name=new_column_name),
-            tqdm(split_tables, total=len(split_tables)),
-            chunksize=chunksize
-        )]
+        tokenized_tables = [
+            t
+            for t in pool.map(
+                partial(func, column_name=column_name, new_column_name=new_column_name),
+                tqdm(split_tables, total=len(split_tables)),
+                chunksize=chunksize,
+            )
+        ]
 
     return join_tables(tokenized_tables)
 
@@ -97,16 +99,9 @@ def apply_fn_to_parqueet(func):
         modified_column = pa.array([func(x.as_py()) for x in column_to_modify])
 
         if new_column_name is None:
-            return table.set_column(
-                table.column_names.index(column_name),
-                column_name,
-                modified_column
-            )
+            return table.set_column(table.column_names.index(column_name), column_name, modified_column)
         else:
-            return table.append_column(
-                new_column_name,
-                modified_column
-            )
+            return table.append_column(new_column_name, modified_column)
 
     inner.__name__ = inner.__qualname__ = uuid.uuid4().hex
     setattr(sys.modules[inner.__module__], inner.__name__, inner)
