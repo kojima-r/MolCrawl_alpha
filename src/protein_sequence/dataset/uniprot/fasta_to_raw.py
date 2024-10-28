@@ -66,7 +66,7 @@ def parse_fasta_to_raw_sequence(fasta_dir, raw_dir, max_lines_per_file: int) -> 
 
 
 def fasta_to_raw(dataset: str, output_dir: Union[str, Path], max_lines_per_file: int):
-    fasta_dir = Path(output_dir)
+    fasta_dir = Path(output_dir) / dataset
     if dataset == UniProtDatasetEnum.UniParc:
         fasta_dir = Path(output_dir) / "fasta_files"
 
