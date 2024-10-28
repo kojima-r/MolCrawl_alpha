@@ -146,7 +146,7 @@ def get_url_md5_mapping(url: str) -> Dict:
 def process_dataset(dataset: str, output_dir: Union[str, os.PathLike[str]], num_worker: int, use_md5: bool):
     logging.info(f"Processing dataset {dataset}...")
     logging.info("Downloading archive from the server...")
-    output_dir = Path(output_dir)
+    output_dir = Path(output_dir) / dataset
     if dataset == UniProtDatasetEnum.UniParc:
         download_dir = output_dir / "archive"
         download_dir.mkdir(parents=True, exist_ok=True)

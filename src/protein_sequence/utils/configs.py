@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from utils.config import Config
+from core.config import Config
 
 
 @dataclass

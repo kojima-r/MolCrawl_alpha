@@ -172,4 +172,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     cfg = ProteinSequenceConfig.from_file(args.config).data_preparation
 
-    tokenize_to_parquet(cfg.output_dir, cfg.num_worker)
+    output_dir = Path(cfg.output_dir) / cfg.dataset
+    tokenize_to_parquet(output_dir, cfg.num_worker)
