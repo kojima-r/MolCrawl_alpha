@@ -28,9 +28,8 @@ from torch.distributed import init_process_group, destroy_process_group
 
 from model import GPTConfig, GPT
 
-from protein_sequence.gpt2.dataset import ProteinSequenceDataset
+from core.dataset import PreparedDataset
 
-datasets = {"protein_sequence": ProteinSequenceDataset}
 dataset_params = {}
 # -----------------------------------------------------------------------------
 # default config values designed to train a gpt2 (124M) on OpenWebText
@@ -123,8 +122,8 @@ ctx = nullcontext() if device_type == "cpu" else torch.amp.autocast(device_type=
 
 # poor man's data loader
 # data_dir = os.path.join("gpt2", "data", dataset)
-training_data = datasets[dataset](**dataset_params, split="train")
-test_data = datasets[dataset](**dataset_params, split="valid")
+training_data = PreparedDataset(**dataset_params, split="train")
+test_data = PreparedDataset(**dataset_params, split="valid")
 
 # training_data = torch.load(os.path.join(data_dir, "train.pt"))
 # test_data = torch.load(
