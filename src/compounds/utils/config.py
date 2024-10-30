@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from utils.config import Config
+from core.config import Config
 
 
 @dataclass
@@ -18,6 +18,7 @@ class Organix13PreparationConfig:
 
     # Location to save raw unprocessed datasets
     raw_data_path: str = "src/compounds/dataset/organix13/raw"
+
 
 @dataclass
 class CompoundConfig(Config):

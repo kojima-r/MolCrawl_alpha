@@ -2,7 +2,7 @@ from datasets import load_from_disk
 import torch
 
 
-class ProteinSequenceDataset:
+class PreparedDataset:
 
     def __init__(self, dataset_dir, split):
         super().__init__()

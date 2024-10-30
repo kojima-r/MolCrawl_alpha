@@ -23,4 +23,8 @@ log_interval = 10
 weight_decay = 1e-1
 
 # dataset
-dataset = 'molecule_nl'
+dataset = "molecule_nl"
+
+dataset_params = {
+    "dataset_dir": "/nasa/datasets/riken/projects/fundamental_models_202407/molecule_related_natural_language/training_ready_hf_dataset"
+}
