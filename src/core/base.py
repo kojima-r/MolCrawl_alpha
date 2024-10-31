@@ -1,5 +1,6 @@
 import json
 import logging
+import logging.config
 import os
 from pathlib import Path
 
@@ -29,7 +30,7 @@ class TrainableTokenizer(ABC):
 
     def decode(self, token_ids):
         return self.tokenizer.decode(token_ids)
-    
+
     def train_new_from_iterator(self, iterator):
         super().train_new_from_iterator(iterator)
 
