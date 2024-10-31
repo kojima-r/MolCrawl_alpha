@@ -53,8 +53,6 @@ model.load_state_dict(state_dict)
 model.eval()
 model.to(device)
 
-tokenizer = Tokenizer()
-
 
 training_data = PreparedDataset(**dataset_params, split="train")
 test_data = PreparedDataset(**dataset_params, split="valid")

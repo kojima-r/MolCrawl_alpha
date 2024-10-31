@@ -82,11 +82,6 @@ exec(open("gpt2/configurator.py").read())  # overrides from command line or conf
 config = {k: globals()[k] for k in config_keys}  # will be useful for logging
 # -----------------------------------------------------------------------------
 
-try:
-    tokenizer = Tokenizer()
-except Exception:
-    raise ImportError("Please initialize the tokenizer in the *_config.py file")
-
 # various inits, derived attributes, I/O setup
 ddp = int(os.environ.get("RANK", -1)) != -1  # is this a ddp run?
 if ddp:
