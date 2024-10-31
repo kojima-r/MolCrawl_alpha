@@ -38,9 +38,9 @@ out_dir = "out"
 eval_interval = 2000
 log_interval = 1
 eval_iters = 200
-eval_only = False # if True, script exits right after the first eval
-always_save_checkpoint = False # if True, always save a checkpoint after each eval
-init_from = 'scratch' # 'scratch' or 'resume' or 'gpt2*'
+eval_only = False  # if True, script exits right after the first eval
+always_save_checkpoint = False  # if True, always save a checkpoint after each eval
+init_from = "scratch"  # 'scratch' or 'resume' or 'gpt2*'
 # wandb logging
 wandb_log = False  # disabled by default
 wandb_project = "owt"
@@ -137,7 +137,7 @@ def get_batch(split):
     elif split == "val":
         data = test_data
 
-    ix = np.random.randint(0, len(dataset), batch_size).tolist()
+    ix = np.random.randint(0, len(data), batch_size).tolist()
     batch = torch.stack([data[i] for i in ix])
     x = batch[:, :-1]
     y = batch[:, 1:]

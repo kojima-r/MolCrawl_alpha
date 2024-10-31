@@ -7,10 +7,8 @@ from contextlib import nullcontext
 import torch
 from model import GPTConfig, GPT
 
-from protein_sequence.gpt2.dataset import ProteinSequenceDataset
+from core.dataset import PreparedDataset
 
-
-datasets = {"protein_sequence": ProteinSequenceDataset}
 dataset_params = {}
 dataset = ""
 # -----------------------------------------------------------------------------
@@ -58,8 +56,8 @@ model.to(device)
 tokenizer = Tokenizer()
 
 
-training_data = datasets[dataset](**dataset_params, split="train")
-
+training_data = PreparedDataset(**dataset_params, split="train")
+test_data = PreparedDataset(**dataset_params, split="valid")
 
 ix = torch.randint(len(training_data), (10,))
 inputs = torch.stack([training_data[int(i)] for i in ix])
