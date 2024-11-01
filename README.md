@@ -73,9 +73,26 @@ If necessary it is possible to rerun only part of the full script by selecting t
 
     Size of the dataset: 8.9G
 
-    Samples: 3,342,414
+    Traning Samples:
+        # Samples: 3,288,855
 
-    Tokens: 467,530,577
+        # Tokens: 460,447,039
+
+    Validation Samples:
+        # Samples: 20,498
+
+        # Tokens: 2,568,952
+
+    Test Samples:
+        # Samples: 33,061
+
+        # Tokens: 4,514,586
+
+    Total:
+        # Samples: 3,342,414
+
+        # Tokens: 467,530,577
+
 
     Samples length size distribution Training Set: ![mol nl sample dist](assets/img/molecule_nl_tokenized_train_lengths_dist.png)
     
