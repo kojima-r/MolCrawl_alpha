@@ -18,11 +18,10 @@ from scgpt import scbank
 import scgpt as scg
 import cellxgene_census
 import rich
-from datasets.utils.logging import disable_progress_bar
+from datasets.utils.logging import disable_progress_bar, enable_progress_bar
 
 from rna.utils.config import RnaConfig
 
-disable_progress_bar()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -51,20 +50,6 @@ def preprocess(
 
     # filter genes
     sc.pp.filter_genes(adata, min_counts=min_counts_genes)
-
-    # TODO: add binning in sparse matrix and save in separate datatable
-    # The binning happens in the Collator
-    # preprocessor = Preprocessor(
-    #     use_key="X",  # the key in adata.layers to use as raw data
-    #     filter_gene_by_counts=False,  # step 1
-    #     filter_cell_by_counts=False,  # step 2
-    #     normalize_total=False,  # 3. whether to normalize the raw data and to what sum
-    #     log1p=False,  # 4. whether to log1p the normalized data
-    #     binning=51,  # 6. whether to bin the raw data and to what number of bins
-    #     result_binned_key="X_binned",  # the key in adata.layers to store the binned data
-    # )
-    # preprocessor(adata)
-
     adata.layers[main_table_key] = adata.X.copy()
 
     return adata
@@ -89,7 +74,10 @@ def process_h5ad_to_parquet(
                 token_col="feature_name",
                 immediate_save=False,
             )
-            db.data_tables["counts"].data.to_parquet(parquet_path)
+            data = db.data_tables["counts"].data
+            data = data.map(lambda expression: {"num_tokens": len(expression["genes"])})
+            data.to_parquet(parquet_path)
+            logging.info(f"Saving file to {parquet_path}")
 
             # clean up
             del adata
@@ -101,7 +89,7 @@ def process_h5ad_to_parquet(
             if parquet_path.exists():
                 os.remove(parquet_path)
     else:
-        logging.info(f"Skipping processing since file alreafy exist: {parquet_path}")
+        logging.info(f"Skipping processing since file already exist: {parquet_path}")
 
 
 def get_census_gene_vocab(version: str):
@@ -121,6 +109,7 @@ def get_census_gene_vocab(version: str):
 
 
 def prepare_parquet(output_dir: str, version: str, num_worker: int, min_counts_genes: int):
+    disable_progress_bar()
 
     vocab = get_census_gene_vocab(version)
     vocab.save_json(Path(output_dir) / "gene_vocab.json")
@@ -134,6 +123,8 @@ def prepare_parquet(output_dir: str, version: str, num_worker: int, min_counts_g
     with concurrent.futures.ThreadPoolExecutor(num_worker) as executor:
         func = partial(process_h5ad_to_parquet, output_dir=parquet_dir, vocab=vocab, min_counts_genes=min_counts_genes)
         list(rich.progress.track(executor.map(func, files), "Tokenizing h5ad file to parquet...", len(files)))
+
+    enable_progress_bar()
 
 
 if "__main__" == __name__:
