@@ -11,22 +11,23 @@ n_head = 16
 n_embd = 1024
 
 tensorboard = True  # log training metrics to tensorboard
-tensorboard_dir = "runs_train_gpt2_molecule_nl_medium_6e-6wu2000-60000-its"
-out_dir = "out-molecule-nl-gpt2-medium-6e-6wu2000-60000-its"
+tensorboard_dir = "runs_train_gpt2_molecule_nl_medium_1e-6wu200-30000-its"
+out_dir = "out-molecule-nl-gpt2-medium-1e-6wu200-30000-its"
 
 tokenizer = Tokenizer()
 
 # these make the total batch size be ~0.5M
 # 12 batch size * 1024 block size * 5 gradaccum * 8 GPUs = 491,520
 batch_size = 2  # max size in koala
+eval_batch_size = 4  # max size in koala
 block_size = 1024
 gradient_accumulation_steps = 5 * 16
 
 # training
-max_iters = 60000
-lr_decay_iters = 60000
-warmup_iters = 2000  # how many steps to warm up for
-learning_rate = 6e-6  # max learning rate
+max_iters = 30000
+lr_decay_iters = 30000
+warmup_iters = 200  # how many steps to warm up for
+learning_rate = 1e-6  # max learning rate
 min_lr = learning_rate/10  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 
 # eval stuff
