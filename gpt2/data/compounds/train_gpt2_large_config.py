@@ -4,6 +4,9 @@
 
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 
+
+# Large-Sized GPT2 Model
+
 n_layer = 36
 n_head = 20
 n_embd = 1280

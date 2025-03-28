@@ -4,7 +4,7 @@
 
 from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer as Tokenizer
 
-# Medium-Sized GPT2 Model
+# Large-Sized GPT2 Model
 
 n_layer = 36
 n_head = 20
