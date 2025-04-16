@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     setup_logging(cfg.output_dir)
 
-    build_list(cfg.output_dir)
+    build_list(cfg.output_dir, cfg.census_version)
     download(cfg.output_dir, cfg.census_version, cfg.num_worker, cfg.size_workload)
     h5ad_to_loom(cfg.output_dir)
     tokenize(cfg.output_dir)
