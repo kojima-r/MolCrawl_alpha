@@ -371,10 +371,7 @@ python scripts/preparation_script_rna.py assets/configs/rna.yaml
 ```
 
 One limitation of the rna sequence task is the fact that the sequence data are continuous and therefore
-it creates a challenge for the tokenization and the model. The tokenization is taking into account in the following scripts.
-However we could not provide a gpt2 training example, since the gpt2 masking is non trivial and
-developing the proper architecture for such a task is past the goal of this project.
-See section 3 of the scFormer paper for the details of specific of the model.
+it creates a challenge for the tokenization and the model. The tokenization is made based on geneformer model. We used their code and statistics to compute our own tokenization. This is motivated by the similarity of both dataset.
 
 ### Configuration
 
@@ -405,8 +402,8 @@ There will be multiple directory generate in the output_dir provided in the conf
 - `tissue_list.tsv`: List of tissue taken into account.
 - `download_dir`: Raw archive file downloaded from the cellxgene database
 - `extract`: h5ad file extracted from the archives
+- `loom_dir`: loom files ready to be use for the tokenization
 - `parquet_files`: parquet files containing tokenized gene and expression values
-- `gene_vocab.json`: Dict of gene and their token id
 
 ### Separate scripts
 
@@ -424,11 +421,12 @@ The is 4 separate scripts for cellxgene downloading.
 
     Extract h5ad files form the archived in `download_dir` and save them to the `extract` directory
 
-- `src/rna/dataset/cellxgene/script/tokenization.py`
+- `src/rna/dataset/cellxgene/script/h5ad_to_loom.py`
 
-    Create the gene token vocabulary, filter genes have a counts under `min_counts_genes` and save
-    gene tokens and expression value in a tuple in a parquet file. All parquet files are saved
-    in `parquet_files` the inputs are the extracted h5ad files.
+    Transfer the h5ad file to loom and delete some unnecessary entries.
+
+- `scr/rna/dataset/cellxgene/tokenization.py`
+    Create the gene token vocabulary, based on geneformer code.
 
 
 # Training of GPT2 model

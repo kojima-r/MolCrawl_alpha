@@ -24,3 +24,4 @@ dependencies:
     - transformers==4.45.1
     - scgpt==0.2.1
     - rdchiral==1.1.0
+    - loompy==3.0.8

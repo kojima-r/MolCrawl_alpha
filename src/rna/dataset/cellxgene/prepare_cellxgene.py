@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 
 from rna.dataset.cellxgene.script.build_list import build_list
 from rna.dataset.cellxgene.script.download import download
-from rna.dataset.cellxgene.script.tokenization import prepare_parquet
+from rna.dataset.cellxgene.script.h5ad_to_loom import h5ad_to_loom
 from rna.utils.config import RnaConfig
 
 
@@ -23,4 +23,4 @@ if __name__ == "__main__":
 
     build_list(cfg.output_dir)
     download(cfg.output_dir, cfg.census_version, cfg.num_worker, cfg.size_workload)
-    prepare_parquet(cfg.output_dir, cfg.census_version, cfg.num_worker, cfg.min_counts_genes)
+    h5ad_to_loom(cfg.output_dir)

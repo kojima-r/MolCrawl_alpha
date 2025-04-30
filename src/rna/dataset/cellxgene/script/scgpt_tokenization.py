@@ -1,3 +1,7 @@
+"""
+Legacy code use for scgpt, in the end geneformer is used to compute the tokenization
+"""
+
 from typing import Union
 import gc
 from pathlib import Path

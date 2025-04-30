@@ -21,9 +21,10 @@ import matplotlib.pyplot as plt
 
 from rna.dataset.cellxgene.script.build_list import build_list
 from rna.dataset.cellxgene.script.download import download
+from rna.dataset.cellxgene.script.h5ad_to_loom import h5ad_to_loom
 from datasets.utils.logging import enable_progress_bar
 
-from rna.dataset.cellxgene.script.tokenization import prepare_parquet
+from rna.dataset.tokenization import tokenize
 from rna.utils.config import RnaConfig
 from core.base import setup_logging
 
@@ -51,7 +52,8 @@ if __name__ == "__main__":
 
     build_list(cfg.output_dir)
     download(cfg.output_dir, cfg.census_version, cfg.num_worker, cfg.size_workload)
-    prepare_parquet(cfg.output_dir, cfg.census_version, cfg.num_worker, cfg.min_counts_genes)
+    h5ad_to_loom(cfg.output_dir)
+    tokenize(cfg.output_dir)
 
     data = load_dataset(
         "parquet",
