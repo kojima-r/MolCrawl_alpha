@@ -76,7 +76,7 @@ training_args = TrainingArguments(
 
 
 train_dataset = load_from_disk(dataset_dir)["train"]
-test_dataset = load_from_disk(dataset_dir)["test"].select(range(10000))  # for testing purposes, select only 10000 samples
+test_dataset = load_from_disk(dataset_dir)["test"].select(range(min(10000, load_from_disk(dataset_dir)["test"].num_rows)))  # for testing purposes, select only 10000 samples
 
 
 trainer = Trainer(
