@@ -10,7 +10,7 @@ n_layer = 36
 n_head = 20
 n_embd = 1280
 
-
+dataset_dir = "outputs/training_ready_hf_dataset"  # Adjust the path as necessary for your generated dataset.
 
 tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = "runs_train_gpt2_molecule_nl_medium_1e-6wu200-30000-its"
@@ -43,11 +43,11 @@ weight_decay = 1e-1
 # dataset
 dataset = "molecule_nl"
 
-dataset_params = {
-    "dataset_dir": "outputs/training_ready_hf_dataset"
-}
-
 # Special Tokens
 start_instruction = 1
 end_instruction = [518, 29914, 25580, 29962]
 eos_token = 2  # eos
+
+dataset_params = {
+    "dataset_dir": dataset_dir   # Adjust the path as necessary for your generated dataset.
+}

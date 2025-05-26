@@ -11,13 +11,15 @@ n_layer = 36
 n_head = 20
 n_embd = 1280
 
+dataset_dir = "outputs/compounds/training_ready_hf_dataset"  # path to the dataset directory
 
+tokenizer_path = "assets/molecules/vocab.txt"  # path to the tokenizer vocab file
 
 tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = "out-compounds-medium-6e-7wu200-30000-its"
 out_dir = "out-compounds-medium-6e-7wu200-30000-its"
 
-tokenizer = Tokenizer("assets/molecules/vocab.txt", 256)
+tokenizer = Tokenizer(tokenizer_path, 256)
 
 # these make the total batch size be ~0.5M
 # 12 batch size * 1024 block size * 5 gradaccum * 8 GPUs = 491,520
@@ -44,10 +46,10 @@ weight_decay = 1e-1
 # dataset
 dataset = "compounds"
 
-dataset_params = {
-    "dataset_dir": "outputs/compounds/training_ready_hf_dataset"
-}
-
 # Special Tokens
 start_instruction = 12
 eos_token = 12  # eos
+
+dataset_params = {
+    "dataset_dir": dataset_dir
+}

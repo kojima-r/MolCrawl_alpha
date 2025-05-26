@@ -5,14 +5,21 @@
 
 import sentencepiece as spm
 
-tokenizer = spm.SentencePieceProcessor(
-    model_file="/nasa/datasets/riken/projects/fundamental_models_202407/refseq/spm_tokenizer.model"
-)
+tokenizer_path = "refseq/spm_tokenizer.model"  # Adjust the path as necessary for your generated tokenizer.
+
+dataset_dir = "refseq/training_ready_hf_dataset"  # Adjust the path as necessary for your generated dataset.
+
+out_dir = "out-genome-sequence"  # output directory for model checkpoints
+
 
 tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = "runs_train_gpt2_genome_sequence"
 out_dir = "out-genome_sequence"
 
+tokenizer = spm.SentencePieceProcessor(
+    model_file=tokenizer_path
+)
+meta_vocab_size = tokenizer.vocab_size()
 # these make the total batch size be ~0.5M
 # 12 batch size * 1024 block size * 5 gradaccum * 8 GPUs = 491,520
 batch_size = 12
@@ -27,8 +34,10 @@ learning_rate = 6e-6  # max learning rate
 min_lr = learning_rate / 10  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 
 # eval stuff
-eval_interval = 1000
-eval_iters = 200
+eval_interval = 1
+# eval_interval = 1000
+eval_iters = 1
+# eval_iters = 200
 log_interval = 10
 
 # weight decay
@@ -37,4 +46,4 @@ weight_decay = 1e-1
 # dataset
 dataset = "genome_sequence"
 
-dataset_params = {"dataset_dir": "/nasa/datasets/riken/projects/fundamental_models_202407/refseq/training_ready_hf_dataset"}
+dataset_params = {"dataset_dir": dataset_dir}

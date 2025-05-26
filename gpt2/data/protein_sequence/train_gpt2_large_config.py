@@ -10,6 +10,9 @@ n_layer = 36
 n_head = 20
 n_embd = 1280
 
+dataset_dir = "uniprot/UniRef50/training_ready_hf_dataset"  # Adjust the path as necessary for your generated dataset.
+
+out_dir = "out-protein-sequence"  # output directory for model checkpoints
 
 tokenizer = Tokenizer()
 
@@ -35,5 +38,5 @@ weight_decay = 1e-1
 dataset = "protein_sequence"
 
 dataset_params = {
-    "dataset_dir": "/nasa/datasets/riken/projects/fundamental_models_202407/uniprot/UniRef50/training_ready_hf_dataset"
+    "dataset_dir": dataset_dir    # Adjust the path as necessary for your generated dataset.
 }

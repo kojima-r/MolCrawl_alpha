@@ -9,6 +9,8 @@ tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = "runs_train_gpt2_molecule_nl_small_6e-6wu200-6000-its"
 out_dir = "out-molecule-nl-gpt2-small-6e-6wu200-6000-its"
 
+dataset_dir = "outputs/training_ready_hf_dataset"  # Adjust the path as necessary for your generated dataset.
+
 tokenizer = Tokenizer()
 
 # these make the total batch size be ~0.5M
@@ -36,11 +38,11 @@ weight_decay = 1e-1
 # dataset
 dataset = "molecule_nl"
 
-dataset_params = {
-    "dataset_dir": "outputs/training_ready_hf_dataset"
-}
-
 # Special Tokens
 start_instruction = 1
 end_instruction = [518, 29914, 25580, 29962]
 eos_token = 2  # eos
+
+dataset_params = {
+    "dataset_dir": dataset_dir # Adjust the path as necessary for your generated dataset.
+}

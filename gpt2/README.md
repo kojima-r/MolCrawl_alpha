@@ -24,6 +24,21 @@ Running this will lunch a training job, and output results in the path `out/ckpt
 
 In each `path/to/corresponding/dataset/train_gpt2_config.py` config, you can set the following parameters.
 
+### IMPORTANT SETTING PARAMETERS
+
+ #### tokenizer_path
+  Some datasets have this parameter in the config.py. If so, they require you to set this parameter accordingly to the tokenizer which resulted from the data-preprocessing.
+
+  The instructions to set it are as follows:
+  - For Genome Sequence: select the `spm_tokenizer.model` file generated after running the script `scripts/preparation_script_genome_sequence.py`. It will be in the folder you defined in the `assets/configs/genome_sequence.yaml` under `output_dir`.
+  - For Compounds: select the `vocab.txt` file generated after running the script `scripts/preparation_script_compounds.py`. It will be in the path you defined in the `assets/configs/compounds.yaml` under `vocab_path`.
+  - For Molecule Natural Language: It does not require you to set it up.
+  - For Protein Sequence:  It does not require you to set it up.
+
+  #### dataset_dir
+  
+  The path to your processed dataset. This is the output of [Usage](#usage), step 1. When you run this file, it will print the output of the dataset, which you should match to this parameter.
+
 ### 📊 Logging
 
 * **`tensorboard`**
@@ -31,6 +46,8 @@ In each `path/to/corresponding/dataset/train_gpt2_config.py` config, you can set
 
 * **`tensorboard_dir`**
   Directory where TensorBoard logs will be saved.
+
+### Output Weights
 
 * **`out_dir`**
   Directory where training outputs (e.g., checkpoints, logs) will be saved.

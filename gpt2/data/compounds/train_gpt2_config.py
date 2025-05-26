@@ -4,12 +4,15 @@
 
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 
+dataset_dir = "outputs/compounds/training_ready_hf_dataset"  # path to the dataset directory
+
+tokenizer_path = "assets/molecules/vocab.txt"  # path to the tokenizer vocab file
 
 tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = "runs_train_gpt2_compounds_small_6e-6wu200-6000-its"
 out_dir = "out-compounds-small-6e-6wu200-6000-its"
 
-tokenizer = Tokenizer("assets/molecules/vocab.txt", 256)
+tokenizer = Tokenizer(tokenizer_path, 256)
 
 # these make the total batch size be ~0.5M
 # 12 batch size * 1024 block size * 5 gradaccum * 8 GPUs = 491,520
@@ -36,10 +39,10 @@ weight_decay = 1e-1
 # dataset
 dataset = "compounds"
 
-dataset_params = {
-    "dataset_dir": "outputs/compounds/training_ready_hf_dataset"
-}
-
 # Special Tokens
 start_instruction = 12
 eos_token = 12  # eos
+
+dataset_params = {
+    "dataset_dir": dataset_dir
+}

@@ -67,6 +67,7 @@ def tokenize_batch_dataset(parquet_path, context_length, number_sample):
     )
 
     path_dataset = str(Path(parquet_path).parent / "training_ready_hf_dataset")
+    print(f"Saving dataset to: {path_dataset}. Match this path to the train_gpt2_config.py->dataset_dir parameter.")
     chunked_dataset.save_to_disk(path_dataset)
 
 
