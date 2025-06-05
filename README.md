@@ -377,7 +377,7 @@ Note: the parameters `--training-set-subset-len` and `--test-set-subset-len` can
 
 2. Train the model by running `python gpt2/train.py path/to/corresponding/dataset/train_gpt2_config.py`
 
-Inside each `data/<dataset>` folder, there is a file named `train_gpt2_config.py`, which contains parameters to train GPT2 in that dataset. For example: `python gpt2/train.py riken-dataset-fundational-model/gpt2/data/molecule_nl/train_gpt2_large_config.py` will train the large GPT2 model on the molecule_nl dataset.
+Inside each `data/<dataset>` folder, there is a file named `train_gpt2_config.py`, which contains parameters to train GPT2 in that dataset. For example: `python gpt2/train.py gpt2/data/molecule_nl/train_gpt2_large_config.py` will train the large GPT2 model on the molecule_nl dataset.
 
 Running this will lunch a training job, and output results in the path `out/ckpt.pt
 
@@ -395,7 +395,7 @@ To run with DDP on 4 gpus across 2 nodes, example:
 `torchrun --nproc_per_node=8 --nnodes=2 --node_rank=1 --master_addr=123.456.123.456 --master_port=1234 config_file.py`
 (If your cluster does not have Infiniband interconnect prepend NCCL_IB_DISABLE=1)
 
-3. Generate a sample from the trained checkpoint running `python gpt2/sample.py {config.py}`. This should be the same config file that you used for trainig, for example `python gpt2/sample.py riken-dataset-fundational-model/gpt2/data/molecule_nl/train_gpt2_large_config.py` for the exmaple in step 2.
+3. Generate a sample from the trained checkpoint running `python gpt2/sample.py {config.py}`. This should be the same config file that you used for trainig, for example `python gpt2/sample.py gpt2/data/molecule_nl/train_gpt2_large_config.py` for the exmaple in step 2.
 
 ## Data Preparation
 
@@ -411,7 +411,7 @@ python src/protein_sequence/dataset/prepare_gpt2.py assets/configs/protein_seque
 For Molecule Related Natural Language, run the following command:
 
 ```bash
-python src/molecule_related_nl/dataset/prepare_gpt2.py riken-dataset-fundational-model/assets/configs/molecules_nl.yaml
+python src/molecule_related_nl/dataset/prepare_gpt2.py assets/configs/molecules_nl.yaml
 ```
 
 For Genome Sequence, run the following command:
@@ -439,6 +439,9 @@ Now running these scripts will prepare the dataset in batch and make sure the co
 is filled without any padding.
 
 ## Training
+
+> [!IMPORTANT]
+> Users need to adjust the config.py (e.g., dataset_dir, tokenizer_path, out_dir, tensorboard_dir, batch_size, etc.) before running train.py . A detailed list of additional parameters is provided in the [GPT2 Readme](./gpt2/README.md). 
 
 Then the training can be launch for the prepared datasets. In the path `gpt2/data/<dataset-name>`, you will find a folder with 3 files:
 1. `train_gpt2_config.py`: Config for training the small-sized version of the model,

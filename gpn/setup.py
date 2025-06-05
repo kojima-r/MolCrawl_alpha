@@ -3,7 +3,8 @@ from setuptools import setup
 
 install_requires = [
     "transformers[torch]==4.45.2",
-    "datasets",
+    "tensorboardX==2.6.2.2",
+    "datasets==3.6.0",
     "pyarrow",
     "pandas",
     "numpy",
@@ -24,11 +25,11 @@ install_requires = [
 
 setup(
     name='gpn',
-    version='0.6',
+    version='0.1.0',
     description='gpn',
     url='http://github.com/songlab-cal/gpn',
-    author='Gonzalo Benegas',
-    author_email='gbenegas@berkeley.edu',
+    author='Elix Inc addapting Gonzalo Benegas',
+    author_email='',
     license='MIT',
     packages=['gpn', 'gpn.msa'],
     zip_safe=False,
