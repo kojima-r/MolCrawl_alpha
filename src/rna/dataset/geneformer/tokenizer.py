@@ -106,6 +106,8 @@ class TranscriptomeTokenizer:
         self.cls_token = "<unk>"
         self.mask_token = "<mask>"
 
+        self.reverse_dict = dict(zip(self.gene_token_dict.values(), self.gene_token_dict.keys()))
+
     def tokenize_data(
         self,
         data_directory: Path | str,
@@ -293,3 +295,19 @@ class TranscriptomeTokenizer:
 
     def __len__(self):
         return len(self.gene_token_dict)
+
+    def decode(self, token_ids):
+        """
+        Decode token IDs to gene names.
+
+        Parameters
+        ----------
+        token_ids : list of int
+            List of token IDs to decode.
+
+        Returns
+        -------
+        list of str
+            List of gene names corresponding to the token IDs.
+        """
+        return list(map(self.reverse_dict.get, token_ids))

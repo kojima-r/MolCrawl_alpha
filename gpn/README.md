@@ -4,7 +4,7 @@ This folder contains the code for training and inferencing with the Genome seque
 
 # Installation
 
-For using these models, you need to create a different conda environment. Once you have creted the enviroment, install the package by going into the folder that contains this readme, and then running `pip install --no-build-isolation -e .`
+For using these models, you need to create a different conda environment by doing `conda create -n new_environment_name python=3.11`. Once you have creted the enviroment, install the package by going into the folder that contains this readme, and then running `pip install --no-build-isolation -e .`
 
 # Data Preparation
 

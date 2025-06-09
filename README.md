@@ -474,6 +474,12 @@ For Compounds, the small version training can can be done by running the followi
 python gpt2/train.py gpt2/data/compounds/train_gpt2_config.py
 ```
 
+For RNA, the small version training can can be done by running the following:
+
+```bash
+python gpt2/train.py gpt2/data/rna/train_gpt2_config.py
+```
+
 This will train a model and save it in outputdir.
 
 FOR MORE INFORMATION REGARDING THE CONFIG FILES, PLEASE REFER TO THE [GPT2 README](./gpt2/README.md).
