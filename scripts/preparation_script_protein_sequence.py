@@ -17,7 +17,7 @@ python scripts/preparation_script_protein_sequence.py assets/configs/protein_seq
 
 from argparse import ArgumentParser
 from pathlib import Path
-import logging
+import logging, os
 
 from datasets import load_dataset
 import matplotlib.pyplot as plt
@@ -52,6 +52,8 @@ if __name__ == "__main__":
 
     process_dataset(cfg.dataset, cfg.output_dir, cfg.num_worker, cfg.use_md5)
     fasta_to_raw(cfg.dataset, cfg.output_dir, cfg.max_lines_per_file)
+    os.makedirs(Path(cfg.output_dir) / "raw_files", exist_ok=True)
+
     tokenize_to_parquet(cfg.output_dir, cfg.num_worker)
 
     data = load_dataset(
