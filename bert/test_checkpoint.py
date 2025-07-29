@@ -14,29 +14,86 @@ import argparse
 import time
 import json
 import numpy as np
+import sys
+import os
 from pathlib import Path
 from transformers import BertForMaskedLM, BertTokenizer, DataCollatorForLanguageModeling
 from datasets import load_from_disk
 import matplotlib.pyplot as plt
 
+# プロジェクトのsrcディレクトリをパスに追加
+project_root = Path(__file__).parent.parent
+src_path = project_root / "src"
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 
-def load_model_and_tokenizer(checkpoint_path):
+
+def load_domain_tokenizer(domain, vocab_path=None):
+    """ドメイン特化のトークナイザーをロードする"""
+    try:
+        if domain == "compounds":
+            from compounds.utils.tokenizer import CompoundsTokenizer
+            vocab_file = vocab_path or "assets/molecules/vocab.txt"
+            if not os.path.exists(vocab_file):
+                print(f"語彙ファイルが見つかりません: {vocab_file}")
+                return None
+            return CompoundsTokenizer(vocab_file, 256)
+        
+        elif domain == "molecule_nl":
+            from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
+            return MoleculeNatLangTokenizer()
+        
+        elif domain == "genome":
+            # ゲノム配列用のトークナイザー（実装に応じて調整）
+            print("ゲノム配列用のトークナイザーは現在サポートされていません")
+            return None
+        
+        elif domain == "rna":
+            # RNA配列用のトークナイザー（実装に応じて調整）
+            print("RNA配列用のトークナイザーは現在サポートされていません")
+            return None
+        
+        else:
+            print(f"未知のドメイン: {domain}")
+            return None
+            
+    except ImportError as e:
+        print(f"ドメイン特化トークナイザーのインポートに失敗: {e}")
+        return None
+    except Exception as e:
+        print(f"トークナイザーの初期化に失敗: {e}")
+        return None
+
+
+def load_model_and_tokenizer(checkpoint_path, domain=None, vocab_path=None):
     """チェックポイントからBERTモデルとトークナイザーをロードする"""
     try:
         print(f"チェックポイントをロードしています: {checkpoint_path}")
         model = BertForMaskedLM.from_pretrained(checkpoint_path)
         
-        # トークナイザーの読み込み（チェックポイントからまたは設定ファイルから）
+        tokenizer = None
+        
+        # 最初にチェックポイントからトークナイザーを読み込み試行
         try:
             tokenizer = BertTokenizer.from_pretrained(checkpoint_path)
+            print("✓ チェックポイントからトークナイザーを読み込みました")
         except Exception as e:
             print(f"チェックポイントからトークナイザーを読み込めませんでした: {e}")
-            print("設定ファイルからトークナイザーを読み込みます...")
-            # 設定に基づいてトークナイザーを初期化（必要に応じて調整）
-            tokenizer = None
+        
+        # ドメイン特化トークナイザーを試行
+        if tokenizer is None and domain:
+            print(f"ドメイン特化トークナイザーを読み込み中: {domain}")
+            tokenizer = load_domain_tokenizer(domain, vocab_path)
+            if tokenizer:
+                print(f"✓ {domain}用のトークナイザーを読み込みました")
+        
+        # どのトークナイザーも読み込めない場合
+        if tokenizer is None:
+            print("⚠ トークナイザーが利用できません。一部のテストがスキップされます。")
             
-        print("✓ モデルとトークナイザーの読み込み成功")
+        print("✓ モデルの読み込み成功")
         return model, tokenizer
+        
     except Exception as e:
         print(f"✗ モデルの読み込み中にエラーが発生しました: {e}")
         return None, None
@@ -57,15 +114,32 @@ def test_basic_functionality(model, tokenizer, test_texts):
     for i, text in enumerate(test_texts):
         print(f"\nテスト {i+1}: {text}")
         
-        # テキストをトークナイズ
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-        
-        # 推論実行
-        with torch.no_grad():
-            outputs = model(**inputs)
-        
-        print(f"  ✓ 推論成功 - 出力形状: {outputs.logits.shape}")
+        try:
+            # ドメイン特化トークナイザーの場合
+            if hasattr(tokenizer, 'tokenize_text'):
+                # CompoundsTokenizerなどの場合
+                if hasattr(tokenizer, 'encode'):
+                    input_ids = tokenizer.encode(text)
+                    input_ids = torch.tensor([input_ids]).to(device)
+                    
+                    with torch.no_grad():
+                        outputs = model(input_ids)
+                    
+                    print(f"  ✓ 推論成功 - 出力形状: {outputs.logits.shape}")
+                else:
+                    print(f"  ! エンコード機能がサポートされていません")
+            else:
+                # 標準のBertTokenizerの場合
+                inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                
+                with torch.no_grad():
+                    outputs = model(**inputs)
+                
+                print(f"  ✓ 推論成功 - 出力形状: {outputs.logits.shape}")
+                
+        except Exception as e:
+            print(f"  ✗ 推論エラー: {e}")
 
 
 def test_masked_language_modeling(model, tokenizer, test_texts):
@@ -81,36 +155,87 @@ def test_masked_language_modeling(model, tokenizer, test_texts):
     model.eval()
     
     for text in test_texts[:2]:  # 最初の2つのテキストでテスト
-        # マスクトークンを挿入
-        tokens = tokenizer.tokenize(text)
-        if len(tokens) > 3:
-            # 中間のトークンをマスク
-            mask_idx = len(tokens) // 2
-            original_token = tokens[mask_idx]
-            tokens[mask_idx] = tokenizer.mask_token
-            masked_text = tokenizer.convert_tokens_to_string(tokens)
-            
-            print(f"\n元のテキスト: {text}")
-            print(f"マスクされたテキスト: {masked_text}")
-            
-            # 予測実行
-            inputs = tokenizer(masked_text, return_tensors="pt")
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-            
-            with torch.no_grad():
-                outputs = model(**inputs)
-            
-            # マスク位置の予測を取得
-            mask_token_index = torch.where(inputs["input_ids"] == tokenizer.mask_token_id)[1]
-            if len(mask_token_index) > 0:
-                mask_token_logits = outputs.logits[0, mask_token_index[0], :]
-                top_5_tokens = torch.topk(mask_token_logits, 5, dim=-1)
-                
-                print(f"元のトークン: {original_token}")
-                print("予測されたトップ5トークン:")
-                for i, (score, token_id) in enumerate(zip(top_5_tokens.values, top_5_tokens.indices)):
-                    token = tokenizer.decode([token_id])
-                    print(f"  {i+1}. {token} (スコア: {score.item():.3f})")
+        try:
+            # ドメイン特化トークナイザーの場合の処理
+            if hasattr(tokenizer, 'tokenize_text'):
+                # CompoundsTokenizerなどの場合
+                tokens = tokenizer.tokenize(text)
+                if len(tokens) > 3:
+                    # 中間のトークンをマスク
+                    mask_idx = len(tokens) // 2
+                    original_token = tokens[mask_idx]
+                    tokens[mask_idx] = '[MASK]'  # マスクトークン
+                    
+                    # トークンを文字列に戻す
+                    masked_text = ''.join(tokens)
+                    
+                    print(f"\n元のテキスト: {text}")
+                    print(f"マスクされたテキスト: {masked_text}")
+                    
+                    # エンコード
+                    try:
+                        if hasattr(tokenizer, 'encode'):
+                            input_ids = tokenizer.encode(masked_text)
+                            input_ids = torch.tensor([input_ids]).to(device)
+                        else:
+                            print("エンコード機能がサポートされていません")
+                            continue
+                            
+                        with torch.no_grad():
+                            outputs = model(input_ids)
+                        
+                        # マスク位置を探す
+                        mask_token_id = tokenizer.vocab.get('[MASK]', None)
+                        if mask_token_id is not None:
+                            mask_positions = torch.where(input_ids == mask_token_id)[1]
+                            if len(mask_positions) > 0:
+                                mask_token_logits = outputs.logits[0, mask_positions[0], :]
+                                top_5_tokens = torch.topk(mask_token_logits, 5, dim=-1)
+                                
+                                print(f"元のトークン: {original_token}")
+                                print("予測されたトップ5トークン:")
+                                for i, (score, token_id) in enumerate(zip(top_5_tokens.values, top_5_tokens.indices)):
+                                    token = tokenizer.ids_to_tokens.get(token_id.item(), '[UNK]')
+                                    print(f"  {i+1}. {token} (スコア: {score.item():.3f})")
+                        
+                    except Exception as e:
+                        print(f"エンコード/推論エラー: {e}")
+                        
+            else:
+                # 標準のBertTokenizerの場合
+                tokens = tokenizer.tokenize(text)
+                if len(tokens) > 3:
+                    # 中間のトークンをマスク
+                    mask_idx = len(tokens) // 2
+                    original_token = tokens[mask_idx]
+                    tokens[mask_idx] = tokenizer.mask_token
+                    masked_text = tokenizer.convert_tokens_to_string(tokens)
+                    
+                    print(f"\n元のテキスト: {text}")
+                    print(f"マスクされたテキスト: {masked_text}")
+                    
+                    # 予測実行
+                    inputs = tokenizer(masked_text, return_tensors="pt")
+                    inputs = {k: v.to(device) for k, v in inputs.items()}
+                    
+                    with torch.no_grad():
+                        outputs = model(**inputs)
+                    
+                    # マスク位置の予測を取得
+                    mask_token_index = torch.where(inputs["input_ids"] == tokenizer.mask_token_id)[1]
+                    if len(mask_token_index) > 0:
+                        mask_token_logits = outputs.logits[0, mask_token_index[0], :]
+                        top_5_tokens = torch.topk(mask_token_logits, 5, dim=-1)
+                        
+                        print(f"元のトークン: {original_token}")
+                        print("予測されたトップ5トークン:")
+                        for i, (score, token_id) in enumerate(zip(top_5_tokens.values, top_5_tokens.indices)):
+                            token = tokenizer.decode([token_id])
+                            print(f"  {i+1}. {token} (スコア: {score.item():.3f})")
+                            
+        except Exception as e:
+            print(f"MLMテスト中にエラー: {e}")
+            continue
 
 
 def test_embedding_generation(model, tokenizer, test_texts):
@@ -260,6 +385,9 @@ def main():
     parser = argparse.ArgumentParser(description="BERTチェックポイントの包括的テストスクリプト")
     parser.add_argument("--checkpoint_path", required=True, help="テストするチェックポイントのパス")
     parser.add_argument("--dataset_path", help="評価用データセットのパス（オプション）")
+    parser.add_argument("--domain", choices=["compounds", "molecule_nl", "genome", "rna"], 
+                       help="使用するドメイン（compounds, molecule_nl, genome, rna）")
+    parser.add_argument("--vocab_path", help="語彙ファイルのパス（compoundsドメイン用）")
     parser.add_argument("--test_texts", nargs="*", 
                        default=[
                            "これはテストサンプルです。",
@@ -274,11 +402,15 @@ def main():
     
     print("=== BERTチェックポイント テストスクリプト ===")
     print(f"チェックポイント: {args.checkpoint_path}")
+    if args.domain:
+        print(f"ドメイン: {args.domain}")
+    if args.vocab_path:
+        print(f"語彙ファイル: {args.vocab_path}")
     
     results = {}
     
     # モデルとトークナイザーのロード
-    model, tokenizer = load_model_and_tokenizer(args.checkpoint_path)
+    model, tokenizer = load_model_and_tokenizer(args.checkpoint_path, args.domain, args.vocab_path)
     
     if model is None:
         print("モデルの読み込みに失敗したため、テストを終了します。")
