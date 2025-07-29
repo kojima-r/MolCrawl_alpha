@@ -53,10 +53,10 @@ def load_domain_tokenizer(domain, vocab_path=None):
             return create_genome_tokenizer(model_path)
 
         elif domain == "protein_sequence":
-            # タンパク質配列用のESMトークナイザー
-            from protein_sequence.dataset.tokenizer import EsmSequenceTokenizer
+            # タンパク質配列用のBERT互換ESMトークナイザー
+            from protein_sequence.utils.bert_tokenizer import create_bert_protein_tokenizer
             
-            return EsmSequenceTokenizer()
+            return create_bert_protein_tokenizer()
 
         elif domain == "rna":
             # RNA配列用のトークナイザー（実装に応じて調整）
