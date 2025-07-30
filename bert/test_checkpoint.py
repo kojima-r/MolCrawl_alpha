@@ -41,9 +41,10 @@ def load_domain_tokenizer(domain, vocab_path=None):
             return CompoundsTokenizer(vocab_file, 256)
 
         elif domain == "molecule_nl":
-            from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
+            # 分子関連自然言語用のBERT互換トークナイザー
+            from molecule_related_nl.utils.bert_tokenizer import create_bert_molecule_nl_tokenizer
 
-            return MoleculeNatLangTokenizer()
+            return create_bert_molecule_nl_tokenizer()
 
         elif domain == "genome":
             # ゲノム配列用のSentencePieceトークナイザー
