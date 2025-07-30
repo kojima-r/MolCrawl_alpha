@@ -59,9 +59,10 @@ def load_domain_tokenizer(domain, vocab_path=None):
             return create_bert_protein_tokenizer()
 
         elif domain == "rna":
-            # RNA配列用のトークナイザー（実装に応じて調整）
-            print("RNA配列用のトークナイザーは現在サポートされていません")
-            return None
+            # RNA配列用のBERT互換トークナイザー
+            from rna.utils.bert_tokenizer import create_bert_rna_tokenizer
+            
+            return create_bert_rna_tokenizer()
 
         else:
             print(f"未知のドメイン: {domain}")
@@ -125,8 +126,19 @@ def test_basic_functionality(model, tokenizer, test_texts):
         print(f"\nテスト {i+1}: {text}")
 
         try:
+            # BERT互換トークナイザーの場合（標準のBertTokenizerまたはカスタムラッパー）
+            if hasattr(tokenizer, '__call__') and hasattr(tokenizer, 'model_input_names'):
+                # BERT互換のラッパー（RNA, Protein, Genome など）
+                inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+
+                with torch.no_grad():
+                    outputs = model(**inputs)
+
+                print(f"  ✓ 推論成功 - 出力形状: {outputs.logits.shape}")
+                
             # ドメイン特化トークナイザーの場合
-            if hasattr(tokenizer, "tokenize_text"):
+            elif hasattr(tokenizer, "tokenize_text"):
                 # CompoundsTokenizerなどの場合
                 if hasattr(tokenizer, "encode"):
                     input_ids = tokenizer.encode(text)
@@ -166,8 +178,50 @@ def test_masked_language_modeling(model, tokenizer, test_texts):
 
     for text in test_texts[:2]:  # 最初の2つのテキストでテスト
         try:
-            # ドメイン特化トークナイザーの場合の処理
-            if hasattr(tokenizer, "tokenize_text"):
+            # BERT互換トークナイザーの場合（標準またはカスタムラッパー）
+            if hasattr(tokenizer, '__call__') and hasattr(tokenizer, 'model_input_names'):
+                # 標準のBertTokenizerまたはBERT互換ラッパーの場合
+                tokens = tokenizer.tokenize(text)
+                if len(tokens) > 3:
+                    # 中間のトークンをマスク
+                    mask_idx = len(tokens) // 2
+                    original_token = tokens[mask_idx]
+                    tokens[mask_idx] = tokenizer.mask_token if hasattr(tokenizer, 'mask_token') else "[MASK]"
+                    
+                    # トークンから文字列を再構築
+                    if hasattr(tokenizer, 'convert_tokens_to_string'):
+                        masked_text = tokenizer.convert_tokens_to_string(tokens)
+                    else:
+                        masked_text = " ".join(tokens)
+
+                    print(f"\n元のテキスト: {text}")
+                    print(f"マスクされたテキスト: {masked_text}")
+
+                    # 予測実行
+                    inputs = tokenizer(masked_text, return_tensors="pt", max_length=512, truncation=True)
+                    inputs = {k: v.to(device) for k, v in inputs.items()}
+
+                    with torch.no_grad():
+                        outputs = model(**inputs)
+
+                    # マスク位置の予測を取得
+                    mask_token_id = getattr(tokenizer, 'mask_token_id', 4)  # デフォルトは4
+                    mask_token_index = torch.where(inputs["input_ids"] == mask_token_id)[1]
+                    if len(mask_token_index) > 0:
+                        mask_token_logits = outputs.logits[0, mask_token_index[0], :]
+                        top_5_tokens = torch.topk(mask_token_logits, 5, dim=-1)
+
+                        print(f"元のトークン: {original_token}")
+                        print("予測されたトップ5トークン:")
+                        for i, (score, token_id) in enumerate(zip(top_5_tokens.values, top_5_tokens.indices)):
+                            if hasattr(tokenizer, 'decode'):
+                                token = tokenizer.decode([token_id], skip_special_tokens=True)
+                            else:
+                                token = f"Token_{token_id.item()}"
+                            print(f"  {i+1}. {token} (スコア: {score.item():.3f})")
+
+            # ドメイン特化トークナイザーの場合
+            elif hasattr(tokenizer, "tokenize_text"):
                 # CompoundsTokenizerなどの場合
                 tokens = tokenizer.tokenize(text)
                 if len(tokens) > 3:
@@ -263,16 +317,21 @@ def test_embedding_generation(model, tokenizer, test_texts):
     embeddings = []
 
     for text in test_texts[:3]:  # 最初の3つのテキストでテスト
-        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        try:
+            inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+            inputs = {k: v.to(device) for k, v in inputs.items()}
 
-        with torch.no_grad():
-            outputs = model.bert(**inputs)  # BertForMaskedLMの場合、bertレイヤーにアクセス
-            # [CLS]トークンのエンベディングを取得
-            cls_embedding = outputs.last_hidden_state[0, 0, :].cpu().numpy()
-            embeddings.append(cls_embedding)
+            with torch.no_grad():
+                outputs = model.bert(**inputs)  # BertForMaskedLMの場合、bertレイヤーにアクセス
+                # [CLS]トークンのエンベディングを取得
+                cls_embedding = outputs.last_hidden_state[0, 0, :].cpu().numpy()
+                embeddings.append(cls_embedding)
 
-        print(f"✓ エンベディング生成成功 - 形状: {cls_embedding.shape}")
+            print(f"✓ エンベディング生成成功 - 形状: {cls_embedding.shape}")
+            
+        except Exception as e:
+            print(f"エンベディング生成エラー: {e}")
+            continue
 
     if len(embeddings) > 1:
         # エンベディング間の類似度を計算
@@ -306,17 +365,21 @@ def test_batch_processing(model, tokenizer, test_texts):
 
         batch_texts = test_texts[:batch_size]
 
-        start_time = time.time()
-        inputs = tokenizer(batch_texts, return_tensors="pt", padding=True, truncation=True)
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        try:
+            start_time = time.time()
+            inputs = tokenizer(batch_texts, return_tensors="pt", padding=True, truncation=True, max_length=512)
+            inputs = {k: v.to(device) for k, v in inputs.items()}
 
-        with torch.no_grad():
-            outputs = model(**inputs)
+            with torch.no_grad():
+                outputs = model(**inputs)
 
-        end_time = time.time()
-        processing_time = end_time - start_time
+            end_time = time.time()
+            processing_time = end_time - start_time
 
-        print(f"✓ バッチサイズ {batch_size}: {processing_time:.3f}秒")
+            print(f"✓ バッチサイズ {batch_size}: {processing_time:.3f}秒")
+            
+        except Exception as e:
+            print(f"✗ バッチサイズ {batch_size}: エラー - {e}")
 
 
 def test_model_performance(model, tokenizer, dataset_path=None):
@@ -398,17 +461,63 @@ def main():
     parser.add_argument(
         "--test_texts",
         nargs="*",
-        default=[
-            "これはテストサンプルです。",
-            "分子の構造を解析します。",
-            "機械学習モデルの性能を評価中。",
-            "自然言語処理の技術が進歩している。",
-            "データサイエンスは重要な分野です。",
-        ],
+        default=None,
         help="テスト用のサンプルテキスト",
     )
 
     args = parser.parse_args()
+
+    # ドメイン固有のデフォルトテストテキストを設定
+    if args.test_texts is None:
+        if args.domain == "compounds":
+            args.test_texts = [
+                "CC(C)C",
+                "CCO",
+                "CC(=O)O",
+                "C1=CC=CC=C1",
+                "CCCCCCCCCCCCCCCCCC(=O)O",
+            ]
+        elif args.domain == "protein_sequence":
+            args.test_texts = [
+                "MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG",
+                "MKWVTFISLLLLFSSAYSRGVFRRDTHKSEIAHRFKDLGEEHFKGLVLIAFSQYLQQCPFDEHVK",
+                "MHHHHHHSSGVDLGTENLYFQSMKTFRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDI",
+                "AKLRDPSFDENIQKALKIAKQLQAEKQAKKQVEQIKLKQQKQVKLAKQEAKLQELQEKLQAKK",
+                "MGSSHHHHHHSSGLVPRGSHMKTFRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIL",
+            ]
+        elif args.domain == "genome":
+            args.test_texts = [
+                "ATCGATCGATCGATCG",
+                "GCTAGCTAGCTAGCTA", 
+                "TTTTAAAACCCCGGGG",
+                "AAATTTCCCGGGAAATTTCCCGGG",
+                "ATGCATGCATGCATGC",
+            ]
+        elif args.domain == "rna":
+            args.test_texts = [
+                "cell_type_B_cell",
+                "cell_type_T_cell", 
+                "tissue_brain",
+                "tissue_liver",
+                "gene_expression_high",
+            ]
+        elif args.domain == "molecule_nl":
+            args.test_texts = [
+                "この分子は抗がん作用を示す。",
+                "薬剤の効果を測定します。",
+                "分子構造解析を実行中。",
+                "化学反応のメカニズム。",
+                "バイオマーカーの特定。",
+            ]
+        else:
+            # デフォルト
+            args.test_texts = [
+                "これはテストサンプルです。",
+                "分子の構造を解析します。",
+                "機械学習モデルの性能を評価中。",
+                "自然言語処理の技術が進歩している。",
+                "データサイエンスは重要な分野です。",
+            ]
 
     print("=== BERTチェックポイント テストスクリプト ===")
     print(f"チェックポイント: {args.checkpoint_path}")
