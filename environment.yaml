@@ -16,6 +16,7 @@ dependencies:
   - rich=12.6.0
   - typing-extensions=4.4.0
   - dask=2024.2.1
+  - matplotlib=3.9.2
   - pip:
     - accelerate==0.34.2
     - ncbi-genome-download==0.3.3

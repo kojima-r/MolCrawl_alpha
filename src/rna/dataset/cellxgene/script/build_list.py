@@ -32,12 +32,12 @@ def save_tissue_obs(target_tissue, census, dir_path: Path) -> None:
         fp.writelines([f"{_id}\n" for _id in tissue_obs["soma_joinid"]])
 
 
-def build_list(output_directory):
+def build_list(output_directory, version):
     output_directory = Path(output_directory)
     data_directory = output_directory / "metadata_preparation_dir"
     data_directory.mkdir(exist_ok=True, parents=True)
 
-    census = cellxgene_census.open_soma()
+    census = cellxgene_census.open_soma(census_version=version)
     tissue_list = get_tissue_list(census)
     with open(data_directory.parent / "tissue_list.tsv", "w") as fp:
         fp.writelines(tissue_list)
