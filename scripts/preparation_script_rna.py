@@ -71,5 +71,5 @@ if __name__ == "__main__":
         vocab = json.load(file)
     logger.info(f"Size of the vocabulary: {len(vocab)}")
 
-    logger.info(f"Number of tokens: {sum(data['num_tokens'])}")
+    logger.info(f"Number of tokens: {sum(data['token_count'])}")
     create_distribution_plot(data)
