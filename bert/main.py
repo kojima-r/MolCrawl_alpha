@@ -55,7 +55,13 @@ else:
 
 model = BertForMaskedLM(config=model_config)
 
-data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=True, mlm_probability=0.2)
+# Use custom data collator if defined in config, otherwise use default
+if "data_collator" in globals():
+    print("Using custom data collator from config")
+    # data_collator is already defined in the config file
+else:
+    print("Using default DataCollatorForLanguageModeling")
+    data_collator = DataCollatorForLanguageModeling(tokenizer=globals()["tokenizer"], mlm=True, mlm_probability=0.2)
 
 training_args = TrainingArguments(
     output_dir=model_path,  # output directory to where save model checkpoint
@@ -78,6 +84,25 @@ training_args = TrainingArguments(
 
 train_dataset = load_from_disk(dataset_dir)["train"]
 test_dataset = load_from_disk(dataset_dir)["test"].select(range(min(10000, load_from_disk(dataset_dir)["test"].num_rows)))  # for testing purposes, select only 10000 samples
+
+# Apply preprocessing function if it exists in config
+if "preprocess_function" in globals() and callable(globals()["preprocess_function"]):
+    print("Applying preprocessing function to add attention_mask...")
+    train_dataset = train_dataset.map(globals()["preprocess_function"], batched=True)
+    test_dataset = test_dataset.map(globals()["preprocess_function"], batched=True)
+    print("Preprocessing completed.")
+    print("Train dataset columns after preprocessing:", train_dataset.column_names)
+    print("Test dataset columns after preprocessing:", test_dataset.column_names)
+    
+    # Verify attention_mask was added
+    sample = train_dataset[0]
+    print("Sample keys:", list(sample.keys()))
+    if "attention_mask" in sample:
+        print("✓ attention_mask successfully added")
+    else:
+        print("✗ attention_mask not found after preprocessing")
+else:
+    print("No preprocessing function found or not callable.")
 
 
 trainer = Trainer(
