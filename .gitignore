@@ -8,6 +8,8 @@ __pycache__
 *.json
 *.txt
 
+!package.json
+
 download_dir
 extracted_dir
 zinc15_download_dir
