@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     # process4
     logger.info("👉Process4 : Converting raw text to Parquet...")
-    #raw_to_parquet(GENOME_SEQUENCE_DIR)
+    raw_to_parquet(GENOME_SEQUENCE_DIR)
 
     # process5
     logger.info("👉Process5 : Loading Parquet dataset...")
