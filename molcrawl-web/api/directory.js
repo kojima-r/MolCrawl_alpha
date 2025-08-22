@@ -1,6 +1,23 @@
 const fs = require('fs').promises;
 const path = require('path');
-const model_dir = path.resolve(__dirname, '../../learning_source_202508');
+const { execSync } = require('child_process');
+
+// paths.pyからLEARNING_SOURCE_DIRを動的に取得
+function getLearningSourcePath() {
+  try {
+    const scriptPath = path.join(__dirname, '..', 'get_learning_source_dir.py');
+    const projectRoot = path.resolve(__dirname, '../..');
+    const result = execSync(`cd "${projectRoot}" && python3 "${scriptPath}"`, { encoding: 'utf8' });
+    const config = JSON.parse(result.trim());
+    return config.absolute_path;
+  } catch (error) {
+    console.error('Error getting learning source path from paths.py:', error.message);
+    // フォールバック: デフォルトパス
+    return path.resolve(__dirname, '../../learning_source_20250818');
+  }
+}
+
+const model_dir = getLearningSourcePath();
 
 // デバッグ: model_dirの値を確認
 console.log('directory.js loaded with model_dir:', model_dir);

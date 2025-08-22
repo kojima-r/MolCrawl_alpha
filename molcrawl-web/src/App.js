@@ -281,7 +281,6 @@ function App() {
         <div className="directory-browser">
           <div className="tree-container">
             <div className="tree-header">
-              <h2>📁 learning_source_202508</h2>
               <div className="controls">
                 <button 
                   className={`mode-btn ${viewMode === 'lazy' ? 'active' : ''}`}
