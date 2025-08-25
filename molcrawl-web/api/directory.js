@@ -1,6 +1,24 @@
 const fs = require('fs').promises;
 const path = require('path');
-const model_dir = path.resolve(__dirname, '../../learning_source_202508');
+const { execSync } = require('child_process');
+const { checkZincFiles } = require('./zinc-checker');
+
+// paths.pyからLEARNING_SOURCE_DIRを動的に取得
+function getLearningSourcePath() {
+  try {
+    const scriptPath = path.join(__dirname, '..', 'get_learning_source_dir.py');
+    const projectRoot = path.resolve(__dirname, '../..');
+    const result = execSync(`cd "${projectRoot}" && python3 "${scriptPath}"`, { encoding: 'utf8' });
+    const config = JSON.parse(result.trim());
+    return config.absolute_path;
+  } catch (error) {
+    console.error('Error getting learning source path from paths.py:', error.message);
+    // フォールバック: デフォルトパス
+    return path.resolve(__dirname, '../../learning_source_20250818');
+  }
+}
+
+const model_dir = getLearningSourcePath();
 
 // デバッグ: model_dirの値を確認
 console.log('directory.js loaded with model_dir:', model_dir);
@@ -373,9 +391,54 @@ async function getFullDirectoryTree(req, res) {
   }
 }
 
+// ZINC20データのチェック機能
+async function checkZincData(req, res) {
+  try {
+    // compounds/dataset/organix13/zinc/zinc_complete/ のパスを構築
+    const zincBasePath = path.join(model_dir, 'compounds', 'dataset', 'organix13', 'zinc', 'zinc_complete');
+    
+    console.log('Checking ZINC data at:', zincBasePath);
+    
+    // ディレクトリが存在するかチェック
+    try {
+      await fs.access(zincBasePath);
+    } catch (error) {
+      return res.json({
+        success: true,
+        data: {
+          exists: false,
+          message: 'ZINC20データディレクトリが見つかりません',
+          path: zincBasePath
+        }
+      });
+    }
+
+    // ZINCファイルをチェック
+    const checkResults = await checkZincFiles(zincBasePath);
+    
+    res.json({
+      success: true,
+      data: {
+        exists: true,
+        path: zincBasePath,
+        ...checkResults,
+        lastChecked: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('ZINC データチェックエラー:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+
 module.exports = {
   getDirectoryStructure,
   expandDirectory,
   getFullDirectoryTree,
+  checkZincData,
   formatFileSize
 };

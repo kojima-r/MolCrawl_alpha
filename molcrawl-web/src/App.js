@@ -1,5 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import ZincChecker from './ZincChecker';
+
+// データセットタブの定義
+const DATASET_TABS = [
+  {
+    id: 'compounds',
+    name: 'Compounds',
+    icon: '🧪',
+    description: '化合物データセット',
+    path: 'compounds'
+  },
+  {
+    id: 'genome_sequence',
+    name: 'Genome Sequence',
+    icon: '🧬',
+    description: 'ゲノム配列データセット',
+    path: 'genome_sequence'
+  },
+  {
+    id: 'protein_sequence',
+    name: 'Protein Sequence',
+    icon: '🧬',
+    description: 'タンパク質配列データセット',
+    path: 'protein_sequence'
+  },
+  {
+    id: 'rna',
+    name: 'RNA',
+    icon: '🧬',
+    description: 'RNAデータセット',
+    path: 'rna'
+  },
+  {
+    id: 'molecule_nl',
+    name: 'Molecule NL',
+    icon: '💬',
+    description: '分子自然言語データセット',
+    path: 'molecule_nl'
+  }
+];
 
 // APIから実際のディレクトリ構造を取得
 const fetchDirectoryStructure = async (path = null, recursive = false, maxDepth = 3) => {
@@ -120,76 +160,139 @@ const DirectoryTree = ({ data, expandedDirs, onToggle, level = 0 }) => {
 };
 
 function App() {
-  const [directoryData, setDirectoryData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [expandedDirs, setExpandedDirs] = useState(new Set());
-  const [expandingDirs, setExpandingDirs] = useState(new Set());
+  const [activeTab, setActiveTab] = useState('compounds');
+  const [directoryData, setDirectoryData] = useState({});
+  const [loading, setLoading] = useState({});
+  const [error, setError] = useState({});
+  const [expandedDirs, setExpandedDirs] = useState({});
+  const [expandingDirs, setExpandingDirs] = useState({});
   const [viewMode, setViewMode] = useState('lazy'); // 'lazy' | 'recursive' | 'full'
   const [maxDepth, setMaxDepth] = useState(3);
 
-  // 初期データの読み込み
-  const loadInitialData = async () => {
-    setLoading(true);
-    setError(null);
+  // 特定のタブのデータを取得するためのヘルパー関数
+  const getTabData = (tabId) => directoryData[tabId] || null;
+  const getTabLoading = (tabId) => loading[tabId] || false;
+  const getTabError = (tabId) => error[tabId] || null;
+  const getTabExpandedDirs = (tabId) => expandedDirs[tabId] || new Set();
+  const getTabExpandingDirs = (tabId) => expandingDirs[tabId] || new Set();
+
+  // タブごとの状態を更新するヘルパー関数
+  const updateTabData = (tabId, data) => {
+    setDirectoryData(prev => ({ ...prev, [tabId]: data }));
+  };
+
+  const updateTabLoading = (tabId, isLoading) => {
+    setLoading(prev => ({ ...prev, [tabId]: isLoading }));
+  };
+
+  const updateTabError = (tabId, errorMsg) => {
+    setError(prev => ({ ...prev, [tabId]: errorMsg }));
+  };
+
+  const updateTabExpandedDirs = (tabId, dirs) => {
+    setExpandedDirs(prev => ({ ...prev, [tabId]: dirs }));
+  };
+
+  const updateTabExpandingDirs = (tabId, dirs) => {
+    setExpandingDirs(prev => ({ ...prev, [tabId]: dirs }));
+  };
+
+  // 初期データの読み込み（特定のタブ用）
+  const loadInitialData = async (tabId) => {
+    const tabInfo = DATASET_TABS.find(tab => tab.id === tabId);
+    if (!tabInfo) return;
+
+    updateTabLoading(tabId, true);
+    updateTabError(tabId, null);
     try {
-      const data = await fetchDirectoryStructure();
-      setDirectoryData(data);
+      const data = await fetchDirectoryStructure(tabInfo.path);
+      updateTabData(tabId, data);
     } catch (err) {
-      console.error('初期データ読み込みエラー:', err);
-      setError(err.message);
+      console.error(`初期データ読み込みエラー (${tabId}):`, err);
+      updateTabError(tabId, err.message);
     } finally {
-      setLoading(false);
+      updateTabLoading(tabId, false);
     }
   };
 
-  // 完全なツリーの読み込み
-  const loadFullTree = async () => {
-    setLoading(true);
-    setError(null);
+  // 完全なツリーの読み込み（特定のタブ用）
+  const loadFullTree = async (tabId) => {
+    const tabInfo = DATASET_TABS.find(tab => tab.id === tabId);
+    if (!tabInfo) return;
+
+    updateTabLoading(tabId, true);
+    updateTabError(tabId, null);
     try {
       const data = await fetchFullDirectoryTree(maxDepth, true);
-      setDirectoryData(data);
+      // ルートパスからタブのパスにフィルタリング
+      const filteredData = filterDataByPath(data, tabInfo.path);
+      updateTabData(tabId, filteredData);
       setViewMode('full');
     } catch (err) {
-      console.error('完全ツリー読み込みエラー:', err);
-      setError(err.message);
+      console.error(`完全ツリー読み込みエラー (${tabId}):`, err);
+      updateTabError(tabId, err.message);
     } finally {
-      setLoading(false);
+      updateTabLoading(tabId, false);
     }
+  };
+
+  // データをパスでフィルタリングするヘルパー関数
+  const filterDataByPath = (data, targetPath) => {
+    if (!data || !targetPath) return data;
+    // 実装は後で詳細化
+    return data;
   };
 
   // 再帰的展開モードの切り替え
   const toggleRecursiveMode = async () => {
     if (viewMode === 'recursive') {
       setViewMode('lazy');
-      loadInitialData();
+      loadInitialData(activeTab);
     } else {
       setViewMode('recursive');
-      setExpandedDirs(new Set());
+      updateTabExpandedDirs(activeTab, new Set());
     }
   };
 
+  // タブ切り替え時の処理
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    // タブにデータがない場合のみ読み込み
+    if (!getTabData(tabId)) {
+      loadInitialData(tabId);
+    }
+  };
+
+  // リフレッシュ処理
+  const handleRefresh = () => {
+    loadInitialData(activeTab);
+  };
+
   useEffect(() => {
-    loadInitialData();
+    // 初期タブのデータを読み込み
+    loadInitialData(activeTab);
   }, []);
 
-  // ディレクトリの展開/折りたたみ
+
+  // ディレクトリの展開/折りたたみ（タブ対応）
   const handleToggleDirectory = async (path, item) => {
-    const newExpandedDirs = new Set(expandedDirs);
+    const currentExpandedDirs = getTabExpandedDirs(activeTab);
+    const currentExpandingDirs = getTabExpandingDirs(activeTab);
+    const newExpandedDirs = new Set(currentExpandedDirs);
     
-    if (expandedDirs.has(path)) {
+    if (currentExpandedDirs.has(path)) {
       // 折りたたみ
       newExpandedDirs.delete(path);
-      setExpandedDirs(newExpandedDirs);
+      updateTabExpandedDirs(activeTab, newExpandedDirs);
     } else {
       // 展開
       newExpandedDirs.add(path);
-      setExpandedDirs(newExpandedDirs);
+      updateTabExpandedDirs(activeTab, newExpandedDirs);
       
       // 子要素がまだ読み込まれていない場合は読み込む
       if (item.children.length === 0 && item.count > 0 && viewMode !== 'full') {
-        setExpandingDirs(new Set([...expandingDirs, path]));
+        const newExpandingDirs = new Set([...currentExpandingDirs, path]);
+        updateTabExpandingDirs(activeTab, newExpandingDirs);
         
         try {
           const isRecursive = viewMode === 'recursive';
@@ -209,30 +312,28 @@ function App() {
             return data;
           };
           
-          setDirectoryData(prevData => updateChildren(prevData));
+          const currentData = getTabData(activeTab);
+          updateTabData(activeTab, updateChildren(currentData));
         } catch (err) {
           console.error('子ディレクトリ読み込みエラー:', err);
           // エラーの場合は展開状態を元に戻す
           newExpandedDirs.delete(path);
-          setExpandedDirs(newExpandedDirs);
+          updateTabExpandedDirs(activeTab, newExpandedDirs);
         } finally {
-          setExpandingDirs(new Set([...expandingDirs].filter(p => p !== path)));
+          const finalExpandingDirs = new Set([...currentExpandingDirs].filter(p => p !== path));
+          updateTabExpandingDirs(activeTab, finalExpandingDirs);
         }
       }
     }
   };
 
-  // リフレッシュ
-  const handleRefresh = () => {
-    setExpandedDirs(new Set());
-    if (viewMode === 'full') {
-      loadFullTree();
-    } else {
-      loadInitialData();
-    }
-  };
+  // 現在のタブの状態に基づく条件レンダリング用の変数
+  const currentTabData = getTabData(activeTab);
+  const currentTabLoading = getTabLoading(activeTab);
+  const currentTabError = getTabError(activeTab);
+  const currentTabExpandedDirs = getTabExpandedDirs(activeTab);
 
-  if (loading) {
+  if (currentTabLoading) {
     return (
       <div className="App">
         <header className="App-header">
@@ -251,7 +352,7 @@ function App() {
     );
   }
 
-  if (error) {
+  if (currentTabError) {
     return (
       <div className="App">
         <header className="App-header">
@@ -262,7 +363,7 @@ function App() {
           <div className="directory-browser">
             <div className="error">
               <span>❌ エラーが発生しました</span>
-              <span>{error}</span>
+              <span>{currentTabError}</span>
               <button onClick={handleRefresh}>再試行</button>
             </div>
           </div>
@@ -275,64 +376,97 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>🧬 MolCrawl Dataset Browser</h1>
-        <p>Fundamental Models Dataset Explorer - 再帰的ディレクトリ探索</p>
+        <p>Fundamental Models Dataset Explorer - 深層学習モデルデータセット</p>
       </header>
       <main className="App-main">
         <div className="directory-browser">
-          <div className="tree-container">
-            <div className="tree-header">
-              <h2>📁 learning_source_202508</h2>
-              <div className="controls">
-                <button 
-                  className={`mode-btn ${viewMode === 'lazy' ? 'active' : ''}`}
-                  onClick={() => {setViewMode('lazy'); handleRefresh();}}
-                  title="必要に応じて読み込み"
-                >
-                  💤 遅延
-                </button>
-                <button 
-                  className={`mode-btn ${viewMode === 'recursive' ? 'active' : ''}`}
-                  onClick={toggleRecursiveMode}
-                  title="展開時に子ディレクトリも読み込み"
-                >
-                  🔄 再帰
-                </button>
-                <button 
-                  className={`mode-btn ${viewMode === 'full' ? 'active' : ''}`}
-                  onClick={loadFullTree}
-                  title="全体を一度に読み込み"
-                >
-                  🌳 完全
-                </button>
-                <select 
-                  value={maxDepth} 
-                  onChange={(e) => setMaxDepth(parseInt(e.target.value))}
-                  className="depth-select"
-                  title="最大読み込み深度"
-                >
-                  <option value={2}>深度 2</option>
-                  <option value={3}>深度 3</option>
-                  <option value={4}>深度 4</option>
-                  <option value={5}>深度 5</option>
-                  <option value={10}>深度 10</option>
-                </select>
-                <button className="refresh-btn" onClick={handleRefresh}>
-                  🔄
-                </button>
+          {/* タブナビゲーション */}
+          <nav className="tab-navigation">
+            {DATASET_TABS.map(tab => (
+              <button
+                key={tab.id}
+                className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => handleTabChange(tab.id)}
+                title={tab.description}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.name}</span>
+              </button>
+            ))}
+          </nav>
+
+          {/* タブコンテンツ */}
+          <div className="tab-content">
+            <div className="tree-container">
+              <div className="tree-header">
+                <div className="controls">
+                  <button 
+                    className={`mode-btn ${viewMode === 'lazy' ? 'active' : ''}`}
+                    onClick={() => {setViewMode('lazy'); handleRefresh();}}
+                    title="必要に応じて読み込み"
+                  >
+                    💤 遅延
+                  </button>
+                  <button 
+                    className={`mode-btn ${viewMode === 'recursive' ? 'active' : ''}`}
+                    onClick={toggleRecursiveMode}
+                    title="展開時に子ディレクトリも読み込み"
+                  >
+                    🔄 再帰
+                  </button>
+                  <button 
+                    className={`mode-btn ${viewMode === 'full' ? 'active' : ''}`}
+                    onClick={() => loadFullTree(activeTab)}
+                    title="全体を一度に読み込み"
+                  >
+                    🌳 完全
+                  </button>
+                  <select 
+                    value={maxDepth} 
+                    onChange={(e) => setMaxDepth(parseInt(e.target.value))}
+                    className="depth-select"
+                    title="最大読み込み深度"
+                  >
+                    <option value={2}>深度 2</option>
+                    <option value={3}>深度 3</option>
+                    <option value={4}>深度 4</option>
+                    <option value={5}>深度 5</option>
+                    <option value={10}>深度 10</option>
+                  </select>
+                  <button className="refresh-btn" onClick={handleRefresh}>
+                    🔄
+                  </button>
+                </div>
               </div>
+              <div className="mode-info">
+                <span className={`mode-indicator mode-${viewMode}`}>
+                  {viewMode === 'lazy' && '💤 遅延読み込みモード: クリック時に個別読み込み'}
+                  {viewMode === 'recursive' && '🔄 再帰読み込みモード: 展開時に子ディレクトリも読み込み'}
+                  {viewMode === 'full' && '🌳 完全読み込みモード: 全体構造を一度に表示'}
+                </span>
+              </div>
+
+              {/* Compoundsタブの特別な機能 */}
+              {activeTab === 'compounds' && (
+                <ZincChecker />
+              )}
+
+              {currentTabData && (
+                <DirectoryTree
+                  data={currentTabData}
+                  expandedDirs={currentTabExpandedDirs}
+                  onToggle={handleToggleDirectory}
+                />
+              )}
+              {!currentTabData && !currentTabLoading && (
+                <div className="empty-state">
+                  <p>データを読み込んでください</p>
+                  <button onClick={() => loadInitialData(activeTab)}>
+                    📁 {DATASET_TABS.find(tab => tab.id === activeTab)?.name} を読み込み
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="mode-info">
-              <span className={`mode-indicator mode-${viewMode}`}>
-                {viewMode === 'lazy' && '💤 遅延読み込みモード: クリック時に個別読み込み'}
-                {viewMode === 'recursive' && '🔄 再帰読み込みモード: 展開時に子ディレクトリも読み込み'}
-                {viewMode === 'full' && '🌳 完全読み込みモード: 全体構造を一度に表示'}
-              </span>
-            </div>
-            <DirectoryTree
-              data={directoryData}
-              expandedDirs={expandedDirs}
-              onToggle={handleToggleDirectory}
-            />
           </div>
         </div>
       </main>
