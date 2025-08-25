@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import ZincChecker from './ZincChecker';
 
 // データセットタブの定義
 const DATASET_TABS = [
@@ -444,6 +445,12 @@ function App() {
                   {viewMode === 'full' && '🌳 完全読み込みモード: 全体構造を一度に表示'}
                 </span>
               </div>
+
+              {/* Compoundsタブの特別な機能 */}
+              {activeTab === 'compounds' && (
+                <ZincChecker />
+              )}
+
               {currentTabData && (
                 <DirectoryTree
                   data={currentTabData}

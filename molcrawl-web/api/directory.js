@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { execSync } = require('child_process');
+const { checkZincFiles } = require('./zinc-checker');
 
 // paths.pyからLEARNING_SOURCE_DIRを動的に取得
 function getLearningSourcePath() {
@@ -390,9 +391,54 @@ async function getFullDirectoryTree(req, res) {
   }
 }
 
+// ZINC20データのチェック機能
+async function checkZincData(req, res) {
+  try {
+    // compounds/dataset/organix13/zinc/zinc_complete/ のパスを構築
+    const zincBasePath = path.join(model_dir, 'compounds', 'dataset', 'organix13', 'zinc', 'zinc_complete');
+    
+    console.log('Checking ZINC data at:', zincBasePath);
+    
+    // ディレクトリが存在するかチェック
+    try {
+      await fs.access(zincBasePath);
+    } catch (error) {
+      return res.json({
+        success: true,
+        data: {
+          exists: false,
+          message: 'ZINC20データディレクトリが見つかりません',
+          path: zincBasePath
+        }
+      });
+    }
+
+    // ZINCファイルをチェック
+    const checkResults = await checkZincFiles(zincBasePath);
+    
+    res.json({
+      success: true,
+      data: {
+        exists: true,
+        path: zincBasePath,
+        ...checkResults,
+        lastChecked: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('ZINC データチェックエラー:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+
 module.exports = {
   getDirectoryStructure,
   expandDirectory,
   getFullDirectoryTree,
+  checkZincData,
   formatFileSize
 };
