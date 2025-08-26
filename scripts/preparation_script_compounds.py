@@ -40,6 +40,7 @@ def run_statistics(table_row, column_name):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("config")
+    parser.add_argument("--force", action="store_true", help="Force re-download and reprocessing even if files exist")
     args = parser.parse_args()
     cfg = CompoundConfig.from_file(args.config).data_preparation
     organix13_dataset_path = COMPOUNDS_DIR + "/organix13"
@@ -47,46 +48,64 @@ if __name__ == "__main__":
 
     setup_logging(COMPOUNDS_DIR + "/compounds_logs")
 
-    os.path.exists(cfg.raw_data_path) or os.makedirs(cfg.raw_data_path)
-    download_datasets(cfg.raw_data_path, organix13_dataset_path)
+    # マーカーファイル・出力ファイル
+    download_marker = Path(organix13_dataset_path) / "download_complete.marker"
+    tokenized_marker = Path(organix13_dataset_path) / "tokenized_complete.marker"
+    stats_marker = Path(organix13_dataset_path) / "stats_complete.marker"
+    processed_parquet = Path(organix13_dataset_path) / "OrganiX13_tokenized.parquet"
 
-    organix13_dataset = read_parquet(file_path=os.path.join(organix13_dataset_path, "OrganiX13.parquet"))
+    # 1. データダウンロード
+    if not args.force and download_marker.exists():
+        logger.info("Dataset download already completed. Skipping download step.")
+    else:
+        logger.info("Downloading datasets...")
+        os.path.exists(cfg.raw_data_path) or os.makedirs(cfg.raw_data_path)
+        download_datasets(cfg.raw_data_path, organix13_dataset_path)
+        download_marker.touch()
+        logger.info("Download completed.")
 
-    mol_tokenizer = CompoundsTokenizer(
-        cfg.vocab_path,
-        cfg.max_length,
-    )
+    # 2. トークナイズ
+    if not args.force and tokenized_marker.exists() and processed_parquet.exists():
+        logger.info("Tokenization already completed. Skipping tokenization step.")
+        organix13_dataset = read_parquet(file_path=str(processed_parquet))
+    else:
+        organix13_dataset = read_parquet(file_path=os.path.join(organix13_dataset_path, "OrganiX13.parquet"))
+        mol_tokenizer = CompoundsTokenizer(
+            cfg.vocab_path,
+            cfg.max_length,
+        )
+        logger.info(msg="Tokenizing SMILES...")
+        processed_organix13 = multiprocess_tokenization(
+            mol_tokenizer.bulk_tokenizer_parquet, organix13_dataset, column_name="smiles", new_column_name="tokens", processes=2
+        )
+        scaffolds_tokenizer = ScaffoldsTokenizer(
+            cfg.vocab_path,
+            cfg.max_length,
+        )
+        logger.info(msg="Tokenizing Scaffolds...")
+        processed_organix13 = multiprocess_tokenization(
+            scaffolds_tokenizer.bulk_tokenizer_parquet,
+            processed_organix13,
+            column_name="smiles",
+            new_column_name="scaffold_tokens",
+        )
+        logger.info(msg="Tokenizing done.")
+        save_parquet(table=processed_organix13, file_path=processed_parquet)
+        tokenized_marker.touch()
+        organix13_dataset = processed_organix13
 
-    logger.info(msg="Tokenizing SMILES...")
-    processed_organix13 = multiprocess_tokenization(
-        mol_tokenizer.bulk_tokenizer_parquet, organix13_dataset, column_name="smiles", new_column_name="tokens", processes=2
-    )
-
-    scaffolds_tokenizer = ScaffoldsTokenizer(
-        cfg.vocab_path,
-        cfg.max_length,
-    )
-
-    logger.info(msg="Tokenizing Scaffolds...")
-    processed_organix13 = multiprocess_tokenization(
-        scaffolds_tokenizer.bulk_tokenizer_parquet,
-        processed_organix13,
-        column_name="smiles",
-        new_column_name="scaffold_tokens",
-    )
-
-    logger.info(msg="Tokenizing done.")
-
-    logger.info(msg="Computing Statistics...")
-
-    statistics = {
-        **run_statistics(processed_organix13["tokens"], "SMILES"),
-        **run_statistics(processed_organix13["scaffold_tokens"], "Scaffolds")
-    }
-
-    for key, value in statistics.items():
-        logger.info(msg="{}: {}".format(key, value))
+    # 3. 統計処理
+    if not args.force and stats_marker.exists():
+        logger.info("Statistics already computed. Skipping statistics step.")
+    else:
+        logger.info(msg="Computing Statistics...")
+        statistics = {
+            **run_statistics(organix13_dataset["tokens"], "SMILES"),
+            **run_statistics(organix13_dataset["scaffold_tokens"], "Scaffolds")
+        }
+        for key, value in statistics.items():
+            logger.info(msg="{}: {}".format(key, value))
+        stats_marker.touch()
 
     logger.info(msg="Saving processed dataset to {}.".format(COMPOUNDS_DIR))
-
-    save_parquet(table=processed_organix13, file_path=COMPOUNDS_DIR)
+    # 保存はtokenized_marker作成時に実施済み
