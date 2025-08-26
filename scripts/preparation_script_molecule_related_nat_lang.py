@@ -46,6 +46,7 @@ def calculate_statistics(dataset, split):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("config")
+    parser.add_argument("--force", action="store_true", help="Force re-download and reprocessing even if files exist")
     args = parser.parse_args()
     cfg = MoleculeNLConfig.from_file(args.config).data_preparation
 
@@ -58,13 +59,49 @@ if __name__ == "__main__":
     os.path.exists(base_dataset_dir) or os.makedirs(base_dataset_dir)
 
     logger.info(msg="Downloading Dataset...")
-    try:
-        download_hf_dataset(base_dataset_dir)
-    except Exception as e:
-        logger.error(msg="Failed to download dataset. This error often occurs as you have already downloaded the dataset.")
-        logger.error(msg=e)
+    
+    # データセットが既に存在するかチェック
+    dataset_marker_file = base_dataset_dir / "dataset_info.json"
+    dataset_config_file = base_dataset_dir / "dataset_dict.json"
+    
+    if not args.force and dataset_marker_file.exists() and dataset_config_file.exists():
+        logger.info(msg=f"Dataset already exists at {base_dataset_dir}. Skipping download.")
+        logger.info(msg="If you want to re-download, please use --force option or delete the directory and run again.")
+        
+        # データセットの読み込みテストを行う
+        try:
+            test_dataset = read_dataset(base_dataset_dir)
+            logger.info(msg=f"Dataset validation successful. Found splits: {list(test_dataset.keys())}")
+        except Exception as e:
+            logger.warning(msg=f"Dataset validation failed: {e}")
+            logger.info(msg="Re-downloading dataset...")
+            try:
+                download_hf_dataset(base_dataset_dir)
+                logger.info(msg="Dataset download completed successfully.")
+            except Exception as download_error:
+                logger.error(msg="Failed to download dataset.")
+                logger.error(msg=download_error)
+                exit(1)
+    else:
+        if args.force:
+            logger.info(msg="Force option specified. Re-downloading dataset...")
+        try:
+            download_hf_dataset(base_dataset_dir)
+            logger.info(msg="Dataset download completed successfully.")
+        except Exception as e:
+            logger.error(msg="Failed to download dataset. This error often occurs as you have already downloaded the dataset.")
+            logger.error(msg=e)
+            exit(1)
 
     dataset = read_dataset(base_dataset_dir)
+
+    # 既に処理済みのparquetファイルが存在するかチェック
+    if not args.force and parquet_file.exists():
+        logger.info(msg=f"Processed dataset already exists at {parquet_file}.")
+        logger.info(msg="Skipping tokenization and processing. If you want to reprocess, please use --force option or delete the parquet file and run again.")
+        exit(0)
+    elif args.force and parquet_file.exists():
+        logger.info(msg="Force option specified. Reprocessing dataset...")
 
     tokenizer = MoleculeNatLangTokenizer()
 
