@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 OUTPUT_DIR="$PROJECT_ROOT/clinvar_evaluation_results"
 DATA_DIR="$OUTPUT_DIR/data"
-MODELS_DIR="$PROJECT_ROOT/gpt2-output"
+MODELS_DIR="$PROJECT_ROOT/$LEARNING_SOURCE_DIR/genome_sequence/gpt2-output"
 
 # デフォルト設定
 MODEL_SIZE="small"
@@ -164,7 +164,7 @@ if [[ "$VISUALIZE_ONLY" != true ]]; then
     fi
     
     # ClinVarデータファイルの確認
-    CLINVAR_DATA="$DATA_DIR/clinvar_evaluation_dataset.csv"
+    CLINVAR_DATA="$DATA_DIR/random_2000_clinvar.csv"
     if [[ ! -f "$CLINVAR_DATA" ]]; then
         echo "エラー: ClinVarデータが見つかりません: $CLINVAR_DATA"
         echo "まずデータ準備を実行してください"
