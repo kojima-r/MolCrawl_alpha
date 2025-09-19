@@ -12,6 +12,9 @@ Usage:
 
 import argparse
 import re
+import os
+import gzip
+import shutil
 from datasets import load_dataset
 from pyfaidx import Fasta
 import pandas as pd
@@ -48,7 +51,7 @@ def get_sequences(ref_genome, mapping, chrom, pos, ref, alt, flank=64):
 def main():
     parser = argparse.ArgumentParser(description="Prepare ClinVar benchmark sequences")
     parser.add_argument("--ref_fasta", type=str, required=True,
-                        help="Path to GRCh38 genomic FASTA (e.g. GCA_000001405.28_GRCh38.p13_genomic.fna.gz)")
+                        help="Path to GRCh38 genomic FASTA (e.g. GCA_000001405.28_GRCh38.p13_genomic.fna or .fna.gz)")
     parser.add_argument("--output_file", type=str, default="clinvar_sequences.csv",
                         help="Output CSV file")
     parser.add_argument("--flank", type=int, default=64,
@@ -57,6 +60,23 @@ def main():
                         help="Limit number of samples to process (default: all)")
 
     args = parser.parse_args()
+    
+    # ファイル形式の自動対応
+    ref_fasta_path = args.ref_fasta
+    if ref_fasta_path.endswith('.gz'):
+        # .gzファイルの場合、展開された版があるかチェック
+        uncompressed_path = ref_fasta_path.replace('.gz', '')
+        if os.path.exists(uncompressed_path):
+            print(f"Using uncompressed FASTA file: {uncompressed_path}")
+            ref_fasta_path = uncompressed_path
+        else:
+            # 展開された版がない場合は一時的に展開
+            print(f"Uncompressing {ref_fasta_path} for compatibility...")
+            with gzip.open(ref_fasta_path, 'rb') as f_in:
+                with open(uncompressed_path, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            ref_fasta_path = uncompressed_path
+            print(f"Uncompressed to: {ref_fasta_path}")
 
     dataset = load_dataset("gonzalobenegas/clinvar")
     df = dataset["test"].to_pandas()
@@ -88,7 +108,7 @@ def main():
         for sig, count in clin_sig_counts.head(10).items():  # 上位10個を表示
             print(f"  {sig}: {count}")
 
-    ref_genome = Fasta(args.ref_fasta)
+    ref_genome = Fasta(ref_fasta_path)
     mapping = build_chrom_mapping(ref_genome)
 
     records = []
