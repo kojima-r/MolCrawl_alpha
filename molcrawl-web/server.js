@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { getDirectoryStructure, expandDirectory, getFullDirectoryTree, checkZincData, getZincDataCounts } = require('./api/directory');
+const { getGenomeSpeciesList, getGenomeSpeciesByCategory } = require('./api/genome-species');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,6 +30,8 @@ app.get('/api/directory/expand', expandDirectory);
 app.get('/api/directory/tree', getFullDirectoryTree);
 app.get('/api/zinc/check', checkZincData);
 app.get('/api/zinc/count', getZincDataCounts);
+app.get('/api/genome/species', getGenomeSpeciesList);
+app.get('/api/genome/species/category', getGenomeSpeciesByCategory);
 
 // ヘルスチェック
 app.get('/api/health', (req, res) => {
@@ -41,7 +44,9 @@ app.get('/api/health', (req, res) => {
       '/api/directory/expand?path=<path>&recursive=true - ディレクトリ展開',
       '/api/directory/tree?maxDepth=5&includeFiles=true - 完全ツリー取得',
       '/api/zinc/check - ZINC20データチェック',
-      '/api/zinc/count - ZINC20データ件数取得'
+      '/api/zinc/count - ZINC20データ件数取得',
+      '/api/genome/species - ゲノム種リスト取得',
+      '/api/genome/species/category?category=<category> - カテゴリ別種リスト取得'
     ]
   });
 });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import ZincChecker from './ZincChecker';
+import GenomeSpeciesList from './GenomeSpeciesList';
 
 // データセットタブの定義
 const DATASET_TABS = [
@@ -449,6 +450,11 @@ function App() {
               {/* Compoundsタブの特別な機能 */}
               {activeTab === 'compounds' && (
                 <ZincChecker />
+              )}
+
+              {/* Genome Sequenceタブの特別な機能 */}
+              {activeTab === 'genome_sequence' && (
+                <GenomeSpeciesList />
               )}
 
               {currentTabData && (
