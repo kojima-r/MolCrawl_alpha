@@ -51,8 +51,44 @@ console.log('model_dir exists?', require('fs').existsSync(model_dir));
  */
 async function getDirectoryInfo(dirPath) {
   try {
+    // ディレクトリの存在チェック
+    try {
+      await fs.access(dirPath, fs.constants.F_OK);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return {
+          name: path.basename(dirPath),
+          type: 'directory',
+          size: 0,
+          count: 0,
+          path: dirPath,
+          children: [],
+          warning: 'ディレクトリが存在しません'
+        };
+      }
+      throw error;
+    }
+    
     const stats = await fs.stat(dirPath);
-    const files = await fs.readdir(dirPath);
+    if (!stats.isDirectory()) {
+      throw new Error('指定されたパスはディレクトリではありません');
+    }
+    
+    let files;
+    try {
+      files = await fs.readdir(dirPath);
+    } catch (error) {
+      console.warn(`ディレクトリ読み取り失敗: ${dirPath}`, error.message);
+      return {
+        name: path.basename(dirPath),
+        type: 'directory',
+        size: 0,
+        count: 0,
+        path: dirPath,
+        children: [],
+        warning: 'ディレクトリの読み取りに失敗'
+      };
+    }
     
     const children = [];
     let totalSize = 0;
@@ -64,15 +100,29 @@ async function getDirectoryInfo(dirPath) {
         
         if (fileStats.isDirectory()) {
           // ディレクトリの場合、子要素の数を取得
-          const subFiles = await fs.readdir(filePath);
-          children.push({
-            name: file,
-            type: 'directory',
-            size: 0,
-            count: subFiles.length,
-            path: filePath,
-            children: [] // 初期状態では空
-          });
+          try {
+            const subFiles = await fs.readdir(filePath);
+            children.push({
+              name: file,
+              type: 'directory',
+              size: 0,
+              count: subFiles.length,
+              path: filePath,
+              children: [] // 初期状態では空
+            });
+          } catch (subError) {
+            // 子ディレクトリの読み取りに失敗した場合でもディレクトリとして追加
+            console.warn(`子ディレクトリ読み取り失敗: ${filePath}`, subError.message);
+            children.push({
+              name: file,
+              type: 'directory',
+              size: 0,
+              count: 0,
+              path: filePath,
+              children: [],
+              warning: '読み取り失敗'
+            });
+          }
         } else {
           // ファイルの場合
           children.push({
@@ -85,13 +135,24 @@ async function getDirectoryInfo(dirPath) {
         }
       } catch (error) {
         console.warn(`ファイル情報の取得に失敗: ${filePath}`, error.message);
+        // エラーが発生したファイルも情報として追加（タイプ不明として）
+        children.push({
+          name: file,
+          type: 'unknown',
+          size: 0,
+          path: filePath,
+          warning: 'アクセス失敗'
+        });
       }
     }
     
     // ソート：ディレクトリを先に、その後名前順
     children.sort((a, b) => {
       if (a.type !== b.type) {
-        return a.type === 'directory' ? -1 : 1;
+        if (a.type === 'directory') return -1;
+        if (b.type === 'directory') return 1;
+        if (a.type === 'file') return -1;
+        if (b.type === 'file') return 1;
       }
       return a.name.localeCompare(b.name);
     });
@@ -149,6 +210,27 @@ async function getDirectoryStructure(req, res) {
       });
     }
     
+    // ディレクトリが存在するかチェック
+    try {
+      await fs.access(normalizedPath, fs.constants.F_OK);
+    } catch (error) {
+      // ディレクトリが存在しない場合、空の構造を返す
+      console.warn(`Directory not found: ${normalizedPath}`);
+      return res.json({
+        success: true,
+        data: {
+          name: path.basename(normalizedPath),
+          type: 'directory',
+          size: 0,
+          count: 0,
+          path: normalizedPath,
+          children: [],
+          warning: 'ディレクトリが存在しません'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     const directoryInfo = await getDirectoryInfo(normalizedPath);
     
     res.json({
@@ -158,6 +240,24 @@ async function getDirectoryStructure(req, res) {
     });
   } catch (error) {
     console.error('ディレクトリ取得エラー:', error);
+    
+    // エラーの種類に応じて適切なレスポンスを返す
+    if (error.code === 'ENOENT') {
+      return res.json({
+        success: true,
+        data: {
+          name: path.basename(targetPath),
+          type: 'directory',
+          size: 0,
+          count: 0,
+          path: targetPath,
+          children: [],
+          warning: 'ディレクトリが存在しません'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: error.message,
@@ -203,7 +303,26 @@ async function expandDirectory(req, res) {
       });
     }
     
-    const stats = await fs.stat(normalizedPath);
+    // ディレクトリが存在するかチェック
+    let stats;
+    try {
+      stats = await fs.stat(normalizedPath);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        // ディレクトリが存在しない場合、空の配列を返す
+        return res.json({
+          success: true,
+          data: [],
+          recursive: recursive,
+          maxDepth: maxDepth,
+          currentPath: normalizedPath,
+          warning: 'ディレクトリが存在しません',
+          timestamp: new Date().toISOString()
+        });
+      }
+      throw error;
+    }
+    
     if (!stats.isDirectory()) {
       return res.status(400).json({
         error: 'ディレクトリではありません',
@@ -289,6 +408,20 @@ async function expandDirectory(req, res) {
     });
   } catch (error) {
     console.error('ディレクトリ展開エラー:', error);
+    
+    // エラーの種類に応じて適切なレスポンスを返す
+    if (error.code === 'ENOENT') {
+      return res.json({
+        success: true,
+        data: [],
+        recursive: recursive,
+        maxDepth: maxDepth,
+        currentPath: targetPath,
+        warning: 'ディレクトリが存在しません',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: error.message,
@@ -324,6 +457,31 @@ async function getFullDirectoryTree(req, res) {
         message: '指定されたパスにはアクセスできません',
         requestedPath: targetPath,
         resolvedPath: normalizedPath
+      });
+    }
+    
+    // ディレクトリが存在するかチェック
+    try {
+      await fs.access(normalizedPath, fs.constants.F_OK);
+    } catch (error) {
+      // ディレクトリが存在しない場合、空の構造を返す
+      console.warn(`Directory not found for tree: ${normalizedPath}`);
+      return res.json({
+        success: true,
+        data: {
+          name: path.basename(normalizedPath),
+          type: 'directory',
+          size: 0,
+          totalSize: 0,
+          count: 0,
+          path: normalizedPath,
+          children: [],
+          depth: 0,
+          warning: 'ディレクトリが存在しません'
+        },
+        maxDepth: maxDepth,
+        includeFiles: includeFiles,
+        timestamp: new Date().toISOString()
       });
     }
     
@@ -392,7 +550,23 @@ async function getFullDirectoryTree(req, res) {
     const tree = await buildFullTree(normalizedPath);
     
     if (!tree) {
-      throw new Error('ディレクトリツリーの構築に失敗しました');
+      return res.json({
+        success: true,
+        data: {
+          name: path.basename(normalizedPath),
+          type: 'directory',
+          size: 0,
+          totalSize: 0,
+          count: 0,
+          path: normalizedPath,
+          children: [],
+          depth: 0,
+          warning: 'ディレクトリツリーの構築に失敗しました'
+        },
+        maxDepth: maxDepth,
+        includeFiles: includeFiles,
+        timestamp: new Date().toISOString()
+      });
     }
     
     res.json({
@@ -404,6 +578,28 @@ async function getFullDirectoryTree(req, res) {
     });
   } catch (error) {
     console.error('完全ツリー取得エラー:', error);
+    
+    // エラーの種類に応じて適切なレスポンスを返す
+    if (error.code === 'ENOENT') {
+      return res.json({
+        success: true,
+        data: {
+          name: path.basename(targetPath),
+          type: 'directory',
+          size: 0,
+          totalSize: 0,
+          count: 0,
+          path: targetPath,
+          children: [],
+          depth: 0,
+          warning: 'ディレクトリが存在しません'
+        },
+        maxDepth: maxDepth,
+        includeFiles: includeFiles,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: error.message,
