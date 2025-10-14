@@ -22,6 +22,7 @@ import math
 from contextlib import nullcontext
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
@@ -29,15 +30,226 @@ from torch.distributed import init_process_group, destroy_process_group
 from model import GPTConfig, GPT
 
 from core.dataset import PreparedDataset
+from datasets import load_from_disk, Dataset
+import json
+import pandas as pd
+from pathlib import Path
+import pyarrow as pa
 
-# Import common configuration
-from configs.common import *
+class RNADataset:
+    """RNA Transcriptome Dataset"""
+    
+    def __init__(self, data_dir, split="train", vocab_file=None, test_size=0.1):
+        self.data_dir = data_dir
+        self.split = split
+        self.test_size = test_size
+        
+        # Load vocabulary
+        if vocab_file and os.path.exists(vocab_file):
+            with open(vocab_file, 'r') as f:
+                self.vocab = json.load(f)
+            self.vocab_size = len(self.vocab)
+        else:
+            # Default RNA vocabulary
+            self.vocab = {'<pad>': 0, '<unk>': 1, '<eos>': 2}
+            self.vocab_size = 3
+        
+        # Load dataset - direct arrow file reading to bypass metadata issues
+        print(f"📂 Attempting to load data from {data_dir}")
+        
+        try:
+            data_path = Path(data_dir)
+            arrow_files = sorted(list(data_path.glob("*.arrow")))
+            
+            if arrow_files:
+                print(f"📁 Found {len(arrow_files)} arrow files: {[f.name for f in arrow_files]}")
+                
+                all_batches = []
+                for arrow_file in arrow_files:
+                    print(f"📖 Reading {arrow_file.name}...")
+                    try:
+                        # Try as memory mapped stream first
+                        with pa.memory_map(str(arrow_file)) as mmap:
+                            with pa.ipc.open_stream(mmap) as reader:
+                                table = reader.read_all()
+                                print(f"� Read table via stream: {len(table)} rows")
+                                all_batches.append(table)
+                    except Exception:
+                        try:
+                            # Fallback to RecordBatch file
+                            with pa.memory_map(str(arrow_file)) as mmap:
+                                with pa.ipc.open_file(mmap) as reader:
+                                    table = reader.read_all()
+                                    print(f"� Read table via file: {len(table)} rows")
+                                    all_batches.append(table)
+                        except Exception as e:
+                            print(f"❌ Failed to read {arrow_file.name}: {e}")
+                            continue
+                
+                if all_batches:
+                    # Combine all tables
+                    combined_table = pa.concat_tables(all_batches)
+                    print(f"📊 Combined {len(all_batches)} tables: {len(combined_table)} total rows")
+                    
+                    # Convert PyArrow table to pandas DataFrame, then to HuggingFace Dataset
+                    df = combined_table.to_pandas()
+                    print(f"📋 Converted to pandas DataFrame: {len(df)} rows")
+                    
+                    # Convert numpy arrays to lists for HuggingFace compatibility
+                    if 'token' in df.columns:
+                        df['token'] = df['token'].apply(lambda x: x.tolist() if hasattr(x, 'tolist') else x)
+                    
+                    # Create dataset from pandas DataFrame (bypasses metadata issues)
+                    self.dataset = Dataset.from_pandas(df)
+                    print(f"✅ Created HuggingFace Dataset from pandas DataFrame")
+                    print(f"🔍 Dataset columns: {self.dataset.column_names}")
+                else:
+                    raise ValueError("No arrow files could be read successfully")
+            else:
+                raise FileNotFoundError(f"No .arrow files found in {data_dir}")
+                
+        except Exception as e:
+            print(f"❌ Arrow loading failed: {e}")
+            # Fallback to other methods
+            try:
+                print("🔄 Trying HuggingFace format as fallback...")
+                self.dataset = load_from_disk(data_dir)
+                print(f"✅ Loaded HuggingFace dataset from {data_dir}")
+            except Exception as e2:
+                print(f"❌ All loading methods failed: {e2}")
+                raise FileNotFoundError(f"Could not load data from {data_dir}")
+        
+        # Split into train/valid if needed
+        if hasattr(self.dataset, 'keys') and isinstance(self.dataset, dict) and 'train' in self.dataset:
+            # Already has splits
+            if split == "train":
+                self.data = self.dataset['train']
+            elif split == "valid" or split == "val":
+                self.data = self.dataset.get('valid', self.dataset.get('test', self.dataset['train']))
+        else:
+            # Single dataset, need to split
+            total_size = len(self.dataset)
+            if split == "train":
+                self.data = self.dataset.select(range(int(total_size * (1 - self.test_size))))
+            else:  # valid
+                self.data = self.dataset.select(range(int(total_size * (1 - self.test_size)), total_size))
+        
+        print(f"Loaded {len(self.data)} samples for {split}")
+        
+        # Sample a few examples to understand data structure
+        if len(self.data) > 0:
+            sample = self.data[0]
+            print(f"Sample keys: {list(sample.keys())}")
+            for key, value in sample.items():
+                if isinstance(value, (list, str)):
+                    print(f"  {key}: {type(value)} of length {len(value)}")
+                else:
+                    print(f"  {key}: {type(value)} = {value}")
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        item = self.data[idx]
+        
+        # RNA data has 'token' column with numpy arrays
+        tokens = None
+        
+        # Try 'token' column first (RNA data format)
+        if 'token' in item and item['token'] is not None:
+            tokens = item['token']
+        else:
+            # Try other possible token column names
+            for key in ['input_ids', 'tokens', 'token_ids', 'tokenized']:
+                if key in item and item[key] is not None:
+                    tokens = item[key]
+                    break
+        
+        if tokens is None:
+            # If no tokens, try to find text and tokenize it
+            text = None
+            for key in ['text', 'sequence', 'input_text']:
+                if key in item and item[key] is not None:
+                    text = item[key]
+                    break
+            
+            if text is not None:
+                # Simple tokenization (this is a fallback)
+                tokens = [self.vocab.get(char, self.vocab.get('<unk>', 1)) for char in str(text)]
+            else:
+                # Last resort: use all numeric values as tokens
+                numeric_values = [v for v in item.values() if isinstance(v, (int, list))]
+                if numeric_values:
+                    tokens = numeric_values[0] if isinstance(numeric_values[0], list) else [numeric_values[0]]
+                else:
+                    tokens = [0]  # padding token
+        
+        # Handle numpy array or list
+        if hasattr(tokens, 'tolist'):
+            # Convert numpy array to list
+            tokens = tokens.tolist()
+        elif not isinstance(tokens, list):
+            tokens = list(tokens)
+        
+        # Convert to integers if needed
+        try:
+            tokens = [int(t) for t in tokens]
+        except (ValueError, TypeError):
+            tokens = [self.vocab.get('<unk>', 1) for _ in tokens]
+        
+        return torch.tensor(tokens, dtype=torch.long)
 
 dataset_params = {}
+# -----------------------------------------------------------------------------
+# default config values designed to train a gpt2 (124M) on OpenWebText
+# I/O
 
+tensorboard = False  # log training metrics to tensorboard
+tensorboard_dir = "runs"
+
+out_dir = "out-gpt2"
+eval_interval = 2000
+log_interval = 1
+eval_iters = 200
+eval_only = False  # if True, script exits right after the first eval
+always_save_checkpoint = False  # if True, always save a checkpoint after each eval
+init_from = "scratch"  # 'scratch' or 'resume' or 'gpt2*'
+# data
+dataset = "openwebtext"
+gradient_accumulation_steps = 5 * 8  # used to simulate larger batch sizes
+batch_size = 12  # if gradient_accumulation_steps > 1, this is the micro-batch size
+block_size = 1024
+# model
+n_layer = 12
+n_head = 12
+n_embd = 768
+dropout = 0.0  # for pretraining 0 is good, for finetuning try 0.1+
+bias = False  # do we use bias inside LayerNorm and Linear layers?
+# adamw optimizer
+learning_rate = 6e-4  # max learning rate
+max_iters = 600000  # total number of training iterations
+weight_decay = 1e-1
+beta1 = 0.9
+beta2 = 0.95
+grad_clip = 1.0  # clip gradients at this value, or disable if == 0.0
+# learning rate decay settings
+decay_lr = True  # whether to decay the learning rate
+warmup_iters = 2000  # how many steps to warm up for
+lr_decay_iters = 600000  # should be ~= max_iters per Chinchilla
+min_lr = 6e-5  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
+# DDP settings
+backend = "nccl"  # 'nccl', 'gloo', etc.
+# system
+device = "cuda"  # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
+dtype = (
+    "bfloat16" if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else "float16"
+)  # 'float32', 'bfloat16', or 'float16', the latter will auto implement a GradScaler
+compile = False  # use PyTorch 2.0 to compile the model to be faster
 # -----------------------------------------------------------------------------
 config_keys = [k for k, v in globals().items() if not k.startswith("_") and isinstance(v, (int, float, bool, str))]
-exec(open("gpt2/configurator.py").read())  # overrides from command line or config file
+# Handle configurator path
+configurator_path = "gpt2/configurator.py" if os.path.exists("gpt2/configurator.py") else "configurator.py"
+exec(open(configurator_path).read())  # overrides from command line or config file
 config = {k: globals()[k] for k in config_keys}  # will be useful for logging
 # -----------------------------------------------------------------------------
 
@@ -76,13 +288,11 @@ else:
     master_process = True
     seed_offset = 0
     ddp_world_size = 1
-
 tokens_per_iter = gradient_accumulation_steps * ddp_world_size * batch_size * block_size
 print(f"tokens per iteration will be: {tokens_per_iter:,}")
 
 if master_process:
     os.makedirs(out_dir, exist_ok=True)
-
 torch.manual_seed(1337 + seed_offset)
 torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
@@ -91,10 +301,19 @@ device_type = "cuda" if "cuda" in device else "cpu"  # for later use in torch.au
 ptdtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[dtype]
 ctx = nullcontext() if device_type == "cpu" else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
-# poor man's data loader
-# data_dir = os.path.join("gpt2", "data", dataset)
-training_data = PreparedDataset(**dataset_params, split="train")
-test_data = PreparedDataset(**dataset_params, split="valid")
+# RNA data loader
+rna_data_dir = "path-to-rna-parquet" # TODO
+rna_vocab_file = "path-to-rna-vocab" # TODO
+
+# Use RNADataset if dataset is "rna", otherwise use PreparedDataset
+if dataset == "rna":
+    training_data = RNADataset(rna_data_dir, split="train", vocab_file=rna_vocab_file, test_size=0.1)
+    test_data = RNADataset(rna_data_dir, split="valid", vocab_file=rna_vocab_file, test_size=0.1)
+    # Set vocab size from the RNA dataset
+    meta_vocab_size = training_data.vocab_size
+else:
+    training_data = PreparedDataset(**dataset_params, split="train")
+    test_data = PreparedDataset(**dataset_params, split="valid")
 
 # training_data = torch.load(os.path.join(data_dir, "train.pt"))
 # test_data = torch.load(
@@ -109,9 +328,27 @@ def get_batch(split):
         data = test_data
 
     ix = np.random.randint(0, len(data), batch_size).tolist()
-    batch = torch.stack([data[i] for i in ix])
+    
+    # Handle variable length sequences for RNA data
+    sequences = [data[i] for i in ix]
+    
+    # Pad or truncate sequences to block_size
+    padded_sequences = []
+    for seq in sequences:
+        if len(seq) > block_size:
+            # Truncate to block_size
+            padded_sequences.append(seq[:block_size])
+        elif len(seq) < block_size:
+            # Pad with zeros (assuming 0 is padding token)
+            padding = torch.zeros(block_size - len(seq), dtype=seq.dtype)
+            padded_sequences.append(torch.cat([seq, padding]))
+        else:
+            padded_sequences.append(seq)
+    
+    batch = torch.stack(padded_sequences)
     x = batch[:, :-1]
     y = batch[:, 1:]
+    
     if device_type == "cuda":
         # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
@@ -125,12 +362,15 @@ iter_num = 0
 best_val_loss = 1e9
 
 if not ("meta_vocab_size" in vars() and "meta_vocab_size" in globals()):
-    try:
-        meta_vocab_size = (len(tokenizer) // 8 + 1) * 8
-    except Exception:
-        raise ImportError(
-            "Please initialize the variable meta_vocab_size in the *_config.py file with the size of your vocabulary."
-        )
+    if dataset == "rna":
+        # meta_vocab_size already set from RNADataset
+        pass
+    else:
+        # For non-RNA datasets, meta_vocab_size should be set in config
+        if "meta_vocab_size" not in globals():
+            raise ImportError(
+                "Please initialize the variable meta_vocab_size in the *_config.py file with the size of your vocabulary."
+            )
 
 # model init
 model_args = dict(
@@ -252,12 +492,12 @@ while True:
     if iter_num % eval_interval == 0 and master_process:
         losses = estimate_loss()
         print(f"step {iter_num}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
-
+        
         with open(logging_file, "a") as f:
             f.write(f"{iter_num}, {losses['train']:.4f}, {losses['val']:.4f}\n")
 
         if writer is not None:
-            writer.add_scalar("Val Loss", losses["val"], iter_num)
+            writer.add_scalar("Val Loss", losses['val'], iter_num)
             writer.flush()
 
         if losses["val"] < best_val_loss or always_save_checkpoint:
