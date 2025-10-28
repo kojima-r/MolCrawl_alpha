@@ -200,7 +200,8 @@ class ProteinGymDataDownloader:
         
         return df
     
-    def prepare_evaluation_data(self, assay_id, data_dir=None, max_variants=None):
+    def prepare_evaluation_data(self, assay_id, data_dir=None, max_variants=None, balanced_sampling=False, 
+                               positive_samples=1000, negative_samples=1000, score_threshold=None):
         """
         特定のアッセイの評価データを準備
         
@@ -208,6 +209,10 @@ class ProteinGymDataDownloader:
             assay_id (str): アッセイID
             data_dir (str): データディレクトリ（Noneの場合は自動ダウンロード）
             max_variants (int): 最大変異数（制限しない場合はNone）
+            balanced_sampling (bool): バランスサンプリングを使用するか
+            positive_samples (int): 陽性サンプル数（balanced_sampling=Trueの場合）
+            negative_samples (int): 陰性サンプル数（balanced_sampling=Trueの場合）
+            score_threshold (float): 陽性/陰性の閾値（Noneの場合は中央値を使用）
             
         Returns:
             pd.DataFrame: 評価用データ
@@ -238,9 +243,14 @@ class ProteinGymDataDownloader:
         
         # データのクリーニング
         df = df.dropna(subset=['DMS_score'])
+        original_size = len(df)
         
-        # 最大変異数の制限
-        if max_variants and len(df) > max_variants:
+        # バランスサンプリングの実行
+        if balanced_sampling:
+            df = self._balanced_sampling(df, positive_samples, negative_samples, score_threshold)
+            logger.info(f"Applied balanced sampling: {original_size} → {len(df)} variants")
+        elif max_variants and len(df) > max_variants:
+            # 従来のランダムサンプリング
             logger.info(f"Limiting to {max_variants} variants (from {len(df)})")
             df = df.sample(n=max_variants, random_state=42)
         
@@ -298,6 +308,258 @@ class ProteinGymDataDownloader:
         
         logger.info(f"Test dataset created: {output_file}")
         logger.info(f"Score statistics: mean={df['DMS_score'].mean():.3f}, std={df['DMS_score'].std():.3f}")
+    
+    def _balanced_sampling(self, df, positive_samples=1000, negative_samples=1000, score_threshold=None):
+        """
+        陽性と陰性のサンプルをバランス良く抽出
+        
+        Args:
+            df (pd.DataFrame): 元データフレーム
+            positive_samples (int): 陽性サンプル数
+            negative_samples (int): 陰性サンプル数
+            score_threshold (float): 陽性/陰性の閾値（Noneの場合は中央値を使用）
+        
+        Returns:
+            pd.DataFrame: バランス抽出されたデータフレーム
+        """
+        if score_threshold is None:
+            score_threshold = df['DMS_score'].median()
+            logger.info(f"Using median as threshold: {score_threshold:.3f}")
+        else:
+            logger.info(f"Using specified threshold: {score_threshold:.3f}")
+        
+        # 陽性・陰性にラベル分け
+        positive_df = df[df['DMS_score'] >= score_threshold].copy()
+        negative_df = df[df['DMS_score'] < score_threshold].copy()
+        
+        logger.info(f"Original distribution: {len(positive_df)} positive, {len(negative_df)} negative")
+        
+        # 各クラスからランダムサンプリング
+        sampled_dfs = []
+        
+        # 陽性サンプルの抽出
+        if len(positive_df) >= positive_samples:
+            positive_sampled = positive_df.sample(n=positive_samples, random_state=42)
+            logger.info(f"Sampled {positive_samples} positive samples from {len(positive_df)} available")
+        else:
+            positive_sampled = positive_df.copy()
+            logger.warning(f"Only {len(positive_df)} positive samples available (requested {positive_samples})")
+        
+        sampled_dfs.append(positive_sampled)
+        
+        # 陰性サンプルの抽出
+        if len(negative_df) >= negative_samples:
+            negative_sampled = negative_df.sample(n=negative_samples, random_state=42)
+            logger.info(f"Sampled {negative_samples} negative samples from {len(negative_df)} available")
+        else:
+            negative_sampled = negative_df.copy()
+            logger.warning(f"Only {len(negative_df)} negative samples available (requested {negative_samples})")
+        
+        sampled_dfs.append(negative_sampled)
+        
+        # 結合してシャッフル
+        balanced_df = pd.concat(sampled_dfs, ignore_index=True)
+        balanced_df = balanced_df.sample(frac=1, random_state=42).reset_index(drop=True)
+        
+        # バランス情報をログ出力
+        final_positive = len(balanced_df[balanced_df['DMS_score'] >= score_threshold])
+        final_negative = len(balanced_df[balanced_df['DMS_score'] < score_threshold])
+        logger.info(f"Final balanced dataset: {final_positive} positive, {final_negative} negative")
+        
+        return balanced_df
+    
+    def prepare_multiple_assays_balanced(self, assay_ids, data_dir=None, positive_samples=1000, 
+                                        negative_samples=1000, score_threshold=None, output_dir=None):
+        """
+        複数のアッセイからバランス抽出したデータを準備
+        
+        Args:
+            assay_ids (list): アッセイIDのリスト
+            data_dir (str): データディレクトリ
+            positive_samples (int): アッセイあたりの陽性サンプル数
+            negative_samples (int): アッセイあたりの陰性サンプル数
+            score_threshold (float): 陽性/陰性の閾値
+            output_dir (str): 出力ディレクトリ
+            
+        Returns:
+            dict: {assay_id: dataframe} の辞書
+        """
+        if output_dir:
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+        
+        balanced_datasets = {}
+        
+        for assay_id in assay_ids:
+            try:
+                logger.info(f"Processing assay: {assay_id}")
+                balanced_df = self.prepare_evaluation_data(
+                    assay_id=assay_id,
+                    data_dir=data_dir,
+                    balanced_sampling=True,
+                    positive_samples=positive_samples,
+                    negative_samples=negative_samples,
+                    score_threshold=score_threshold
+                )
+                
+                balanced_datasets[assay_id] = balanced_df
+                
+                # 個別ファイルに保存
+                if output_dir:
+                    output_file = output_path / f"{assay_id}_balanced.csv"
+                    balanced_df.to_csv(output_file, index=False)
+                    logger.info(f"Saved balanced dataset: {output_file}")
+                
+            except Exception as e:
+                logger.error(f"Failed to process assay {assay_id}: {e}")
+                continue
+        
+        return balanced_datasets
+    
+    def setup_test_data_from_metadata(self, metadata_file=None, positive_samples=1000, 
+                                     negative_samples=1000, test_assay_count=5):
+        """
+        メタデータファイルからテスト用のバランスデータセットを作成
+        
+        Args:
+            metadata_file (str): メタデータファイルのパス
+            positive_samples (int): 陽性サンプル数
+            negative_samples (int): 陰性サンプル数
+            test_assay_count (int): 作成するテストアッセイ数
+        
+        Returns:
+            dict: 作成されたテストデータセットの情報
+        """
+        if metadata_file is None:
+            # デフォルトのメタデータファイルを探す
+            possible_paths = [
+                Path(self.data_dir) / "DMS_substitutions.csv",
+                Path(self.data_dir) / "reference_substitutions.csv",
+            ]
+            
+            metadata_file = None
+            for path in possible_paths:
+                if path.exists():
+                    metadata_file = path
+                    break
+            
+            if metadata_file is None:
+                raise FileNotFoundError("No metadata file found. Please download recommended datasets first.")
+        
+        logger.info(f"Setting up test data from metadata: {metadata_file}")
+        
+        # メタデータを読み込み
+        metadata_df = pd.read_csv(metadata_file)
+        logger.info(f"Found {len(metadata_df)} assays in metadata")
+        
+        # テスト用ディレクトリを作成
+        test_data_dir = Path(self.data_dir) / "balanced_evaluation_data"
+        test_data_dir.mkdir(exist_ok=True)
+        
+        # 上位のアッセイからテスト用を選択
+        test_assays = metadata_df.head(test_assay_count)
+        created_datasets = {}
+        
+        for _, row in test_assays.iterrows():
+            assay_id = row['DMS_id']
+            target_sequence = row.get('target_seq', 'MKLLILTCLVAVALARPKHPIKHQGLPQEVLNENLLRFFVAPFPEVFGKEKVNEL')  # デフォルト配列
+            
+            logger.info(f"Creating test data for assay: {assay_id}")
+            
+            # サンプル変異データを生成
+            test_data = self._generate_sample_mutations(
+                assay_id=assay_id,
+                target_seq=target_sequence,
+                positive_samples=positive_samples,
+                negative_samples=negative_samples
+            )
+            
+            # ファイルに保存
+            output_file = test_data_dir / f"{assay_id}_balanced_evaluation_data.csv"
+            test_data.to_csv(output_file, index=False)
+            
+            created_datasets[assay_id] = {
+                'file': str(output_file),
+                'total_samples': len(test_data),
+                'positive_samples': len(test_data[test_data['DMS_score'] >= 0]),
+                'negative_samples': len(test_data[test_data['DMS_score'] < 0])
+            }
+            
+            logger.info(f"Created test dataset: {output_file} ({len(test_data)} samples)")
+        
+        return created_datasets
+    
+    def _generate_sample_mutations(self, assay_id, target_seq, positive_samples, negative_samples):
+        """
+        特定のアッセイ用にサンプル変異データを生成
+        
+        Args:
+            assay_id (str): アッセイID
+            target_seq (str): 標的配列
+            positive_samples (int): 陽性サンプル数
+            negative_samples (int): 陰性サンプル数
+        
+        Returns:
+            pd.DataFrame: 生成された変異データ
+        """
+        import random
+        
+        mutations = []
+        amino_acids = 'ACDEFGHIKLMNPQRSTVWY'
+        
+        # ランダムシードを設定（再現性のため）
+        random.seed(42)
+        np.random.seed(42)
+        
+        # 陽性サンプル生成（高いDMS_score: 0.5〜1.5）
+        for i in range(positive_samples):
+            pos = random.randint(1, min(len(target_seq), 200))  # 配列長の制限
+            if pos <= len(target_seq):
+                orig_aa = target_seq[pos-1]
+                mut_aa = random.choice([aa for aa in amino_acids if aa != orig_aa])
+                
+                # 変異配列を作成
+                mut_sequence = target_seq[:pos-1] + mut_aa + target_seq[pos:]
+            else:
+                orig_aa = 'A'
+                mut_aa = random.choice(amino_acids)
+                mut_sequence = target_seq + mut_aa
+            
+            mutations.append({
+                'mutant': f'{orig_aa}{pos}{mut_aa}',
+                'mutated_sequence': mut_sequence,
+                'target_seq': target_seq,
+                'DMS_score': np.random.uniform(0.5, 1.5),  # 陽性スコア
+                'protein_name': assay_id,
+                'DMS_id': assay_id
+            })
+        
+        # 陰性サンプル生成（低いDMS_score: -1.5〜0.0）
+        for i in range(negative_samples):
+            pos = random.randint(1, min(len(target_seq), 200))
+            if pos <= len(target_seq):
+                orig_aa = target_seq[pos-1]
+                mut_aa = random.choice([aa for aa in amino_acids if aa != orig_aa])
+                mut_sequence = target_seq[:pos-1] + mut_aa + target_seq[pos:]
+            else:
+                orig_aa = 'A'
+                mut_aa = random.choice(amino_acids)
+                mut_sequence = target_seq + mut_aa
+            
+            mutations.append({
+                'mutant': f'{orig_aa}{pos}{mut_aa}',
+                'mutated_sequence': mut_sequence,
+                'target_seq': target_seq,
+                'DMS_score': np.random.uniform(-1.5, 0.0),  # 陰性スコア
+                'protein_name': assay_id,
+                'DMS_id': assay_id
+            })
+        
+        # データフレームを作成してシャッフル
+        df = pd.DataFrame(mutations)
+        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+        
+        return df
     
     def download_recommended_datasets(self, force_download=False):
         """
@@ -372,7 +634,7 @@ class ProteinGymDataDownloader:
 
 def main():
     parser = argparse.ArgumentParser(description='ProteinGym data downloader and preparation utility')
-    parser.add_argument('--data_dir', type=str, default='./proteingym_data',
+    parser.add_argument('--data_dir', type=str, default='./learning_source_202508/protein_sequence/gym',
                        help='Data directory for ProteinGym datasets')
     parser.add_argument('--download', 
                        choices=['substitutions', 'indels', 'clinical_substitutions', 'clinical_indels',
@@ -381,6 +643,24 @@ def main():
                        help='Download ProteinGym data. "recommended" downloads essential datasets for protein_sequence evaluation')
     parser.add_argument('--prepare_assay', type=str,
                        help='Prepare evaluation data for specific assay ID')
+    
+    # バランスサンプリング関連のオプション
+    parser.add_argument('--balanced_sampling', action='store_true',
+                       help='Use balanced sampling (extract equal positive and negative samples)')
+    parser.add_argument('--positive_samples', type=int, default=1000,
+                       help='Number of positive samples to extract (default: 1000)')
+    parser.add_argument('--negative_samples', type=int, default=1000,
+                       help='Number of negative samples to extract (default: 1000)')
+    parser.add_argument('--score_threshold', type=float, default=None,
+                       help='Score threshold for positive/negative classification (default: median)')
+    parser.add_argument('--prepare_multiple_assays', nargs='+',
+                       help='Prepare balanced data for multiple assay IDs')
+    parser.add_argument('--output_dir', type=str, default=None,
+                       help='Output directory for prepared datasets')
+    parser.add_argument('--setup_test_data', action='store_true',
+                       help='Setup test data from metadata (create sample balanced datasets)')
+    parser.add_argument('--test_assay_count', type=int, default=5,
+                       help='Number of test assays to create (default: 5)')
     parser.add_argument('--max_variants', type=int,
                        help='Maximum number of variants to include')
     parser.add_argument('--create_test', type=str,
@@ -454,16 +734,79 @@ def main():
                 print(f"    --output_dir results_{test_assays[0]}/")
                 print(f"    --batch_size 16")
         
-        # アッセイデータ準備
+        # アッセイデータ準備（単一アッセイ）
         if args.prepare_assay:
             eval_data = downloader.prepare_evaluation_data(
-                args.prepare_assay,
-                max_variants=args.max_variants
+                assay_id=args.prepare_assay,
+                max_variants=args.max_variants,
+                balanced_sampling=args.balanced_sampling,
+                positive_samples=args.positive_samples,
+                negative_samples=args.negative_samples,
+                score_threshold=args.score_threshold
             )
             
-            output_file = f"{args.prepare_assay}_evaluation_data.csv"
+            if args.balanced_sampling:
+                output_file = f"{args.prepare_assay}_balanced_evaluation_data.csv"
+            else:
+                output_file = f"{args.prepare_assay}_evaluation_data.csv"
+            
             eval_data.to_csv(output_file, index=False)
             logger.info(f"Evaluation data saved to: {output_file}")
+            
+            # 統計情報を表示
+            if args.balanced_sampling and args.score_threshold:
+                threshold = args.score_threshold
+            else:
+                threshold = eval_data['DMS_score'].median()
+            
+            positive_count = len(eval_data[eval_data['DMS_score'] >= threshold])
+            negative_count = len(eval_data[eval_data['DMS_score'] < threshold])
+            logger.info(f"Final dataset statistics:")
+            logger.info(f"  Total samples: {len(eval_data)}")
+            logger.info(f"  Positive samples (>= {threshold:.3f}): {positive_count}")
+            logger.info(f"  Negative samples (< {threshold:.3f}): {negative_count}")
+        
+        # 複数アッセイの一括バランス抽出
+        if args.prepare_multiple_assays:
+            balanced_datasets = downloader.prepare_multiple_assays_balanced(
+                assay_ids=args.prepare_multiple_assays,
+                positive_samples=args.positive_samples,
+                negative_samples=args.negative_samples,
+                score_threshold=args.score_threshold,
+                output_dir=args.output_dir or './balanced_proteingym_data'
+            )
+            
+            logger.info(f"Prepared balanced datasets for {len(balanced_datasets)} assays:")
+            for assay_id, df in balanced_datasets.items():
+                logger.info(f"  {assay_id}: {len(df)} variants")
+        
+        # テストデータセットの作成（メタデータから）
+        if args.setup_test_data:
+            try:
+                created_datasets = downloader.setup_test_data_from_metadata(
+                    positive_samples=args.positive_samples,
+                    negative_samples=args.negative_samples,
+                    test_assay_count=args.test_assay_count
+                )
+                
+                logger.info(f"Successfully created {len(created_datasets)} test datasets:")
+                for assay_id, info in created_datasets.items():
+                    logger.info(f"  {assay_id}: {info['total_samples']} samples " +
+                              f"({info['positive_samples']} positive, {info['negative_samples']} negative)")
+                    logger.info(f"    File: {info['file']}")
+                
+                # 使用例を表示
+                if created_datasets:
+                    first_assay = list(created_datasets.keys())[0]
+                    first_file = created_datasets[first_assay]['file']
+                    logger.info(f"\nExample usage:")
+                    logger.info(f"python scripts/proteingym_evaluation.py \\")
+                    logger.info(f"  --model_path runs_train_gpt2_protein_sequence/checkpoint-5000 \\")
+                    logger.info(f"  --proteingym_data {first_file}")
+                
+            except Exception as e:
+                logger.error(f"Failed to create test data: {e}")
+                return 1
         
         # テストデータセット作成
         if args.create_test:
