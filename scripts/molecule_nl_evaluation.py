@@ -1,0 +1,673 @@
+#!/usr/bin/env python3
+"""
+Molecule Natural Language モデルの評価スクリプト
+
+このスクリプトは、訓練済みのGPT-2 molecule_nlモデルを使って
+分子関連自然言語タスクの性能を検証します。
+"""
+
+import sys
+import os
+import argparse
+import json
+import pandas as pd
+import numpy as np
+import torch
+import torch.nn.functional as F
+from pathlib import Path
+from collections import defaultdict
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, mean_squared_error
+from datasets import load_from_disk
+import logging
+from datetime import datetime
+import math
+
+# プロジェクトルートを追加
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'gpt2'))
+
+from config.paths import get_gpt2_output_path
+from model import GPT, GPTConfig
+from utils.evaluation_output import get_evaluation_output_dir, get_model_type_from_path, get_model_name_from_path, setup_evaluation_logging
+from utils.model_evaluator import ModelEvaluator
+from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
+
+# ログ設定は後でsetup_evaluation_loggingで行う
+logger = logging.getLogger(__name__)
+
+class GPT2MoleculeNLEvaluator(ModelEvaluator):
+    """Molecule NLデータを使用したモデル評価クラス"""
+    
+    def __init__(self, model_path, tokenizer_path="", device='cuda', max_length=1024):
+        """
+        初期化
+        
+        Args:
+            model_path (str): 訓練済みモデルのパス
+            tokenizer_path (str): 未使用（MoleculeNatLangTokenizerを内部で初期化）
+            device (str): 使用デバイス
+            max_length (int): 最大入力長
+        """
+        self.max_length = max_length
+        self.model_path = model_path
+        self.tokenizer_path = "molecule_nl_internal"  # ダミーパス
+        self.device = device
+        
+        # ModelEvaluatorのパス検証をスキップして直接初期化
+        if not os.path.exists(self.model_path):
+            raise FileNotFoundError(f"Model path not found: {self.model_path}")
+        
+        # トークナイザーとモデルを初期化
+        self.tokenizer = self._init_tokenizer()
+        self.model = self._init_model()
+        
+        # 語彙サイズを設定
+        self.vocab_size = getattr(self.tokenizer, 'vocab_size', 32024)
+    
+    def _init_tokenizer(self):
+        """トークナイザーの初期化（抽象メソッドの実装）"""
+        logger.info(f"Loading MoleculeNatLangTokenizer")
+        try:
+            tokenizer = MoleculeNatLangTokenizer()
+            logger.info(f"✅ MoleculeNatLangTokenizer loaded successfully. Vocab size: {tokenizer.vocab_size}")
+            return tokenizer
+        except Exception as e:
+            logger.error(f"❌ Failed to load MoleculeNatLangTokenizer: {e}")
+            raise
+    
+    def _init_model(self):
+        """モデルの初期化（抽象メソッドの実装）"""
+        logger.info(f"Loading GPT2 model from {self.model_path}")
+        return self._load_gpt2_model()
+    
+    def _load_gpt2_model(self):
+        """訓練済みGPT2モデルの読み込み"""
+        try:
+            # チェックポイントの読み込み
+            checkpoint = torch.load(self.model_path, map_location='cpu')
+            logger.info("✅ Checkpoint loaded successfully")
+            
+            # モデル設定の取得
+            if 'config' in checkpoint:
+                # 新しい形式: 設定が保存されている
+                saved_config = checkpoint['config']
+                logger.info("📝 Using saved model configuration")
+                
+                # GPTConfigで使用可能なパラメータのみを抽出
+                valid_params = {
+                    'block_size', 'vocab_size', 'n_layer', 'n_head', 'n_embd', 
+                    'dropout', 'bias'
+                }
+                model_args = {k: v for k, v in saved_config.items() if k in valid_params}
+                
+                # 語彙サイズが設定にない場合は重みから推測
+                if 'vocab_size' not in model_args:
+                    if 'model' in checkpoint:
+                        state_dict = checkpoint['model']
+                        if 'transformer.wte.weight' in state_dict:
+                            model_args['vocab_size'] = state_dict['transformer.wte.weight'].shape[0]
+                            logger.info(f"📊 Detected vocab_size from weights: {model_args['vocab_size']}")
+                
+                logger.info(f"   - Filtered config keys: {list(model_args.keys())}")
+                if 'vocab_size' in model_args:
+                    logger.info(f"   - Model vocab_size: {model_args['vocab_size']}")
+                if self.tokenizer:
+                    logger.info(f"   - Tokenizer vocab_size: {self.tokenizer.vocab_size}")
+            else:
+                # 古い形式: チェックポイントから語彙サイズを推測
+                logger.warning("⚠️  No saved config found, using checkpoint weights for config")
+                
+                # チェックポイントから語彙サイズを推測
+                if 'model' in checkpoint:
+                    state_dict = checkpoint['model']
+                elif isinstance(checkpoint, dict) and 'transformer.wte.weight' in checkpoint:
+                    state_dict = checkpoint
+                else:
+                    state_dict = checkpoint
+                
+                # 埋め込み層から語彙サイズを取得
+                vocab_size = 32024  # デフォルト値（チェックポイントから確認済み）
+                if 'transformer.wte.weight' in state_dict:
+                    vocab_size = state_dict['transformer.wte.weight'].shape[0]
+                    logger.info(f"📊 Detected vocab_size from checkpoint: {vocab_size}")
+                elif 'wte.weight' in state_dict:
+                    vocab_size = state_dict['wte.weight'].shape[0]
+                    logger.info(f"📊 Detected vocab_size from checkpoint: {vocab_size}")
+                else:
+                    logger.info(f"📊 Using default vocab_size: {vocab_size}")
+                
+                model_args = {
+                    'block_size': 1024,
+                    'vocab_size': vocab_size,
+                    'n_layer': 12,
+                    'n_head': 12,
+                    'n_embd': 768,
+                    'dropout': 0.0,
+                    'bias': True
+                }
+            
+            # モデルの作成
+            gptconf = GPTConfig(**model_args)
+            model = GPT(gptconf)
+            
+            # 重みの読み込み
+            if 'model' in checkpoint:
+                model.load_state_dict(checkpoint['model'])
+            else:
+                model.load_state_dict(checkpoint)
+            
+            model.to(self.device)
+            model.eval()
+            
+            # モデル統計の表示
+            total_params = sum(p.numel() for p in model.parameters())
+            logger.info(f"📊 Model Statistics:")
+            logger.info(f"   - Total parameters: {total_params:,}")
+            logger.info(f"   - Vocabulary size: {model_args.get('vocab_size', 'unknown')}")
+            logger.info(f"   - Block size: {model_args.get('block_size', 'unknown')}")
+            logger.info(f"   - Number of layers: {model_args.get('n_layer', 'unknown')}")
+            logger.info(f"   - Embedding dimension: {model_args.get('n_embd', 'unknown')}")
+            
+            return model
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to load model: {e}")
+            raise RuntimeError(f"Model loading failed: {e}")
+    
+    def encode_sequence(self, sequence: str) -> torch.Tensor:
+        """シーケンスをエンコード（抽象メソッドの実装）"""
+        return self.encode_text(sequence)
+    
+    def encode_text(self, text, add_special_tokens=True):
+        """テキストをトークンIDにエンコード"""
+        try:
+            # MoleculeNatLangTokenizerを使用してエンコード
+            tokenized_result = self.tokenizer.tokenize_text(text)
+            tokens = tokenized_result['input_ids']
+            
+            # 最大長に調整
+            if len(tokens) > self.max_length:
+                tokens = tokens[:self.max_length]
+                logger.debug(f"Text truncated to {len(tokens)} tokens")
+            
+            if not tokens:
+                logger.warning(f"Empty tokenization for text: {text[:50]}...")
+                # パディングトークンのIDを使用
+                tokens = [self.tokenizer.pad_token_id if hasattr(self.tokenizer, 'pad_token_id') else 0]
+            
+            return torch.tensor(tokens, dtype=torch.long)
+            
+        except Exception as e:
+            logger.warning(f"Tokenization failed for text: {text[:50]}... Error: {e}")
+            # フォールバック：基本的なトークン化
+            try:
+                tokens = self.tokenizer(text, return_tensors='pt', truncation=True, max_length=self.max_length)['input_ids'][0]
+                return tokens
+            except Exception as e2:
+                logger.error(f"Fallback tokenization also failed: {e2}")
+                return torch.tensor([0], dtype=torch.long)
+    
+    def calculate_perplexity(self, text):
+        """テキストのパープレキシティを計算"""
+        with torch.no_grad():
+            try:
+                tokens = self.encode_text(text)
+                
+                if len(tokens) < 2:
+                    logger.debug(f"Text too short for perplexity calculation: {len(tokens)} tokens")
+                    return float('inf')
+                
+                # バッチ次元を追加してデバイスに転送
+                tokens = tokens.unsqueeze(0).to(self.device)
+                
+                # モデルの予測
+                logits, _ = self.model(tokens)
+                
+                # 損失計算（次のトークン予測）
+                shift_logits = logits[..., :-1, :].contiguous()
+                shift_labels = tokens[..., 1:].contiguous()
+                
+                # ゼロサイズのテンソーをチェック
+                if shift_logits.numel() == 0 or shift_labels.numel() == 0:
+                    logger.debug(f"Empty tensor in perplexity calculation")
+                    return float('inf')
+                
+                # クロスエントロピー損失
+                loss_fct = torch.nn.CrossEntropyLoss(reduction='mean')
+                loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+                
+                # パープレキシティは損失の指数
+                perplexity = torch.exp(loss).item()
+                
+                return perplexity
+                
+            except Exception as e:
+                logger.debug(f"Error in perplexity calculation: {e}")
+                return float('inf')
+    
+    def generate_text(self, prompt, max_new_tokens=100, temperature=1.0, top_k=50):
+        """テキスト生成"""
+        self.model.eval()
+        with torch.no_grad():
+            tokens = self.encode_text(prompt)
+            tokens = tokens.unsqueeze(0).to(self.device)
+            
+            for _ in range(max_new_tokens):
+                if tokens.shape[1] >= self.max_length:
+                    break
+                
+                # 予測
+                logits, _ = self.model(tokens)
+                logits = logits[:, -1, :] / temperature
+                
+                # Top-k sampling
+                if top_k > 0:
+                    top_k_logits, top_k_indices = torch.topk(logits, top_k)
+                    logits = torch.full_like(logits, float('-inf'))
+                    logits.scatter_(1, top_k_indices, top_k_logits)
+                
+                # サンプリング
+                probs = F.softmax(logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+                
+                # トークンを追加
+                tokens = torch.cat([tokens, next_token], dim=1)
+            
+            # デコード
+            generated_tokens = tokens[0].cpu().numpy().tolist()
+            try:
+                generated_text = self.tokenizer.decode(generated_tokens)
+            except Exception as e:
+                logger.warning(f"Decode failed in text generation: {e}")
+                generated_text = f"[GENERATED TOKENS: {generated_tokens[:20]}...]"
+            
+            return generated_text
+    
+    def evaluate_dataset(self, dataset_path, output_dir='./reports/molecule_nl_evaluation', sample_size=None):
+        """
+        Molecule NLデータセット全体の評価
+        
+        Args:
+            dataset_path (str): データセットのパス
+            output_dir (str): 出力ディレクトリ
+            sample_size (int): サンプルサイズ（None=全データ）
+        """
+        # タイムスタンプを追加してoutput_dirを更新
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = f"{output_dir}_{timestamp}"
+        
+        # 出力ディレクトリが存在しない場合は作成
+        os.makedirs(output_dir, exist_ok=True)
+        
+        logger.info("🔬 Starting Molecule NL Model Evaluation")
+        logger.info("=" * 60)
+        
+        # データセット読み込み
+        logger.info("📚 Loading Molecule NL dataset...")
+        try:
+            dataset = load_from_disk(dataset_path)
+            df = pd.DataFrame(dataset)
+            logger.info(f"✅ Dataset loaded successfully: {len(df)} samples")
+        except Exception as e:
+            logger.error(f"❌ Failed to load dataset: {e}")
+            raise
+        
+        if sample_size:
+            df = df.sample(n=min(sample_size, len(df)), random_state=42)
+            logger.info(f"📊 Using sample of {len(df)} texts")
+        else:
+            logger.info(f"📊 Evaluating all {len(df)} texts")
+        
+        # データセット統計
+        logger.info(f"   - Total samples: {len(df)}")
+        if 'input_ids' in df.columns:
+            avg_length = df['input_ids'].apply(len).mean()
+            logger.info(f"   - Average sequence length: {avg_length:.1f}")
+        
+        results = []
+        perplexities = []
+        processing_errors = 0
+        
+        logger.info("🧬 Processing texts...")
+        
+        for idx, row in df.iterrows():
+            if idx % 100 == 0 and idx > 0:
+                avg_perplexity = np.mean(perplexities) if perplexities else float('inf')
+                logger.info(f"   Progress: {idx}/{len(df)} texts processed, avg perplexity: {avg_perplexity:.2f}")
+            
+            try:
+                # 入力テキストの取得
+                if 'input_ids' in row:
+                    # トークンIDからテキストを復元
+                    input_ids = row['input_ids']
+                    if isinstance(input_ids, list) and len(input_ids) > 0:
+                        try:
+                            # MoleculeNatLangTokenizer.decode()の使用方法を調整
+                            text = self.tokenizer.decode(input_ids)
+                            logger.debug(f"Sample {idx}: Decoded {len(input_ids)} tokens to {len(text)} chars")
+                        except Exception as decode_error:
+                            logger.warning(f"Sample {idx}: Decode failed, using raw token representation: {decode_error}")
+                            text = f"[TOKENS: {input_ids[:10]}...]"  # デバッグ用
+                    else:
+                        logger.warning(f"Sample {idx}: Empty or invalid input_ids")
+                        continue
+                elif 'text' in row:
+                    text = row['text']
+                    logger.debug(f"Sample {idx}: Using text field with {len(text)} chars")
+                else:
+                    logger.warning(f"Sample {idx}: No text or input_ids found")
+                    continue
+                
+                if not text or len(text.strip()) == 0:
+                    logger.warning(f"Sample {idx}: Empty text after processing")
+                    continue
+                
+                # パープレキシティ計算
+                logger.debug(f"Sample {idx}: Calculating perplexity for text: {text[:50]}...")
+                perplexity = self.calculate_perplexity(text)
+                logger.debug(f"Sample {idx}: Perplexity = {perplexity}")
+                
+                # 結果を記録
+                result = {
+                    'index': idx,
+                    'text_length': len(text),
+                    'token_length': len(row.get('input_ids', [])),
+                    'perplexity': perplexity,
+                    'log_perplexity': math.log(perplexity) if perplexity > 0 and perplexity != float('inf') else float('inf'),
+                    'text_preview': text[:100] if len(text) > 100 else text
+                }
+                
+                results.append(result)
+                if perplexity != float('inf'):
+                    perplexities.append(perplexity)
+                
+            except Exception as e:
+                processing_errors += 1
+                logger.warning(f"Error processing sample {idx}: {e}")
+                import traceback
+                logger.debug(f"Full traceback: {traceback.format_exc()}")
+                continue
+        
+        logger.info(f"✅ Processing completed!")
+        logger.info(f"   - Successfully processed: {len(results)} texts")
+        logger.info(f"   - Processing errors: {processing_errors}")
+        
+        # 結果の保存と分析
+        results_df = pd.DataFrame(results)
+        results_df.to_csv(os.path.join(output_dir, 'molecule_nl_detailed_results.csv'), index=False)
+        
+        # 性能指標の計算
+        metrics = self._calculate_metrics(perplexities, results_df)
+        
+        # 結果の保存
+        with open(os.path.join(output_dir, 'molecule_nl_evaluation_results.json'), 'w') as f:
+            json.dump(metrics, f, indent=2)
+        
+        # 可視化（別クラスで処理）
+        self._create_visualizations_with_separate_class(results_df, output_dir)
+        
+        # レポート生成
+        self._generate_report(metrics, results_df, output_dir)
+        
+        logger.info(f"📁 Results saved to: {output_dir}")
+        return metrics, results_df
+    
+    def _create_visualizations_with_separate_class(self, results_df, output_dir):
+        """分離された可視化クラスを使用して可視化を生成"""
+        try:
+            # CSV結果ファイルのパスを生成
+            csv_file = os.path.join(output_dir, "molecule_nl_detailed_results.csv")
+            
+            # 可視化クラスをインポート
+            from molecule_nl_visualization import MoleculeNLVisualizationGenerator
+            
+            # 可視化器を初期化
+            visualizer = MoleculeNLVisualizationGenerator(
+                results_file=csv_file,
+                output_dir=output_dir
+            )
+            
+            # 全ての可視化を生成
+            visualizer.generate_all_visualizations()
+            
+            # HTMLレポートも生成
+            visualizer.create_html_report()
+            
+            logger.info("✅ Visualizations created using separate visualization class")
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Visualization generation failed: {e}")
+            logger.info("📊 Falling back to basic visualization")
+            # フォールバック：基本的な可視化のみ実行
+            self._create_basic_visualization(results_df, output_dir)
+        """分離された可視化クラスを使用して可視化を生成"""
+        try:
+            # CSV結果ファイルのパスを生成
+            csv_file = os.path.join(output_dir, "molecule_nl_detailed_results.csv")
+            
+            # 可視化クラスをインポート
+            from molecule_nl_visualization import MoleculeNLVisualizationGenerator
+            
+            # 可視化器を初期化
+            visualizer = MoleculeNLVisualizationGenerator(
+                results_file=csv_file,
+                output_dir=output_dir
+            )
+            
+            # 全ての可視化を生成
+            visualizer.generate_all_visualizations()
+            
+            # HTMLレポートも生成
+            visualizer.create_html_report()
+            
+            logger.info("✅ Visualizations created using separate visualization class")
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Visualization generation failed: {e}")
+            logger.info("📊 Falling back to basic visualization")
+            # フォールバック：基本的な可視化のみ実行
+            self._create_basic_visualization(results_df, output_dir)
+    
+    def _create_basic_visualization(self, results_df, output_dir):
+        """基本的な結果可視化（フォールバック用）"""
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        
+        plt.style.use("default")
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        
+        # 1. パープレキシティ分布
+        valid_perplexities = results_df[results_df['perplexity'] != float('inf')]['perplexity']
+        if len(valid_perplexities) > 0:
+            axes[0, 0].hist(valid_perplexities, bins=50, alpha=0.7, color='blue')
+            axes[0, 0].set_xlabel('Perplexity')
+            axes[0, 0].set_ylabel('Count')
+            axes[0, 0].set_title('Perplexity Distribution')
+            axes[0, 0].set_yscale('log')
+        else:
+            axes[0, 0].text(0.5, 0.5, 'No valid perplexity values', ha='center', va='center')
+            axes[0, 0].set_title('Perplexity Distribution (No Data)')
+        
+        # 2. テキスト長 vs パープレキシティ
+        valid_data = results_df[results_df['perplexity'] != float('inf')]
+        if len(valid_data) > 0:
+            axes[0, 1].scatter(valid_data['text_length'], valid_data['perplexity'], alpha=0.6)
+            axes[0, 1].set_xlabel('Text Length')
+            axes[0, 1].set_ylabel('Perplexity')
+            axes[0, 1].set_title('Text Length vs Perplexity')
+        else:
+            axes[0, 1].text(0.5, 0.5, 'No valid data', ha='center', va='center')
+            axes[0, 1].set_title('Text Length vs Perplexity (No Data)')
+        
+        # 3. ログパープレキシティ分布
+        valid_log_perplexities = results_df[results_df['log_perplexity'] != float('inf')]['log_perplexity']
+        if len(valid_log_perplexities) > 0:
+            axes[1, 0].hist(valid_log_perplexities, bins=50, alpha=0.7, color='green')
+            axes[1, 0].set_xlabel('Log Perplexity')
+            axes[1, 0].set_ylabel('Count')
+            axes[1, 0].set_title('Log Perplexity Distribution')
+        else:
+            axes[1, 0].text(0.5, 0.5, 'No valid log perplexity values', ha='center', va='center')
+            axes[1, 0].set_title('Log Perplexity Distribution (No Data)')
+        
+        # 4. トークン長分布
+        axes[1, 1].hist(results_df['token_length'], bins=50, alpha=0.7, color='orange')
+        axes[1, 1].set_xlabel('Token Length')
+        axes[1, 1].set_ylabel('Count')
+        axes[1, 1].set_title('Token Length Distribution')
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, "molecule_nl_evaluation_plots.png"), dpi=300, bbox_inches="tight")
+        plt.close()
+        
+        logger.info("📊 Basic visualization completed")
+    
+    def _calculate_metrics(self, perplexities, results_df):
+        """性能指標の計算"""
+        if not perplexities:
+            logger.warning("No valid perplexities found")
+            return {
+                'total_samples': len(results_df),
+                'valid_samples': 0,
+                'mean_perplexity': float('inf'),
+                'median_perplexity': float('inf'),
+                'std_perplexity': float('inf'),
+                'min_perplexity': float('inf'),
+                'max_perplexity': float('inf')
+            }
+        
+        perplexities = np.array(perplexities)
+        
+        metrics = {
+            'total_samples': len(results_df),
+            'valid_samples': len(perplexities),
+            'mean_perplexity': float(np.mean(perplexities)),
+            'median_perplexity': float(np.median(perplexities)),
+            'std_perplexity': float(np.std(perplexities)),
+            'min_perplexity': float(np.min(perplexities)),
+            'max_perplexity': float(np.max(perplexities)),
+            'percentile_25': float(np.percentile(perplexities, 25)),
+            'percentile_75': float(np.percentile(perplexities, 75)),
+            'mean_text_length': float(results_df['text_length'].mean()) if 'text_length' in results_df.columns else 0.0,
+            'mean_token_length': float(results_df['token_length'].mean()) if 'token_length' in results_df.columns else 0.0
+        }
+        
+        return metrics
+    
+    def _generate_report(self, metrics, results_df, output_dir):
+        """評価レポートの生成"""
+        report_path = os.path.join(output_dir, "molecule_nl_evaluation_report.txt")
+        
+        with open(report_path, "w") as f:
+            f.write("Molecule Natural Language Model - Evaluation Report\n")
+            f.write("=" * 60 + "\n\n")
+            
+            f.write(f"🕐 Evaluation Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"🧬 Model Type: GPT-2 for Molecule Natural Language\n")
+            f.write(f"📊 Evaluation Method: Perplexity-based language modeling assessment\n\n")
+            
+            f.write("📈 Dataset Summary:\n")
+            f.write(f"   • Total samples evaluated: {metrics['total_samples']}\n")
+            f.write(f"   • Valid samples: {metrics['valid_samples']}\n")
+            f.write(f"   • Processing success rate: {metrics['valid_samples']/metrics['total_samples']:.1%}\n\n")
+            
+            f.write("🎯 Performance Metrics:\n")
+            f.write(f"   • Mean Perplexity: {metrics.get('mean_perplexity', float('inf')):.3f}\n")
+            f.write(f"   • Median Perplexity: {metrics.get('median_perplexity', float('inf')):.3f}\n")
+            f.write(f"   • Std Perplexity: {metrics.get('std_perplexity', float('inf')):.3f}\n")
+            f.write(f"   • Min Perplexity: {metrics.get('min_perplexity', float('inf')):.3f}\n")
+            f.write(f"   • Max Perplexity: {metrics.get('max_perplexity', float('inf')):.3f}\n\n")
+            
+            f.write("📊 Text Statistics:\n")
+            f.write(f"   • Mean Text Length: {metrics.get('mean_text_length', 0):.1f} characters\n")
+            f.write(f"   • Mean Token Length: {metrics.get('mean_token_length', 0):.1f} tokens\n")
+            f.write(f"   • 25th Percentile Perplexity: {metrics.get('percentile_25', float('inf')):.3f}\n")
+            f.write(f"   • 75th Percentile Perplexity: {metrics.get('percentile_75', float('inf')):.3f}\n\n")
+            
+            # パフォーマンス解釈
+            mean_ppl = metrics.get('mean_perplexity', float('inf'))
+            if mean_ppl < 10:
+                performance_interpretation = "🟢 Excellent language modeling performance"
+            elif mean_ppl < 50:
+                performance_interpretation = "🟡 Good language modeling performance"
+            elif mean_ppl < 200:
+                performance_interpretation = "🟠 Moderate language modeling performance"
+            else:
+                performance_interpretation = "🔴 Poor language modeling performance"
+                
+            f.write(f"📊 Overall Assessment: {performance_interpretation}\n")
+            f.write(f"   Mean Perplexity: {mean_ppl:.3f}\n\n")
+            
+            f.write("💡 Key Insights:\n")
+            f.write("   • Lower perplexity indicates better language modeling capability\n")
+            f.write("   • This model specializes in molecule-related natural language\n")
+            f.write("   • Perplexity reflects the model's uncertainty in predicting next tokens\n")
+            f.write("   • Results should be compared with domain-specific baselines\n")
+
+def main():
+    parser = argparse.ArgumentParser(description='Molecule NL model evaluation')
+    parser.add_argument('--model_path', type=str, default='gpt2-output/molecule_nl-small/ckpt.pt',
+                       help='Path to trained model checkpoint')
+    parser.add_argument('--dataset_path', type=str, default=None,
+                       help='Path to test dataset directory')
+    parser.add_argument('--output_dir', type=str, default=None,
+                       help='Output directory for results (auto-generated if not provided)')
+    parser.add_argument('--sample_size', type=int, default=None,
+                       help='Sample size for testing (default: use all data)')
+    parser.add_argument('--device', type=str, default='cuda',
+                       help='Device to use for evaluation')
+    parser.add_argument('--max_length', type=int, default=1024,
+                       help='Maximum sequence length')
+    
+    args = parser.parse_args()
+    
+    # LEARNING_SOURCE_DIRの設定
+    learning_source_dir = os.environ.get('LEARNING_SOURCE_DIR', 'learning_source_202508')
+    
+    # デフォルトパスの設定
+    if args.dataset_path is None:
+        args.dataset_path = f"{learning_source_dir}/molecule_nl/training_ready_hf_dataset/test"
+    
+    # 出力ディレクトリを自動生成または指定されたものを使用
+    if args.output_dir is None:
+        model_type = get_model_type_from_path(args.model_path)
+        model_name = get_model_name_from_path(args.model_path)
+        args.output_dir = get_evaluation_output_dir(model_type, 'molecule_nl', model_name)
+    else:
+        os.makedirs(args.output_dir, exist_ok=True)
+    
+    # ログ設定
+    logger = setup_evaluation_logging(Path(args.output_dir), 'molecule_nl_evaluation')
+    
+    logger.info("Starting Molecule NL model evaluation...")
+    logger.info(f"Model path: {args.model_path}")
+    logger.info(f"Dataset path: {args.dataset_path}")
+    logger.info(f"Output directory: {args.output_dir}")
+    
+    try:
+        # 評価器の初期化（トークナイザーパスは不要）
+        evaluator = GPT2MoleculeNLEvaluator(
+            model_path=args.model_path,
+            tokenizer_path="",  # MoleculeNatLangTokenizerは内部で初期化
+            device=args.device,
+            max_length=args.max_length
+        )
+        
+        # 評価の実行
+        metrics, results_df = evaluator.evaluate_dataset(
+            dataset_path=args.dataset_path,
+            output_dir=args.output_dir,
+            sample_size=args.sample_size
+        )
+        
+        # 結果の表示
+        logger.info("Evaluation completed successfully!")
+        logger.info(f"Mean Perplexity: {metrics.get('mean_perplexity', float('inf')):.3f}")
+        logger.info(f"Valid samples: {metrics.get('valid_samples', 0)}/{metrics.get('total_samples', 0)}")
+        
+    except Exception as e:
+        logger.error(f"Evaluation failed: {e}")
+        raise
+
+if __name__ == "__main__":
+    main()
