@@ -502,47 +502,111 @@ class ProteinGymEvaluator:
         else:
             return obj
 
-def create_sample_proteingym_data(output_file):
+def create_sample_proteingym_data(output_file, balanced=True, positive_samples=1000, negative_samples=1000):
     """
     サンプルProteinGymデータを作成（テスト用）
+    
+    Args:
+        output_file (str): 出力ファイルパス
+        balanced (bool): バランスデータを作成するか
+        positive_samples (int): 陽性サンプル数
+        negative_samples (int): 陰性サンプル数
     """
     logger.info(f"Creating sample ProteinGym data: {output_file}")
     
-    # サンプルデータ（実際のProteinGymデータの形式に基づく）
-    sample_data = [
-        {
-            'mutant': 'A1V',
-            'mutated_sequence': 'VLKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'DMS_score': 0.85,
-            'protein_name': 'TEST_PROTEIN_1'
-        },
-        {
-            'mutant': 'L2P',
-            'mutated_sequence': 'APKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'DMS_score': 0.15,
-            'protein_name': 'TEST_PROTEIN_1'
-        },
-        {
-            'mutant': 'K3R',
-            'mutated_sequence': 'ALRGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'DMS_score': 0.75,
-            'protein_name': 'TEST_PROTEIN_1'
-        },
-        {
-            'mutant': 'WT',
-            'mutated_sequence': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
-            'DMS_score': 1.0,
-            'protein_name': 'TEST_PROTEIN_1'
-        }
-    ]
+    if balanced:
+        logger.info(f"Creating balanced dataset: {positive_samples} positive + {negative_samples} negative samples")
+        
+        # 陽性サンプル（高いDMS_score）を生成
+        positive_data = []
+        base_sequence = 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT'
+        amino_acids = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
+        
+        np.random.seed(42)  # 再現性のため
+        
+        for i in range(positive_samples):
+            pos = np.random.randint(1, len(base_sequence))
+            orig_aa = base_sequence[pos-1]
+            new_aa = np.random.choice([aa for aa in amino_acids if aa != orig_aa])
+            
+            mut_sequence = list(base_sequence)
+            mut_sequence[pos-1] = new_aa
+            mut_sequence = ''.join(mut_sequence)
+            
+            positive_data.append({
+                'mutant': f'{orig_aa}{pos}{new_aa}',
+                'mutated_sequence': mut_sequence,
+                'target_seq': base_sequence,
+                'DMS_score': np.random.uniform(0.6, 1.0),  # 陽性：0.6-1.0
+                'protein_name': 'TEST_PROTEIN_POSITIVE'
+            })
+        
+        # 陰性サンプル（低いDMS_score）を生成
+        negative_data = []
+        for i in range(negative_samples):
+            pos = np.random.randint(1, len(base_sequence))
+            orig_aa = base_sequence[pos-1]
+            new_aa = np.random.choice([aa for aa in amino_acids if aa != orig_aa])
+            
+            mut_sequence = list(base_sequence)
+            mut_sequence[pos-1] = new_aa
+            mut_sequence = ''.join(mut_sequence)
+            
+            negative_data.append({
+                'mutant': f'{orig_aa}{pos}{new_aa}',
+                'mutated_sequence': mut_sequence,
+                'target_seq': base_sequence,
+                'DMS_score': np.random.uniform(0.0, 0.4),  # 陰性：0.0-0.4
+                'protein_name': 'TEST_PROTEIN_NEGATIVE'
+            })
+        
+        # データを結合してシャッフル
+        sample_data = positive_data + negative_data
+        np.random.shuffle(sample_data)
+        
+    else:
+        # 従来のサンプルデータ（少数）
+        sample_data = [
+            {
+                'mutant': 'A1V',
+                'mutated_sequence': 'VLKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'DMS_score': 0.85,
+                'protein_name': 'TEST_PROTEIN_1'
+            },
+            {
+                'mutant': 'L2P',
+                'mutated_sequence': 'APKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'DMS_score': 0.15,
+                'protein_name': 'TEST_PROTEIN_1'
+            },
+            {
+                'mutant': 'K3R',
+                'mutated_sequence': 'ALRGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'DMS_score': 0.75,
+                'protein_name': 'TEST_PROTEIN_1'
+            },
+            {
+                'mutant': 'WT',
+                'mutated_sequence': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'target_seq': 'ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT',
+                'DMS_score': 1.0,
+                'protein_name': 'TEST_PROTEIN_1'
+            }
+        ]
     
     df = pd.DataFrame(sample_data)
     df.to_csv(output_file, index=False)
-    logger.info(f"Sample data created with {len(df)} variants")
+    
+    if balanced:
+        threshold = 0.5  # 中間値
+        positive_count = len(df[df['DMS_score'] >= threshold])
+        negative_count = len(df[df['DMS_score'] < threshold])
+        logger.info(f"Sample balanced data created: {len(df)} total ({positive_count} positive, {negative_count} negative)")
+    else:
+        logger.info(f"Sample data created with {len(df)} variants")
 
 def get_protein_tokenizer_path():
     """
@@ -574,6 +638,14 @@ def main():
     parser.add_argument('--tokenizer_path', type=str, default=None,
                        help='Path to tokenizer (auto-detect if not provided)')
     
+    # バランスサンプルデータ作成用オプション
+    parser.add_argument('--balanced_samples', action='store_true',
+                       help='Create balanced sample data (positive and negative)')
+    parser.add_argument('--sample_positive_count', type=int, default=1000,
+                       help='Number of positive samples in created data (default: 1000)')
+    parser.add_argument('--sample_negative_count', type=int, default=1000,
+                       help='Number of negative samples in created data (default: 1000)')
+    
     args = parser.parse_args()
     
     # 出力ディレクトリを自動生成または指定されたものを使用
@@ -589,8 +661,16 @@ def main():
     
     # サンプルデータ作成モード
     if args.create_sample_data:
-        create_sample_proteingym_data(args.proteingym_data)
-        logger.info("Sample data created. Run again without --create_sample_data to evaluate.")
+        create_sample_proteingym_data(
+            output_file=args.proteingym_data,
+            balanced=args.balanced_samples,
+            positive_samples=args.sample_positive_count,
+            negative_samples=args.sample_negative_count
+        )
+        if args.balanced_samples:
+            logger.info(f"Balanced sample data created ({args.sample_positive_count} positive + {args.sample_negative_count} negative). Run again without --create_sample_data to evaluate.")
+        else:
+            logger.info("Sample data created. Run again without --create_sample_data to evaluate.")
         return
     
     try:
