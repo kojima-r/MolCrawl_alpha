@@ -25,6 +25,20 @@ build
 runs*
 out/*
 dataset/*
+dataset/
+miniconda*/
+reports
+reports/*
+outputs/
+outputs/*
+logs
+logs/*
+temp
+temp/*
+gpt2-output*/
+learning_source*/
+experiments_data/
+experiments_data
 
 experiments.db
 experiments.db-journal
