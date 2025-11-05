@@ -12,7 +12,7 @@ set -e  # エラー時に停止
 
 # 設定
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"  # bootstrapsディレクトリからの実行を想定
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"  # プロジェクトルートディレクトリ
 
 # LEARNING_SOURCE_DIRの確認
 if [ -z "$LEARNING_SOURCE_DIR" ]; then
@@ -145,15 +145,21 @@ if [[ "$EVAL_ONLY" != true ]]; then
     if [[ "$DOWNLOAD" == true ]]; then
         echo "ClinVarデータをダウンロード中..."
         python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_data_preparation.py" \
-            --mode download \
+            --download \
             --output_dir "$DATA_DIR" \
-            --max_samples "$MAX_SAMPLES"
+            --max_samples "$MAX_SAMPLES" \
+            --sequence_length "$SEQUENCE_LENGTH"
     else
-        echo "サンプルClinVarデータを作成中..."
-        python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_data_preparation.py" \
-            --mode sample \
-            --output_dir "$DATA_DIR" \
-            --max_samples "$MAX_SAMPLES"
+        echo "サンプルClinVarデータを作成中（モック実装）..."
+        # --downloadなしの場合は既存データを使用、または手動でサンプルを作成
+        # 既存のファイルがない場合はエラーメッセージを表示
+        if [[ ! -f "$DATA_DIR/clinvar_evaluation_dataset.csv" ]]; then
+            echo "警告: ClinVarデータが存在しません"
+            echo "初回実行時は --download オプションを使用してデータをダウンロードしてください"
+            echo "例: $0 --download"
+            exit 1
+        fi
+        echo "既存のClinVarデータを使用: $DATA_DIR/clinvar_evaluation_dataset.csv"
     fi
     
     echo "データ準備完了"

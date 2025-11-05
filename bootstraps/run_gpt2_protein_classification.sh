@@ -16,7 +16,7 @@ set -e  # エラー時に停止
 
 # スクリプトのディレクトリを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"  # bootstrapsディレクトリからの実行を想定
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"  # プロジェクトルートディレクトリ
 
 # LEARNING_SOURCE_DIRの確認
 if [ -z "$LEARNING_SOURCE_DIR" ]; then
