@@ -31,6 +31,7 @@ MODEL_SIZE="small"
 SEQUENCE_LENGTH=100
 MAX_SAMPLES=1000
 BATCH_SIZE=16
+TOKENIZER_PATH=""  # 空の場合は自動検出
 
 # ヘルプ表示
 show_help() {
@@ -41,6 +42,7 @@ GPT-2 COSMIC評価パイプライン
 
 オプション:
     -m, --model-size SIZE       モデルサイズ (small/medium/large/xl) [default: small]
+    -t, --tokenizer PATH        トークナイザーパス（指定しない場合は自動検出）
     -s, --sequence-length LEN   配列長 [default: 100]
     -n, --max-samples NUM       クラスあたりの最大サンプル数 [default: 1000]
     -b, --batch-size SIZE       バッチサイズ [default: 16]
@@ -53,6 +55,7 @@ GPT-2 COSMIC評価パイプライン
     $0 --model-size medium --max-samples 2000
     $0 --eval-only --model-size large
     $0 --visualize-only
+    $0 --tokenizer /path/to/spm_tokenizer.model
 
 注意:
     実際のCOSMICデータのダウンロードには登録が必要です。
@@ -69,6 +72,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         -m|--model-size)
             MODEL_SIZE="$2"
+            shift 2
+            ;;
+        -t|--tokenizer)
+            TOKENIZER_PATH="$2"
             shift 2
             ;;
         -s|--sequence-length)
@@ -180,11 +187,24 @@ if [[ "$VISUALIZE_ONLY" != true ]]; then
     echo "モデル: $MODEL_PATH"
     echo "データ: $COSMIC_DATA"
     
-    python "$PROJECT_ROOT/scripts/evaluation/gpt2/cosmic_evaluation.py" \
-        --model_path "$MODEL_PATH" \
-        --cosmic_data "$COSMIC_DATA" \
-        --output_dir "$OUTPUT_DIR" \
+    # Pythonコマンド引数を準備
+    EVAL_ARGS=(
+        "$PROJECT_ROOT/scripts/evaluation/gpt2/cosmic_evaluation.py"
+        --model_path "$MODEL_PATH"
+        --cosmic_data "$COSMIC_DATA"
+        --output_dir "$OUTPUT_DIR"
         --batch_size "$BATCH_SIZE"
+    )
+    
+    # トークナイザーパスが指定されている場合は追加
+    if [[ -n "$TOKENIZER_PATH" ]]; then
+        EVAL_ARGS+=(--tokenizer_path "$TOKENIZER_PATH")
+        echo "トークナイザー: $TOKENIZER_PATH"
+    else
+        echo "トークナイザー: 自動検出"
+    fi
+    
+    python "${EVAL_ARGS[@]}"
     
     echo "モデル評価完了"
 fi

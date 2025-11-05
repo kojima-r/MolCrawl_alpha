@@ -52,9 +52,9 @@ class ModelEvaluator(ABC):
         self.model = None
         self.vocab_size = None
         
-        # Initialize tokenizer and model
-        self._init_tokenizer()
-        self._init_model()
+        # Initialize tokenizer and model (and assign their return values)
+        self.tokenizer = self._init_tokenizer()
+        self.model = self._init_model()
         
         logger.info(f"Initialized {self.__class__.__name__} with model: {model_path}")
     

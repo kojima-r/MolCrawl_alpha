@@ -47,11 +47,8 @@ class ProteinGymEvaluator(ModelEvaluator):
             device (str): 使用デバイス
         """
         # 親クラスの初期化（tokenizer_pathがNoneの場合はmodel_pathを使用）
+        # トークナイザーとモデルは自動的に初期化される
         super().__init__(model_path, tokenizer_path or model_path, device)
-        
-        # サブクラス固有の初期化
-        self.tokenizer = self._init_tokenizer()
-        self.model = self._init_model()
     
     def _init_tokenizer(self):
         """protein_sequence用のトークナイザーを初期化（抽象メソッドの実装）"""

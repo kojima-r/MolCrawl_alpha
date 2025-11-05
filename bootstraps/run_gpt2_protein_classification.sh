@@ -29,6 +29,7 @@ fi
 # デフォルト設定
 MODEL_PATH=""
 DATA_PATH=""
+TOKENIZER_PATH=""  # 空の場合は自動検出
 OUTPUT_DIR="$LEARNING_SOURCE_DIR/protein_sequence/report/gpt2_protein_classification"
 DATA_DIR="$LEARNING_SOURCE_DIR/protein_sequence/data/protein_classification"
 CREATE_SAMPLE="false"
@@ -47,6 +48,7 @@ GPT-2 Protein Classification評価パイプライン
 オプション:
     -m, --model_path PATH       GPT-2モデルチェックポイントへのパス (必須)
     -d, --data_path PATH        評価用データセットCSVへのパス
+    --tokenizer PATH            トークナイザーパス（指定しない場合は自動検出）
     -o, --output_dir PATH       出力ディレクトリ (デフォルト: \$LEARNING_SOURCE_DIR/protein_sequence/report/gpt2_protein_classification)
     -s, --create_sample         サンプル評価データセットを作成
     -t, --threshold FLOAT       二値分類の閾値 (デフォルト: 0.0)
@@ -85,6 +87,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -d|--data_path)
             DATA_PATH="$2"
+            shift 2
+            ;;
+        --tokenizer)
+            TOKENIZER_PATH="$2"
             shift 2
             ;;
         -o|--output_dir)
@@ -246,6 +252,14 @@ if [ "$SKIP_EVALUATION" = false ]; then
     
     if [[ -n "$DATA_PATH" ]]; then
         EVAL_ARGS+=("--data_path" "$DATA_PATH")
+    fi
+    
+    # トークナイザーパスが指定されている場合は追加
+    if [[ -n "$TOKENIZER_PATH" ]]; then
+        EVAL_ARGS+=(--tokenizer_path "$TOKENIZER_PATH")
+        echo "トークナイザー: $TOKENIZER_PATH"
+    else
+        echo "トークナイザー: 自動検出"
     fi
     
     python "${EVAL_ARGS[@]}"

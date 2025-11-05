@@ -66,14 +66,10 @@ class OMIMEvaluator(ModelEvaluator):
                  device: str = None,
                  logger: Optional[logging.Logger] = None):
         
-        # 親クラスの初期化
-        super().__init__(model_path, tokenizer_path, device or ('cuda' if torch.cuda.is_available() else 'cpu'))
-        
         self.logger = logger or logging.getLogger(__name__)
         
-        # サブクラス固有の初期化
-        self.tokenizer = self._init_tokenizer()
-        self.model = self._init_model()
+        # 親クラスの初期化（トークナイザーとモデルを自動初期化）
+        super().__init__(model_path, tokenizer_path, device or ('cuda' if torch.cuda.is_available() else 'cpu'))
         
         # 評価結果保存用
         self.results = {}
@@ -82,7 +78,10 @@ class OMIMEvaluator(ModelEvaluator):
     def _init_tokenizer(self):
         """トークナイザーの初期化（抽象メソッドの実装）"""
         self.logger.info(f"Loading tokenizer from {self.tokenizer_path}")
-        return spm.SentencePieceProcessor(model_file=self.tokenizer_path)
+        tokenizer = spm.SentencePieceProcessor(model_file=self.tokenizer_path)
+        self.vocab_size = tokenizer.vocab_size()
+        self.logger.info(f"Tokenizer loaded with vocab_size: {self.vocab_size}")
+        return tokenizer
     
     def _init_model(self):
         """モデルの初期化（抽象メソッドの実装）"""
@@ -464,6 +463,8 @@ def main():
                        help='Batch size for evaluation (default: 16)')
     parser.add_argument('--device', type=str, default=None,
                        help='Device to use (cuda/cpu, default: auto)')
+    parser.add_argument('--tokenizer_path', type=str, default=None,
+                       help='Path to SentencePiece tokenizer model (auto-detect if not provided)')
     
     args = parser.parse_args()
     
@@ -480,7 +481,12 @@ def main():
         logger = setup_evaluation_logging(Path(args.output_dir), 'omim_evaluation')
         
         # トークナイザーパス取得
-        tokenizer_path = get_genome_tokenizer_path()
+        if args.tokenizer_path:
+            tokenizer_path = args.tokenizer_path
+            logger.info(f"Using specified tokenizer: {tokenizer_path}")
+        else:
+            tokenizer_path = get_genome_tokenizer_path()
+            logger.info(f"Using auto-detected tokenizer: {tokenizer_path}")
         
         # 評価実行
         evaluator = OMIMEvaluator(

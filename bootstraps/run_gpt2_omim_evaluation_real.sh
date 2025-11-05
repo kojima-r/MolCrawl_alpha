@@ -57,6 +57,7 @@ fi
 # デフォルト設定
 MODEL_SIZE="small"
 BATCH_SIZE=16
+TOKENIZER_PATH=""  # 空の場合は自動検出
 OUTPUT_DIR="$LEARNING_SOURCE_DIR/genome_sequence/report/omim_real_evaluation"
 DATA_DIR="$LEARNING_SOURCE_DIR/genome_sequence/data/omim_real"
 DEFAULT_CONFIG="$PROJECT_ROOT/configs/omim_real_data.yaml"
@@ -74,6 +75,7 @@ GPT-2 OMIM実データ評価パイプライン
 
 オプション:
     --model_size SIZE           GPT-2モデルサイズ (small|medium|large, デフォルト: small)
+    --tokenizer PATH            トークナイザーパス（指定しない場合は自動検出）
     --batch_size SIZE           バッチサイズ (デフォルト: 16)
     --output_dir DIR            出力ディレクトリ (デフォルト: \$LEARNING_SOURCE_DIR/genome_sequence/report/omim_real_evaluation)
     --config FILE               実データ設定ファイル (デフォルト: configs/omim_real_data.yaml)
@@ -110,6 +112,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --model_size)
             MODEL_SIZE="$2"
+            shift 2
+            ;;
+        --tokenizer)
+            TOKENIZER_PATH="$2"
             shift 2
             ;;
         --batch_size)
@@ -274,11 +280,24 @@ if [ "$SKIP_EVALUATION" = false ]; then
     
     cd "$PROJECT_ROOT"
     
-    python scripts/evaluation/gpt2/omim_evaluation.py \
-        --model_path "$MODEL_PATH" \
-        --data_path "$DATA_PATH" \
-        --output_dir "$OUTPUT_DIR" \
+    # Pythonコマンド引数を準備
+    EVAL_ARGS=(
+        "scripts/evaluation/gpt2/omim_evaluation.py"
+        --model_path "$MODEL_PATH"
+        --data_path "$DATA_PATH"
+        --output_dir "$OUTPUT_DIR"
         --batch_size "$BATCH_SIZE"
+    )
+    
+    # トークナイザーパスが指定されている場合は追加
+    if [[ -n "$TOKENIZER_PATH" ]]; then
+        EVAL_ARGS+=(--tokenizer_path "$TOKENIZER_PATH")
+        log_info "トークナイザー: $TOKENIZER_PATH"
+    else
+        log_info "トークナイザー: 自動検出"
+    fi
+    
+    python "${EVAL_ARGS[@]}"
     
     if [[ $? -ne 0 ]]; then
         echo "エラー: モデル評価に失敗しました"

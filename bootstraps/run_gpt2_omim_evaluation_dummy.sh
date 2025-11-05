@@ -38,6 +38,7 @@ fi
 MODEL_SIZE="small"
 MAX_SAMPLES=50
 BATCH_SIZE=16
+TOKENIZER_PATH=""  # 空の場合は自動検出
 OUTPUT_DIR="$LEARNING_SOURCE_DIR/genome_sequence/report/omim_evaluation"
 DATA_DIR="$LEARNING_SOURCE_DIR/genome_sequence/data/omim"
 
@@ -46,6 +47,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --model_size)
             MODEL_SIZE="$2"
+            shift 2
+            ;;
+        --tokenizer)
+            TOKENIZER_PATH="$2"
             shift 2
             ;;
         --max_samples)
@@ -57,12 +62,13 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -h|--help)
-            echo "GPT-2 OMIM Evaluation Pipeline"
+            echo "GPT-2 OMIM Evaluation Pipeline (Sample Data)"
             echo ""
             echo "Usage: $0 [options]"
             echo ""
             echo "Options:"
             echo "  --model_size SIZE         Model size (small|medium|large, default: small)"
+            echo "  --tokenizer PATH          Tokenizer path (auto-detect if not provided)"
             echo "  --max_samples NUMBER      Maximum samples to generate (default: 50)"
             echo "  --batch_size SIZE         Batch size for evaluation (default: 16)"
             echo "  -h, --help               Show this help message"
@@ -70,6 +76,7 @@ while [[ $# -gt 0 ]]; do
             echo "Examples:"
             echo "  $0 --model_size medium --max_samples 100"
             echo "  $0 --batch_size 32"
+            echo "  $0 --tokenizer /path/to/spm_tokenizer.model"
             exit 0
             ;;
         *)
@@ -168,11 +175,24 @@ echo "モデル評価を実行中..."
 echo "モデル: $MODEL_PATH"
 echo "データ: $DATA_PATH"
 
-python "$PROJECT_ROOT/scripts/evaluation/gpt2/omim_evaluation.py" \
-    --model_path "$MODEL_PATH" \
-    --data_path "$DATA_PATH" \
-    --output_dir "$OUTPUT_DIR" \
+# Pythonコマンド引数を準備
+EVAL_ARGS=(
+    "$PROJECT_ROOT/scripts/evaluation/gpt2/omim_evaluation.py"
+    --model_path "$MODEL_PATH"
+    --data_path "$DATA_PATH"
+    --output_dir "$OUTPUT_DIR"
     --batch_size "$BATCH_SIZE"
+)
+
+# トークナイザーパスが指定されている場合は追加
+if [[ -n "$TOKENIZER_PATH" ]]; then
+    EVAL_ARGS+=(--tokenizer_path "$TOKENIZER_PATH")
+    echo "トークナイザー: $TOKENIZER_PATH"
+else
+    echo "トークナイザー: 自動検出"
+fi
+
+python "${EVAL_ARGS[@]}"
 
 if [ $? -ne 0 ]; then
     echo "エラー: モデル評価に失敗しました"
