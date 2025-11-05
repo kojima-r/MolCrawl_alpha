@@ -37,13 +37,13 @@ logger = logging.getLogger(__name__)
 class ProteinClassificationEvaluator(ModelEvaluator):
     """Protein sequence GPT2 model classification evaluator"""
     
-    def __init__(self, model_path: str, tokenizer_path: str):
+    def __init__(self, model_path: str, tokenizer_path: Optional[str] = None):
         """
         Initialize the evaluator
         
         Args:
             model_path: Path to trained GPT2 model
-            tokenizer_path: Path to tokenizer
+            tokenizer_path: Path to tokenizer (None for EsmSequenceTokenizer)
         """
         # 親クラスの初期化
         super().__init__(model_path, tokenizer_path)
@@ -56,7 +56,8 @@ class ProteinClassificationEvaluator(ModelEvaluator):
     
     def _init_tokenizer(self):
         """トークナイザーの初期化（抽象メソッドの実装）"""
-        logger.info(f"Loading tokenizer from {self.tokenizer_path}")
+        # protein_sequenceはEsmSequenceTokenizerを使用（ファイル不要）
+        logger.info("Using EsmSequenceTokenizer for protein_sequence")
         return EsmSequenceTokenizer(vocab_size=33)
     
     def _init_model(self):
@@ -375,6 +376,19 @@ def create_sample_dataset(output_path: str, num_samples: int = 100):
     
     return output_path
 
+def get_protein_tokenizer_path():
+    """
+    protein_sequence用のトークナイザーパスを取得
+    protein_sequenceはEsmSequenceTokenizerを使用するため、Noneを返す
+    
+    Returns:
+        None: protein_sequenceはSentencePieceを使用しない
+    """
+    # protein_sequenceはEsmSequenceTokenizerを使用するため、
+    # SentencePieceトークナイザーは不要
+    logger.info("protein_sequence uses EsmSequenceTokenizer, not SentencePiece")
+    return None
+
 def main():
     """Main evaluation function"""
     parser = argparse.ArgumentParser(
@@ -388,7 +402,9 @@ def main():
     )
     
     parser.add_argument(
-        "--tokenizer_path", 
+        "--tokenizer_path",
+        type=str,
+        default=None,
         help="Path to tokenizer (default: use EsmSequenceTokenizer)"
     )
     
@@ -442,8 +458,19 @@ def main():
     if not os.path.exists(args.model_path):
         raise FileNotFoundError(f"Model checkpoint not found: {args.model_path}")
     
-    # Set tokenizer path
-    tokenizer_path = args.tokenizer_path or "default"  # Will use EsmSequenceTokenizer
+    # トークナイザーパスの取得
+    if args.tokenizer_path:
+        tokenizer_path = args.tokenizer_path
+    else:
+        tokenizer_path = get_protein_tokenizer_path()
+    
+    # protein_sequenceはEsmSequenceTokenizerを使用するため、tokenizer_pathはNoneでも可
+    if tokenizer_path and tokenizer_path != "None" and not os.path.exists(tokenizer_path):
+        raise FileNotFoundError(f"Tokenizer not found: {tokenizer_path}")
+    
+    # Noneの場合は使用しない
+    if tokenizer_path == "None":
+        tokenizer_path = None
     
     try:
         # Initialize evaluator
