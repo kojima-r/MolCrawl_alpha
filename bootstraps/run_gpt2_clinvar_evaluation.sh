@@ -4,16 +4,27 @@
 #
 #このスクリプトは、ClinVarデータの取得から評価、可視化までの
 #全プロセスを自動で実行します。
+#
+#注意: このスクリプトはbootstraps/ディレクトリから実行されることを想定しています
 #"""
 
 set -e  # エラー時に停止
 
 # 設定
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-OUTPUT_DIR="$LEARNING_SOURCE_DIR/$PROJECT_ROOT/clinvar_evaluation_results"
-DATA_DIR="$OUTPUT_DIR/data"
-MODELS_DIR="$PROJECT_ROOT/$LEARNING_SOURCE_DIR/genome_sequence/gpt2-output"
+PROJECT_ROOT="$SCRIPT_DIR"  # bootstrapsディレクトリからの実行を想定
+
+# LEARNING_SOURCE_DIRの確認
+if [ -z "$LEARNING_SOURCE_DIR" ]; then
+    echo "エラー: LEARNING_SOURCE_DIR環境変数が設定されていません"
+    echo "実行前に以下を設定してください:"
+    echo "  export LEARNING_SOURCE_DIR=/path/to/learning_source"
+    exit 1
+fi
+
+OUTPUT_DIR="$LEARNING_SOURCE_DIR/genome_sequence/report/clinvar_evaluation"
+DATA_DIR="$LEARNING_SOURCE_DIR/genome_sequence/data/clinvar"
+MODELS_DIR="$PROJECT_ROOT/gpt2-output"
 
 # デフォルト設定
 MODEL_SIZE="small"
@@ -118,7 +129,7 @@ if [[ "$VISUALIZE_ONLY" == true ]]; then
         exit 1
     fi
     
-    python scripts/clinvar_visualization.py \
+    python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_visualization.py" \
         --results_file "$RESULTS_FILE" \
         --output_dir "$OUTPUT_DIR/visualizations" \
         --html_report
@@ -133,17 +144,16 @@ if [[ "$EVAL_ONLY" != true ]]; then
     
     if [[ "$DOWNLOAD" == true ]]; then
         echo "ClinVarデータをダウンロード中..."
-        python scripts/clinvar_data_preparation.py \
-            --download \
+        python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_data_preparation.py" \
+            --mode download \
             --output_dir "$DATA_DIR" \
-            --max_samples "$MAX_SAMPLES" \
-            --sequence_length "$SEQUENCE_LENGTH"
+            --max_samples "$MAX_SAMPLES"
     else
         echo "サンプルClinVarデータを作成中..."
-        python scripts/clinvar_data_preparation.py \
+        python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_data_preparation.py" \
+            --mode sample \
             --output_dir "$DATA_DIR" \
-            --max_samples "$MAX_SAMPLES" \
-            --sequence_length "$SEQUENCE_LENGTH"
+            --max_samples "$MAX_SAMPLES"
     fi
     
     echo "データ準備完了"
@@ -164,18 +174,23 @@ if [[ "$VISUALIZE_ONLY" != true ]]; then
     fi
     
     # ClinVarデータファイルの確認
-    CLINVAR_DATA="$DATA_DIR/random_2000_clinvar.csv"
+    CLINVAR_DATA="$DATA_DIR/clinvar_evaluation_dataset.csv"
     if [[ ! -f "$CLINVAR_DATA" ]]; then
-        echo "エラー: ClinVarデータが見つかりません: $CLINVAR_DATA"
-        echo "まずデータ準備を実行してください"
-        exit 1
+        # 代替パスを確認
+        if [[ -f "$DATA_DIR/data/clinvar_evaluation_dataset.csv" ]]; then
+            CLINVAR_DATA="$DATA_DIR/data/clinvar_evaluation_dataset.csv"
+        else
+            echo "エラー: ClinVarデータが見つかりません: $CLINVAR_DATA"
+            echo "まずデータ準備を実行してください"
+            exit 1
+        fi
     fi
     
     echo "モデル評価を実行中..."
     echo "モデル: $MODEL_PATH"
     echo "データ: $CLINVAR_DATA"
     
-    python scripts/clinvar_evaluation.py \
+    python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_evaluation.py" \
         --model_path "$MODEL_PATH" \
         --clinvar_data "$CLINVAR_DATA" \
         --output_dir "$OUTPUT_DIR" \
@@ -193,10 +208,9 @@ if [[ ! -f "$RESULTS_FILE" ]]; then
     exit 1
 fi
 
-python scripts/clinvar_visualization.py \
-    --results_file "$RESULTS_FILE" \
-    --output_dir "$OUTPUT_DIR/visualizations" \
-    --html_report
+python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_visualization.py" \
+    --result-dir "$OUTPUT_DIR" \
+    --output_dir "$OUTPUT_DIR/visualizations"
 
 echo "可視化完了"
 
