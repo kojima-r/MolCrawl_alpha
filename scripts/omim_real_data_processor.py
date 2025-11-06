@@ -325,9 +325,20 @@ class OMIMRealDataProcessor:
         return merged_df
 
 def process_omim_real_data(config_path: str, output_dir: str, 
+                          existing_omim_dir: Optional[str] = None,
                           force_download: bool = False) -> str:
-    """OMIM実データを処理してデータセットを作成"""
+    """
+    OMIM実データを処理してデータセットを作成
     
+    Args:
+        config_path: 設定ファイルパス
+        output_dir: 出力ディレクトリ
+        existing_omim_dir: 既存のOMIMデータディレクトリ（指定時はダウンロードをスキップ）
+        force_download: 強制ダウンロードフラグ
+    
+    Returns:
+        出力ファイルパス
+    """
     # ログ設定
     log_dir = os.path.join(output_dir, 'logs')
     os.makedirs(log_dir, exist_ok=True)
@@ -346,21 +357,40 @@ def process_omim_real_data(config_path: str, output_dir: str,
     logger = logging.getLogger(__name__)
     logger.info("Starting OMIM real data processing")
     
+    if existing_omim_dir:
+        logger.info(f"Using existing OMIM directory: {existing_omim_dir}")
+    
     try:
         # プロセッサ初期化
         processor = OMIMRealDataProcessor(config_path, logger)
         
-        # ファイルダウンロード
-        downloaded_files = processor.download_omim_files(force_download)
+        # ファイルダウンロードまたは既存ファイル使用
+        if existing_omim_dir and os.path.isdir(existing_omim_dir):
+            logger.info("Using existing OMIM files, skipping download")
+            # 既存ファイルのパスを設定
+            downloaded_files = {
+                'mim2gene': os.path.join(existing_omim_dir, 'mim2gene.txt'),
+                'mim_titles': os.path.join(existing_omim_dir, 'mimTitles.txt'),
+                'genemap2': os.path.join(existing_omim_dir, 'genemap2.txt'),
+                'morbidmap': os.path.join(existing_omim_dir, 'morbidmap.txt')
+            }
+            
+            # ファイルの存在確認
+            for key, path in downloaded_files.items():
+                if not os.path.exists(path):
+                    logger.warning(f"File not found: {path}")
+        else:
+            # ファイルダウンロード
+            downloaded_files = processor.download_omim_files(force_download)
         
         # データセット作成
         dataset = processor.create_evaluation_dataset(downloaded_files)
         
         # 結果保存
-        data_dir = os.path.join(output_dir, 'data')
-        os.makedirs(data_dir, exist_ok=True)
+        # output_dirが既にdata配下を指している想定
+        os.makedirs(output_dir, exist_ok=True)
         
-        output_file = os.path.join(data_dir, 'omim_real_evaluation_dataset.csv')
+        output_file = os.path.join(output_dir, 'omim_real_evaluation_dataset.csv')
         dataset.to_csv(output_file, index=False)
         
         logger.info(f"OMIM real data processing completed")
@@ -380,6 +410,8 @@ if __name__ == "__main__":
                        help='Path to OMIM real data config file')
     parser.add_argument('--output_dir', type=str, required=True,
                        help='Output directory')
+    parser.add_argument('--existing_omim_dir', type=str, default=None,
+                       help='Existing OMIM data directory (skip download)')
     parser.add_argument('--force_download', action='store_true',
                        help='Force download even if files exist')
     
@@ -389,6 +421,7 @@ if __name__ == "__main__":
         output_file = process_omim_real_data(
             config_path=args.config,
             output_dir=args.output_dir,
+            existing_omim_dir=args.existing_omim_dir,
             force_download=args.force_download
         )
         print(f"OMIM real data processing completed: {output_file}")

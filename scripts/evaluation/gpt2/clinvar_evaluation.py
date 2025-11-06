@@ -45,18 +45,16 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
             tokenizer_path (str): SentencePieceトークナイザーのパス
             device (str): 使用デバイス
         """
-        # 親クラスの初期化
+        # 親クラスの初期化（トークナイザーとモデルを自動初期化）
         super().__init__(model_path, tokenizer_path, device)
-        
-        # サブクラス固有の初期化
-        self.tokenizer = self._init_tokenizer()
-        self.vocab_size = self.tokenizer.vocab_size()
-        self.model = self._init_model()
         
     def _init_tokenizer(self):
         """トークナイザーの初期化（抽象メソッドの実装）"""
         logger.info(f"Loading tokenizer from {self.tokenizer_path}")
-        return spm.SentencePieceProcessor(model_file=self.tokenizer_path)
+        tokenizer = spm.SentencePieceProcessor(model_file=self.tokenizer_path)
+        self.vocab_size = tokenizer.vocab_size()
+        logger.info(f"Tokenizer loaded with vocab_size: {self.vocab_size}")
+        return tokenizer
         
     def _init_model(self):
         """モデルの初期化（抽象メソッドの実装）"""
@@ -446,53 +444,12 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
 
 def create_sample_clinvar_data(output_file):
     """
-    サンプルClinVarデータを作成（テスト用）
+    ⚠️ DEPRECATED: データ準備機能は clinvar_data_preparation.py に移行してください
+    Use: python scripts/evaluation/gpt2/clinvar_data_preparation.py --mode sample
     """
-    logger.info(f"Creating sample ClinVar data: {output_file}")
-    
-    # サンプルデータ（実際のClinVarデータの形式に基づく）
-    sample_data = [
-        {
-            'variant_id': 'VAR_001',
-            'reference_sequence': 'ATGCGATCGATCGATCGATCGATCG',
-            'variant_sequence': 'ATGCGATCGATCGATCGTTCGATCG',  # A→T変異
-            'ClinicalSignificance': 'Pathogenic',
-            'gene': 'GENE1',
-            'chromosome': 'chr1',
-            'position': 12345
-        },
-        {
-            'variant_id': 'VAR_002',
-            'reference_sequence': 'GCTAGCTAGCTAGCTAGCTAGCTA',
-            'variant_sequence': 'GCTAGCTAGCTAGCTAGCTAGCTA',  # 変異なし
-            'ClinicalSignificance': 'Benign',
-            'gene': 'GENE2',
-            'chromosome': 'chr2',
-            'position': 67890
-        },
-        {
-            'variant_id': 'VAR_003',
-            'reference_sequence': 'TTGCATTGCATTGCATTGCATTGC',
-            'variant_sequence': 'TTGCATTGCATTGCATGGCATTGC',  # T→G変異
-            'ClinicalSignificance': 'Likely benign',
-            'gene': 'GENE3',
-            'chromosome': 'chr3',
-            'position': 11111
-        },
-        {
-            'variant_id': 'VAR_004',
-            'reference_sequence': 'CGATCGATCGATCGATCGATCGAT',
-            'variant_sequence': 'CGATCGATCGATCGAACGATCGAT',  # T→A変異
-            'ClinicalSignificance': 'Likely pathogenic',
-            'gene': 'GENE4',
-            'chromosome': 'chr4',
-            'position': 22222
-        }
-    ]
-    
-    df = pd.DataFrame(sample_data)
-    df.to_csv(output_file, index=False)
-    logger.info(f"Sample data created with {len(df)} variants")
+    logger.warning("⚠️  create_sample_clinvar_data() is deprecated.")
+    logger.warning("Please use: python scripts/evaluation/gpt2/clinvar_data_preparation.py --mode sample")
+    raise DeprecationWarning("Use clinvar_data_preparation.py for data preparation")
 
 def main():
     parser = argparse.ArgumentParser(description='ClinVar evaluation for genome sequence model')
@@ -508,6 +465,8 @@ def main():
                        help='Create sample ClinVar data for testing')
     parser.add_argument('--device', type=str, default='cuda',
                        help='Device to use for evaluation')
+    parser.add_argument('--tokenizer_path', type=str, default=None,
+                       help='Path to SentencePiece tokenizer model (auto-detect if not provided)')
     
     args = parser.parse_args()
     
@@ -530,7 +489,12 @@ def main():
     
     try:
         # トークナイザーパスの取得
-        tokenizer_path = get_genome_tokenizer_path()
+        if args.tokenizer_path:
+            tokenizer_path = args.tokenizer_path
+            logger.info(f"Using specified tokenizer: {tokenizer_path}")
+        else:
+            tokenizer_path = get_genome_tokenizer_path()
+            logger.info(f"Using auto-detected tokenizer: {tokenizer_path}")
         
         # 評価器の初期化
         evaluator = GPT2ClinVarEvaluator(

@@ -46,24 +46,22 @@ class COSMICEvaluator(ModelEvaluator):
             tokenizer_path (str): トークナイザーのパス
             device (str): 使用するデバイス ('cuda' or 'cpu')
         """
-        # 親クラスの初期化
+        # 親クラスの初期化（トークナイザーとモデルを自動初期化）
         super().__init__(
             model_path, 
             tokenizer_path or get_genome_tokenizer_path(), 
             device or ('cuda' if torch.cuda.is_available() else 'cpu')
         )
         
-        # サブクラス固有の初期化
-        self.tokenizer = self._init_tokenizer()
-        self.vocab_size = self.tokenizer.vocab_size()
-        self.model = self._init_model()
-        
         logger.info(f"Model loaded successfully. Config: {self.model.config}")
     
     def _init_tokenizer(self):
         """トークナイザーの初期化（抽象メソッドの実装）"""
         logger.info(f"Loading tokenizer from {self.tokenizer_path}")
-        return spm.SentencePieceProcessor(model_file=self.tokenizer_path)
+        tokenizer = spm.SentencePieceProcessor(model_file=self.tokenizer_path)
+        self.vocab_size = tokenizer.vocab_size()
+        logger.info(f"Tokenizer loaded with vocab_size: {self.vocab_size}")
+        return tokenizer
         
     def _init_model(self):
         """モデルの初期化（抽象メソッドの実装）"""
@@ -411,7 +409,9 @@ def main():
     parser.add_argument('--cosmic_data', required=True, help='Path to COSMIC evaluation dataset')
     parser.add_argument('--output_dir', default=None, help='Output directory (auto-generated if not provided)')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size for evaluation')
-    parser.add_argument('--device', default=None, help='Device to use (cuda/cpu)')
+    parser.add_argument('--device', type=str, default='cuda', help='Device to use (cuda/cpu, default: cuda)')
+    parser.add_argument('--tokenizer_path', type=str, default=None,
+                       help='Path to SentencePiece tokenizer model (auto-detect if not provided)')
     
     args = parser.parse_args()
     
@@ -426,7 +426,12 @@ def main():
     
     try:
         # トークナイザーパスの取得
-        tokenizer_path = get_genome_tokenizer_path()
+        if args.tokenizer_path:
+            tokenizer_path = args.tokenizer_path
+            logger.info(f"Using specified tokenizer: {tokenizer_path}")
+        else:
+            tokenizer_path = get_genome_tokenizer_path()
+            logger.info(f"Using auto-detected tokenizer: {tokenizer_path}")
         
         # 評価器の初期化
         evaluator = COSMICEvaluator(

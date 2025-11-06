@@ -1,316 +1,325 @@
 #!/bin/bash
 
-# BERT ProteinGym evaluation script for protein_sequence model
-# Based on the trained BERT model for protein sequences
+#
+# BERT ProteinGym評価パイプライン実行スクリプト
+#
+# このスクリプトは、ProteinGymデータの準備から評価、可視化までの
+# 全プロセスを自動で実行します。
+#
+# 注意: このスクリプトはbootstraps/ディレクトリから実行されることを想定しています
+#
+# 使用方法:
+#   ./run_bert_proteingym_evaluation.sh [options]
+#
+# オプション:
+#   --model_path PATH                モデルパス (デフォルト: runs_train_bert_protein_sequence/checkpoint-2000)
+#   --tokenizer_path PATH            トークナイザーパス (デフォルト: EsmSequenceTokenizer)
+#   --max_variants NUMBER            最大バリアント数 (デフォルト: 1000)
+#   --batch_size NUMBER              バッチサイズ (デフォルト: 16)
+#   --device cuda|cpu                デバイス (デフォルト: cuda)
+#   --download                       ProteinGymデータをダウンロード
+#   --sample_only                    サンプルデータのみ作成
+#   --skip_data_prep                 データ準備をスキップ
+#   --skip_evaluation                評価をスキップ
+#   --skip_visualization             可視化をスキップ
+#
+# 例:
+#   ./run_bert_proteingym_evaluation.sh --max_variants 2000 --batch_size 32
+#   ./run_bert_proteingym_evaluation.sh --download --sample_only
+#
 
-set -e  # Exit on any error
+set -e  # エラー時に停止
 
-# Color definitions for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# スクリプトのディレクトリを取得
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"  # プロジェクトルートディレクトリ
 
-# Function definitions
-print_header() {
-    echo -e "${BLUE}🧬 Independent BERT Protein Sequence - ProteinGym Evaluation${NC}"
-    echo "================================================================"
-    echo -e "${PURPLE}🤖 BERT-based protein fitness prediction (Independent Implementation)${NC}"
-    echo -e "${CYAN}📅 Date: $(date)${NC}"
-    echo -e "${GREEN}🚀 Using trained BERT model with safetensors${NC}"
-    echo ""
-}
+# LEARNING_SOURCE_DIRの確認
+if [ -z "$LEARNING_SOURCE_DIR" ]; then
+    echo "エラー: LEARNING_SOURCE_DIR環境変数が設定されていません"
+    echo "実行前に以下を設定してください:"
+    echo "  export LEARNING_SOURCE_DIR=/path/to/learning_source"
+    exit 1
+fi
 
-print_config() {
-    echo "Configuration:"
-    echo "  Model Path: $MODEL_PATH"
-    if [ "$TOKENIZER_PATH" = "None" ] || [ -z "$TOKENIZER_PATH" ]; then
-        echo "  Tokenizer: EsmSequenceTokenizer (built-in)"
-    else
-        echo "  Tokenizer Path: $TOKENIZER_PATH"
-    fi
-    echo "  Dataset Path: $DATASET_PATH"
-    echo "  Output Directory: $OUTPUT_DIR"
-    echo "  Sample Size: ${SAMPLE_SIZE:-All variants}"
-    echo ""
-}
+# デフォルト設定
+MODEL_PATH="runs_train_bert_protein_sequence/checkpoint-2000"
+TOKENIZER_PATH="None"  # protein_sequenceはEsmSequenceTokenizerを使用
+MAX_VARIANTS=1000
+BATCH_SIZE=16
+DEVICE="cuda"
+DOWNLOAD=false
+SAMPLE_ONLY=false
+SKIP_DATA_PREP=false
+SKIP_EVALUATION=false
+SKIP_VISUALIZATION=false
 
-check_requirements() {
-    echo "Checking requirements..."
-    
-    # Check if model exists
+DATA_DIR="$LEARNING_SOURCE_DIR/protein_sequence/data/bert_proteingym"
+OUTPUT_DIR="$LEARNING_SOURCE_DIR/protein_sequence/report/bert_proteingym"
+
+# 引数パース
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --model_path)
+            MODEL_PATH="$2"
+            shift 2
+            ;;
+        --tokenizer_path)
+            TOKENIZER_PATH="$2"
+            shift 2
+            ;;
+        --max_variants)
+            MAX_VARIANTS="$2"
+            shift 2
+            ;;
+        --batch_size)
+            BATCH_SIZE="$2"
+            shift 2
+            ;;
+        --device)
+            DEVICE="$2"
+            shift 2
+            ;;
+        --download)
+            DOWNLOAD=true
+            shift
+            ;;
+        --sample_only)
+            SAMPLE_ONLY=true
+            shift
+            ;;
+        --skip_data_prep)
+            SKIP_DATA_PREP=true
+            shift
+            ;;
+        --skip_evaluation)
+            SKIP_EVALUATION=true
+            shift
+            ;;
+        --skip_visualization)
+            SKIP_VISUALIZATION=true
+            shift
+            ;;
+        -h|--help)
+            echo "BERT ProteinGym Evaluation Pipeline"
+            echo ""
+            echo "Usage: $0 [options]"
+            echo ""
+            echo "Options:"
+            echo "  --model_path PATH         Model path (default: runs_train_bert_protein_sequence/checkpoint-2000)"
+            echo "  --tokenizer_path PATH     Tokenizer path (default: EsmSequenceTokenizer)"
+            echo "  --max_variants NUMBER     Maximum variants per assay (default: 1000)"
+            echo "  --batch_size SIZE         Batch size for evaluation (default: 16)"
+            echo "  --device DEVICE           Device to use (cuda|cpu, default: cuda)"
+            echo "  --download                Download ProteinGym data from official source"
+            echo "  --sample_only             Create sample dataset only"
+            echo "  --skip_data_prep          Skip data preparation phase"
+            echo "  --skip_evaluation         Skip evaluation phase"
+            echo "  --skip_visualization      Skip visualization phase"
+            echo "  -h, --help               Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0 --max_variants 2000 --batch_size 32"
+            echo "  $0 --download --sample_only"
+            echo "  $0 --skip_data_prep"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+# 設定表示
+echo "=== BERT ProteinGym評価パイプライン開始 ==="
+echo "モデルパス: $MODEL_PATH"
+if [ "$TOKENIZER_PATH" = "None" ] || [ -z "$TOKENIZER_PATH" ]; then
+    echo "トークナイザー: EsmSequenceTokenizer (built-in)"
+else
+    echo "トークナイザーパス: $TOKENIZER_PATH"
+fi
+echo "最大バリアント数: $MAX_VARIANTS"
+echo "バッチサイズ: $BATCH_SIZE"
+echo "デバイス: $DEVICE"
+echo "データディレクトリ: $DATA_DIR"
+echo "出力ディレクトリ: $OUTPUT_DIR"
+echo ""
+
+# 出力ディレクトリ作成
+mkdir -p "$DATA_DIR"
+mkdir -p "$OUTPUT_DIR"
+
+# パス設定
+DATASET_PATH="$DATA_DIR/bert_proteingym_dataset.csv"
+
+# モデルファイル存在チェック（評価を実行する場合のみ）
+if [ "$SKIP_EVALUATION" = false ]; then
     if [ ! -d "$MODEL_PATH" ]; then
-        echo -e "${RED}❌ Model directory not found: $MODEL_PATH${NC}"
+        echo "エラー: モデルディレクトリが見つかりません: $MODEL_PATH"
+        echo "BERTモデルを先に訓練してください"
         exit 1
     fi
     
-    # Check for model file (safetensors or pytorch)
+    # モデルファイルの確認
     if [ ! -f "$MODEL_PATH/model.safetensors" ] && [ ! -f "$MODEL_PATH/pytorch_model.bin" ]; then
-        echo -e "${RED}❌ No model file found in $MODEL_PATH${NC}"
-        echo "Expected: model.safetensors or pytorch_model.bin"
+        echo "エラー: モデルファイルが見つかりません: $MODEL_PATH"
+        echo "期待されるファイル: model.safetensors または pytorch_model.bin"
         exit 1
     fi
-    
-    # Check tokenizer (protein_sequence uses EsmSequenceTokenizer, not SentencePiece)
-    if [ "$TOKENIZER_PATH" != "None" ] && [ ! -z "$TOKENIZER_PATH" ] && [ ! -f "$TOKENIZER_PATH" ]; then
-        echo -e "${YELLOW}⚠️  SentencePiece tokenizer not found: $TOKENIZER_PATH${NC}"
-        echo -e "${CYAN}ℹ️  Will use EsmSequenceTokenizer for protein_sequence${NC}"
-    fi
-    
-    # Check if dataset exists
-    if [ ! -f "$DATASET_PATH" ]; then
-        echo -e "${RED}❌ Dataset not found: $DATASET_PATH${NC}"
-        echo "Please specify a valid ProteinGym dataset path"
-        exit 1
-    fi
-    
-    # Check dataset format and content
-    if [ -f "$DATASET_PATH" ]; then
-        case "$DATASET_PATH" in
-            *.csv)
-                VARIANT_COUNT=$(tail -n +2 "$DATASET_PATH" | wc -l)
-                echo -e "${GREEN}📊 Dataset contains $VARIANT_COUNT variants${NC}"
-                ;;
-            *.tsv)
-                VARIANT_COUNT=$(tail -n +2 "$DATASET_PATH" | wc -l)
-                echo -e "${GREEN}📊 Dataset contains $VARIANT_COUNT variants${NC}"
-                ;;
-            *.json)
-                echo -e "${GREEN}📊 JSON dataset detected${NC}"
-                ;;
-            *)
-                echo -e "${YELLOW}⚠️  Unknown dataset format${NC}"
-                ;;
-        esac
-    fi
-    
-    echo "All requirements satisfied."
-    echo ""
-}
+fi
 
-activate_conda_env() {
-    # Activate conda environment
-    if [ -f "./miniconda/etc/profile.d/conda.sh" ]; then
-        source ./miniconda/etc/profile.d/conda.sh
-        conda activate conda
-        echo -e "${GREEN}✅ Conda environment activated${NC}"
-    else
-        echo -e "${YELLOW}⚠️  Conda environment not found, using system Python${NC}"
-    fi
-    
-    # Set environment variables for protein_sequence
-    export LEARNING_SOURCE_DIR='learning_source_202508'
-    echo -e "${CYAN}🌍 Environment variables set for protein_sequence${NC}"
-}
+# =============================================================================
+# データ準備フェーズ
+# =============================================================================
 
-run_evaluation() {
-    echo "Running BERT ProteinGym evaluation..."
-    echo "This may take several minutes depending on dataset size and model complexity."
-    echo ""
+if [ "$SKIP_DATA_PREP" = false ]; then
+    echo "=== データ準備フェーズ ==="
+    echo "ProteinGymデータを準備中..."
     
-    # Check CUDA availability
-    if command -v nvidia-smi &> /dev/null; then
-        echo "CUDA available: $(python -c "import torch; print(torch.cuda.is_available())")"
-        echo "Using GPU for evaluation"
-    else
-        echo "CUDA not available, using CPU"
-    fi
-    echo ""
+    cd "$PROJECT_ROOT"
     
-    # Prepare Python command arguments
-    local PYTHON_ARGS=(
-        "bert/proteingym_evaluation.py"
-        "--model_path" "$MODEL_PATH"
-        "--proteingym_data" "$DATASET_PATH"
-        "--device" "${DEVICE:-cuda}"
-        "--batch_size" "${BATCH_SIZE:-16}"
+    # Pythonコマンド引数を準備
+    DATA_PREP_ARGS=(
+        "scripts/evaluation/bert/proteingym_data_preparation.py"
+        "--output_dir" "$DATA_DIR"
+        "--max_variants_per_assay" "$MAX_VARIANTS"
     )
     
-    # Add tokenizer path only if it's not None
-    if [ "$TOKENIZER_PATH" != "None" ] && [ ! -z "$TOKENIZER_PATH" ]; then
-        PYTHON_ARGS+=("--tokenizer_path" "$TOKENIZER_PATH")
+    # ダウンロードフラグ
+    if [ "$DOWNLOAD" = true ]; then
+        DATA_PREP_ARGS+=("--download")
+        echo "📥 ProteinGymデータをダウンロード中..."
     fi
     
-    # Add sample size if specified
-    if [ -n "$SAMPLE_SIZE" ]; then
-        PYTHON_ARGS+=("--sample_size" "$SAMPLE_SIZE")
+    # サンプルのみフラグ
+    if [ "$SAMPLE_ONLY" = true ]; then
+        DATA_PREP_ARGS+=("--sample_only")
+        echo "📝 サンプルデータのみ作成中..."
     fi
     
-    # Run the evaluation
-    python "${PYTHON_ARGS[@]}"
+    python "${DATA_PREP_ARGS[@]}"
     
-    EVAL_EXIT_CODE=$?
-    if [ $EVAL_EXIT_CODE -ne 0 ]; then
-        echo -e "${RED}❌ Evaluation failed with exit code $EVAL_EXIT_CODE${NC}"
-        exit $EVAL_EXIT_CODE
-    fi
-}
-
-analyze_bert_results() {
-    echo ""
-    echo "BERT ProteinGym evaluation completed!"
-    echo "=== Evaluation Completed ==="
-    echo "Results have been automatically saved to the structured output directory."
-    echo "Check the Python execution log above for the exact output directory path."
-    
-    # Results will be in: ${LEARNING_SOURCE_DIR}/protein_sequence/report/bert_proteingym_*_YYYYMMDD_HHMMSS/
-    echo "Expected location: \${LEARNING_SOURCE_DIR}/protein_sequence/report/bert_proteingym_*/"
-    
-    # BERT-specific analysis
-    echo -e "${BLUE}🔍 BERT-Specific Analysis${NC}"
-    echo "========================="
-    
-    # Check for results in the expected location
-    RESULT_DIR="${LEARNING_SOURCE_DIR}/protein_sequence/report"
-    if [ -d "$RESULT_DIR" ]; then
-        LATEST_RESULT=$(find "$RESULT_DIR" -name "*bert_proteingym*" -type d | sort | tail -1)
-        if [ -n "$LATEST_RESULT" ] && [ -f "$LATEST_RESULT/bert_proteingym_results.json" ]; then
-            echo "📊 Results found in: $LATEST_RESULT"
-            echo "🧠 BERT Model Insights:"
-            echo "   Check the JSON file for detailed metrics"
-            echo "   Location: $LATEST_RESULT/bert_proteingym_results.json"
-        else
-            echo "📊 Results will be available in the structured output directory"
-            echo "   Expected location: ${LEARNING_SOURCE_DIR}/protein_sequence/report/bert_proteingym_*/"
-        fi
-    else
-        echo "📊 Results will be available after evaluation completes"
-    fi
-}
-
-print_completion_message() {
-    echo ""
-    echo -e "${GREEN}🎉 Independent BERT ProteinGym Evaluation Completed Successfully!${NC}"
-    echo "=============================================================="
-    echo -e "${CYAN}📁 Results saved to structured directory under \${LEARNING_SOURCE_DIR}/protein_sequence/report/${NC}"
-    echo -e "${CYAN}📋 Logs: logs/${NC}"
-    echo -e "${CYAN}🧬 Model: Trained BERT Protein Sequence Model${NC}"
-    echo -e "${CYAN}📊 Method: Independent fitness assessment${NC}"
-    echo ""
-}
-
-cleanup() {
-    echo "Cleaning up temporary files..."
-    # Add any cleanup operations here
-    echo "Cleanup completed."
-}
-
-# Main execution
-main() {
-    # Set LEARNING_SOURCE_DIR if not already set
-    export LEARNING_SOURCE_DIR="${LEARNING_SOURCE_DIR:-$(dirname "$0")/learning_source_202508}"
-    
-    # Configuration
-    MODEL_PATH="${MODEL_PATH:-runs_train_bert_protein_sequence/checkpoint-2000}"
-    TOKENIZER_PATH="${TOKENIZER_PATH:-None}"  # protein_sequenceはEsmSequenceTokenizerを使用
-    OUTPUT_DIR=""  # Will be auto-generated by the Python script
-    DEVICE="${DEVICE:-cuda}"
-    BATCH_SIZE="${BATCH_SIZE:-16}"
-    
-    # Parse command line arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --model_path)
-                MODEL_PATH="$2"
-                shift 2
-                ;;
-            --tokenizer_path)
-                TOKENIZER_PATH="$2"
-                shift 2
-                ;;
-            --dataset)
-                DATASET_PATH="$2"
-                shift 2
-                ;;
-            --sample_size)
-                SAMPLE_SIZE="$2"
-                shift 2
-                ;;
-            --device)
-                DEVICE="$2"
-                shift 2
-                ;;
-            --batch_size)
-                BATCH_SIZE="$2"
-                shift 2
-                ;;
-            --create_sample_data)
-                CREATE_SAMPLE_DATA=true
-                shift
-                ;;
-            --help)
-                cat << 'EOF'
-Usage: $0 [options]
-Options:
-  --model_path PATH          Path to trained BERT model
-                             (default: runs_train_bert_protein_sequence/checkpoint-2000)
-  --tokenizer_path PATH      Path to tokenizer
-                             (default: EsmSequenceTokenizer built-in)
-  --dataset PATH             Path to ProteinGym dataset (required)
-  --sample_size N            Number of variants to evaluate (default: all)
-  --device DEVICE            Device to use (default: cuda)
-  --batch_size N             Batch size (default: 16)
-  --create_sample_data       Create sample dataset for testing
-  --help                     Show this help message
-EOF
-                exit 0
-                ;;
-            *)
-                echo "Unknown option: $1"
-                exit 1
-                ;;
-        esac
-    done
-    
-    # Check if dataset path is provided
-    if [ -z "$DATASET_PATH" ] && [ "$CREATE_SAMPLE_DATA" != "true" ]; then
-        echo -e "${RED}❌ Dataset path is required${NC}"
-        echo "Use --dataset PATH to specify ProteinGym data file"
-        echo "Use --create_sample_data to create test data"
+    if [ $? -ne 0 ]; then
+        echo "エラー: データ準備に失敗しました"
         exit 1
     fi
     
-    # Output directory will be auto-created by the Python script
-    mkdir -p "logs"
-    
-    # Print header and configuration
-    print_header
-    
-    # Handle sample data creation
-    if [ "$CREATE_SAMPLE_DATA" = "true" ]; then
-        echo "Creating sample ProteinGym data..."
-        SAMPLE_DATA_PATH="${DATASET_PATH:-./sample_proteingym_data.csv}"
-        SAMPLE_ARGS=("bert/proteingym_evaluation.py" "--create_sample_data" "--proteingym_data" "$SAMPLE_DATA_PATH" "--model_path" "$MODEL_PATH")
-        if [ "$TOKENIZER_PATH" != "None" ] && [ ! -z "$TOKENIZER_PATH" ]; then
-            SAMPLE_ARGS+=("--tokenizer_path" "$TOKENIZER_PATH")
-        fi
-        python "${SAMPLE_ARGS[@]}"
-        echo -e "${GREEN}✅ Sample data created at: $SAMPLE_DATA_PATH${NC}"
-        echo "Run again with --dataset $SAMPLE_DATA_PATH to evaluate"
-        exit 0
-    fi
-    
-    print_config
-    
-    # Activate conda environment
-    activate_conda_env
-    
-    echo -e "${GREEN}🚀 Starting Independent BERT ProteinGym Evaluation Pipeline...${NC}"
+    echo "データ準備完了"
     echo ""
     
-    # Main evaluation steps
-    check_requirements
-    run_evaluation
-    analyze_bert_results
-    print_completion_message
-    cleanup
-}
+    # サンプルのみの場合はここで終了
+    if [ "$SAMPLE_ONLY" = true ]; then
+        echo "=== サンプルデータ作成完了 ==="
+        echo "サンプルデータ: $DATA_DIR/bert_proteingym_sample.csv"
+        echo ""
+        echo "評価を実行するには、--sample_onlyオプションを外して再実行してください"
+        exit 0
+    fi
+fi
 
-# Trap to handle script interruption
-trap cleanup EXIT
+# =============================================================================
+# モデル評価フェーズ
+# =============================================================================
 
-# Run main function with all arguments
-main "$@"
+if [ "$SKIP_EVALUATION" = false ]; then
+    echo "=== モデル評価フェーズ ==="
+    echo "BERT ProteinGym評価を実行中..."
+    echo "モデル: $MODEL_PATH"
+    echo "データ: $DATASET_PATH"
+    
+    # データセットの存在確認
+    if [ ! -f "$DATASET_PATH" ]; then
+        echo "エラー: データセットが見つかりません: $DATASET_PATH"
+        echo "先にデータ準備を実行してください（--skip_data_prepを外す）"
+        exit 1
+    fi
+    
+    # Pythonコマンド引数を準備
+    EVAL_ARGS=(
+        "scripts/evaluation/bert/proteingym_evaluation.py"
+        "--model_path" "$MODEL_PATH"
+        "--proteingym_data" "$DATASET_PATH"
+        "--output_dir" "$OUTPUT_DIR"
+        "--device" "$DEVICE"
+        "--batch_size" "$BATCH_SIZE"
+    )
+    
+    # トークナイザーパスを追加（Noneでない場合）
+    if [ "$TOKENIZER_PATH" != "None" ] && [ ! -z "$TOKENIZER_PATH" ]; then
+        EVAL_ARGS+=("--tokenizer_path" "$TOKENIZER_PATH")
+    fi
+    
+    python "${EVAL_ARGS[@]}"
+    
+    if [ $? -ne 0 ]; then
+        echo "エラー: モデル評価に失敗しました"
+        exit 1
+    fi
+    
+    echo "モデル評価完了"
+    echo ""
+fi
+
+# =============================================================================
+# 可視化フェーズ
+# =============================================================================
+
+if [ "$SKIP_VISUALIZATION" = false ]; then
+    echo "=== 可視化フェーズ ==="
+    echo "評価結果の可視化を実行中..."
+    
+    # 最新の評価結果ディレクトリを探す
+    LATEST_RESULT_DIR=$(find "$OUTPUT_DIR" -maxdepth 1 -type d -name "*bert_proteingym*" | sort | tail -1)
+    
+    if [ -z "$LATEST_RESULT_DIR" ]; then
+        echo "エラー: 評価結果ディレクトリが見つかりません"
+        echo "先に評価を実行してください（--skip_evaluationを外す）"
+        exit 1
+    fi
+    
+    echo "評価結果ディレクトリ: $LATEST_RESULT_DIR"
+    
+    # 結果ファイルの存在確認
+    if [ ! -f "$LATEST_RESULT_DIR/bert_proteingym_results.json" ]; then
+        echo "エラー: 評価結果ファイルが見つかりません"
+        echo "期待されるファイル: $LATEST_RESULT_DIR/bert_proteingym_results.json"
+        exit 1
+    fi
+    
+    python "$PROJECT_ROOT/scripts/evaluation/bert/proteingym_visualization.py" \
+        --results_dir "$LATEST_RESULT_DIR" \
+        --output_dir "$LATEST_RESULT_DIR/visualizations"
+    
+    if [ $? -ne 0 ]; then
+        echo "エラー: 可視化に失敗しました"
+        exit 1
+    fi
+    
+    echo "可視化完了"
+    echo ""
+fi
+
+# =============================================================================
+# 完了メッセージ
+# =============================================================================
+
+echo "=== BERT ProteinGym評価パイプライン完了 ==="
+echo ""
+echo "📁 出力ディレクトリ: $OUTPUT_DIR"
+
+if [ "$SKIP_DATA_PREP" = false ]; then
+    echo "📊 データ: $DATA_DIR"
+fi
+
+if [ "$SKIP_EVALUATION" = false ]; then
+    echo "📈 評価結果: $LATEST_RESULT_DIR"
+fi
+
+if [ "$SKIP_VISUALIZATION" = false ]; then
+    echo "📉 可視化: $LATEST_RESULT_DIR/visualizations"
+fi
+
+echo ""
+echo "✅ 全ての処理が正常に完了しました"

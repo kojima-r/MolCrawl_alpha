@@ -1,18 +1,29 @@
 #!/bin/bash
-"""
-COSMIC評価パイプライン実行スクリプト
-
-このスクリプトは、COSMICデータの取得から評価、可視化までの
-全プロセスを自動で実行します。
-"""
+#"""
+#ClinVar評価パイプライン実行スクリプト
+#
+#このスクリプトは、ClinVarデータの取得から評価、可視化までの
+#全プロセスを自動で実行します。
+#
+#注意: このスクリプトはbootstraps/ディレクトリから実行されることを想定しています
+#"""
 
 set -e  # エラー時に停止
 
 # 設定
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-OUTPUT_DIR="$PROJECT_ROOT/cosmic_evaluation_results"
-DATA_DIR="$OUTPUT_DIR/data"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"  # プロジェクトルートディレクトリ
+
+# LEARNING_SOURCE_DIRの確認
+if [ -z "$LEARNING_SOURCE_DIR" ]; then
+    echo "エラー: LEARNING_SOURCE_DIR環境変数が設定されていません"
+    echo "実行前に以下を設定してください:"
+    echo "  export LEARNING_SOURCE_DIR=/path/to/learning_source"
+    exit 1
+fi
+
+OUTPUT_DIR="$LEARNING_SOURCE_DIR/genome_sequence/report/clinvar_evaluation"
+DATA_DIR="$LEARNING_SOURCE_DIR/genome_sequence/data/clinvar"
 MODELS_DIR="$PROJECT_ROOT/gpt2-output"
 
 # デフォルト設定
@@ -20,32 +31,31 @@ MODEL_SIZE="small"
 SEQUENCE_LENGTH=100
 MAX_SAMPLES=1000
 BATCH_SIZE=16
+TOKENIZER_PATH=""  # 空の場合は自動検出
 
 # ヘルプ表示
 show_help() {
     cat << EOF
-COSMIC評価パイプライン
+ClinVar評価パイプライン
 
 使用法: $0 [オプション]
 
 オプション:
     -m, --model-size SIZE       モデルサイズ (small/medium/large/xl) [default: small]
+    -t, --tokenizer PATH        トークナイザーパス（指定しない場合は自動検出）
     -s, --sequence-length LEN   配列長 [default: 100]
     -n, --max-samples NUM       クラスあたりの最大サンプル数 [default: 1000]
     -b, --batch-size SIZE       バッチサイズ [default: 16]
-    -d, --download              COSMICデータをダウンロード（現在はサンプルデータのみ）
+    -d, --download              ClinVarデータをダウンロード
     -e, --eval-only             評価のみ実行（データ準備をスキップ）
     -v, --visualize-only        可視化のみ実行
     -h, --help                  このヘルプを表示
 
 例:
-    $0 --model-size medium --max-samples 2000
+    $0 --download --model-size medium --max-samples 2000
     $0 --eval-only --model-size large
     $0 --visualize-only
-
-注意:
-    実際のCOSMICデータのダウンロードには登録が必要です。
-    現在はサンプルデータを使用した評価のみ対応しています。
+    $0 --tokenizer /path/to/spm_tokenizer.model --download
 EOF
 }
 
@@ -58,6 +68,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         -m|--model-size)
             MODEL_SIZE="$2"
+            shift 2
+            ;;
+        -t|--tokenizer)
+            TOKENIZER_PATH="$2"
             shift 2
             ;;
         -s|--sequence-length)
@@ -101,7 +115,7 @@ mkdir -p "$OUTPUT_DIR"
 mkdir -p "$DATA_DIR"
 mkdir -p "$PROJECT_ROOT/logs"
 
-echo "=== COSMIC評価パイプライン開始 ==="
+echo "=== ClinVar評価パイプライン開始 ==="
 echo "モデルサイズ: $MODEL_SIZE"
 echo "配列長: $SEQUENCE_LENGTH"
 echo "最大サンプル数: $MAX_SAMPLES"
@@ -116,13 +130,13 @@ cd "$PROJECT_ROOT"
 if [[ "$VISUALIZE_ONLY" == true ]]; then
     echo "=== 可視化実行 ==="
     
-    RESULTS_FILE="$OUTPUT_DIR/cosmic_evaluation_results.json"
+    RESULTS_FILE="$OUTPUT_DIR/evaluation_results.json"
     if [[ ! -f "$RESULTS_FILE" ]]; then
         echo "エラー: 評価結果ファイルが見つかりません: $RESULTS_FILE"
         exit 1
     fi
     
-    python scripts/cosmic_visualization.py \
+    python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_visualization.py" \
         --results_file "$RESULTS_FILE" \
         --output_dir "$OUTPUT_DIR/visualizations" \
         --html_report
@@ -135,12 +149,25 @@ fi
 if [[ "$EVAL_ONLY" != true ]]; then
     echo "=== データ準備フェーズ ==="
     
-    echo "COSMICサンプルデータを作成中..."
-    python scripts/cosmic_data_preparation.py \
-        --output_dir "$DATA_DIR" \
-        --max_samples "$MAX_SAMPLES" \
-        --sequence_length "$SEQUENCE_LENGTH" \
-        --create_sample_data
+    if [[ "$DOWNLOAD" == true ]]; then
+        echo "ClinVarデータをダウンロード中..."
+        python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_data_preparation.py" \
+            --download \
+            --output_dir "$DATA_DIR" \
+            --max_samples "$MAX_SAMPLES" \
+            --sequence_length "$SEQUENCE_LENGTH"
+    else
+        echo "サンプルClinVarデータを作成中（モック実装）..."
+        # --downloadなしの場合は既存データを使用、または手動でサンプルを作成
+        # 既存のファイルがない場合はエラーメッセージを表示
+        if [[ ! -f "$DATA_DIR/clinvar_evaluation_dataset.csv" ]]; then
+            echo "警告: ClinVarデータが存在しません"
+            echo "初回実行時は --download オプションを使用してデータをダウンロードしてください"
+            echo "例: $0 --download"
+            exit 1
+        fi
+        echo "既存のClinVarデータを使用: $DATA_DIR/clinvar_evaluation_dataset.csv"
+    fi
     
     echo "データ準備完了"
 fi
@@ -159,23 +186,41 @@ if [[ "$VISUALIZE_ONLY" != true ]]; then
         exit 1
     fi
     
-    # COSMICデータファイルの確認
-    COSMIC_DATA="$DATA_DIR/cosmic_evaluation_dataset.csv"
-    if [[ ! -f "$COSMIC_DATA" ]]; then
-        echo "エラー: COSMICデータが見つかりません: $COSMIC_DATA"
-        echo "まずデータ準備を実行してください"
-        exit 1
+    # ClinVarデータファイルの確認
+    CLINVAR_DATA="$DATA_DIR/clinvar_evaluation_dataset.csv"
+    if [[ ! -f "$CLINVAR_DATA" ]]; then
+        # 代替パスを確認
+        if [[ -f "$DATA_DIR/data/clinvar_evaluation_dataset.csv" ]]; then
+            CLINVAR_DATA="$DATA_DIR/data/clinvar_evaluation_dataset.csv"
+        else
+            echo "エラー: ClinVarデータが見つかりません: $CLINVAR_DATA"
+            echo "まずデータ準備を実行してください"
+            exit 1
+        fi
     fi
     
     echo "モデル評価を実行中..."
     echo "モデル: $MODEL_PATH"
-    echo "データ: $COSMIC_DATA"
+    echo "データ: $CLINVAR_DATA"
     
-    python scripts/cosmic_evaluation.py \
-        --model_path "$MODEL_PATH" \
-        --cosmic_data "$COSMIC_DATA" \
-        --output_dir "$OUTPUT_DIR" \
+    # Pythonコマンド引数を準備
+    EVAL_ARGS=(
+        "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_evaluation.py"
+        --model_path "$MODEL_PATH"
+        --clinvar_data "$CLINVAR_DATA"
+        --output_dir "$OUTPUT_DIR"
         --batch_size "$BATCH_SIZE"
+    )
+    
+    # トークナイザーパスが指定されている場合は追加
+    if [[ -n "$TOKENIZER_PATH" ]]; then
+        EVAL_ARGS+=(--tokenizer_path "$TOKENIZER_PATH")
+        echo "トークナイザー: $TOKENIZER_PATH"
+    else
+        echo "トークナイザー: 自動検出"
+    fi
+    
+    python "${EVAL_ARGS[@]}"
     
     echo "モデル評価完了"
 fi
@@ -183,13 +228,13 @@ fi
 # 3. 結果可視化
 echo "=== 可視化フェーズ ==="
 
-RESULTS_FILE="$OUTPUT_DIR/cosmic_evaluation_results.json"
+RESULTS_FILE="$OUTPUT_DIR/evaluation_results.json"
 if [[ ! -f "$RESULTS_FILE" ]]; then
     echo "エラー: 評価結果ファイルが見つかりません: $RESULTS_FILE"
     exit 1
 fi
 
-python scripts/cosmic_visualization.py \
+python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_visualization.py" \
     --results_file "$RESULTS_FILE" \
     --output_dir "$OUTPUT_DIR/visualizations" \
     --html_report
@@ -212,26 +257,15 @@ print(f'Recall: {results[\"recall\"]:.3f}')
 print(f'F1-Score: {results[\"f1_score\"]:.3f}')
 print(f'ROC-AUC: {results[\"roc_auc\"]:.3f}')
 print(f'PR-AUC: {results[\"pr_auc\"]:.3f}')
-print(f'Sensitivity: {results[\"sensitivity\"]:.3f}')
-print(f'Specificity: {results[\"specificity\"]:.3f}')
 "
 fi
 
 echo ""
 echo "=== 出力ファイル ==="
-echo "評価結果: $OUTPUT_DIR/cosmic_evaluation_results.json"
-echo "詳細レポート: $OUTPUT_DIR/cosmic_evaluation_report.txt"
+echo "評価結果: $OUTPUT_DIR/evaluation_results.json"
+echo "詳細レポート: $OUTPUT_DIR/evaluation_report.txt"
 echo "可視化結果: $OUTPUT_DIR/visualizations/"
-echo "HTMLレポート: $OUTPUT_DIR/visualizations/cosmic_evaluation_report.html"
+echo "HTMLレポート: $OUTPUT_DIR/visualizations/evaluation_report.html"
 
 echo ""
-echo "=== COSMIC評価パイプライン完了 ==="
-
-# COSMICデータベースについての補足情報
-echo ""
-echo "=== COSMICデータベースについて ==="
-echo "COSMIC (Catalogue of Somatic Mutations in Cancer) は世界最大の癌体細胞変異データベースです。"
-echo "- 600万以上の癌関連変異を収録"
-echo "- 癌の種類、遺伝子、変異タイプ別の詳細な分類"
-echo "- 実際のCOSMICデータ使用には登録が必要: https://cancer.sanger.ac.uk/cosmic"
-echo "- 現在はサンプルデータによる概念実証を実装"
+echo "=== ClinVar評価パイプライン完了 ==="

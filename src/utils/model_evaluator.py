@@ -52,9 +52,9 @@ class ModelEvaluator(ABC):
         self.model = None
         self.vocab_size = None
         
-        # Initialize tokenizer and model
-        self._init_tokenizer()
-        self._init_model()
+        # Initialize tokenizer and model (and assign their return values)
+        self.tokenizer = self._init_tokenizer()
+        self.model = self._init_model()
         
         logger.info(f"Initialized {self.__class__.__name__} with model: {model_path}")
     
@@ -63,7 +63,8 @@ class ModelEvaluator(ABC):
         if not os.path.exists(self.model_path):
             raise FileNotFoundError(f"Model path not found: {self.model_path}")
         
-        if not os.path.exists(self.tokenizer_path):
+        # tokenizer_pathがNoneの場合はスキップ（protein_sequenceなど、組み込みトークナイザーを使用する場合）
+        if self.tokenizer_path is not None and not os.path.exists(self.tokenizer_path):
             raise FileNotFoundError(f"Tokenizer path not found: {self.tokenizer_path}")
     
     @abstractmethod
