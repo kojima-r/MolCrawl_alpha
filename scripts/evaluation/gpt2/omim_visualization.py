@@ -58,6 +58,9 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         # 親クラスの初期化
         super().__init__(results_file, results_dir, logger or logging.getLogger(__name__))
         
+        # viz_dir 属性を設定（親クラスのoutput_dirと同じ）
+        self.viz_dir = str(self.output_dir)
+        
         # OMIM固有の検証
         self._setup_omim_data()
     

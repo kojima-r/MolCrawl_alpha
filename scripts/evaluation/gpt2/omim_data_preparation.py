@@ -33,11 +33,28 @@ import argparse
 # プロジェクトルートを追加
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 
+# scriptsディレクトリをパスに追加
+scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if scripts_dir not in sys.path:
+    sys.path.insert(0, scripts_dir)
+
 # 実データプロセッサをインポート
+process_omim_real_data = None
+import_error_message = None
 try:
     from omim_real_data_processor import process_omim_real_data
-except ImportError:
-    process_omim_real_data = None
+except ImportError as e:
+    import_error_message = str(e)
+    # デバッグ情報を標準エラー出力に表示
+    import traceback
+    print("=" * 80, file=sys.stderr)
+    print("DEBUG: Failed to import omim_real_data_processor", file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
+    print(f"Error: {e}", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("Traceback:", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    print("=" * 80, file=sys.stderr)
 
 def get_learning_source_dir():
     """LEARNING_SOURCE_DIR環境変数を取得（必須）"""
@@ -269,6 +286,8 @@ def main():
                        help='Length of genome sequences (default: 100)')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed for reproducibility (default: 42)')
+    parser.add_argument('--existing_omim_dir', type=str, default=None,
+                       help='Existing OMIM data directory to use (skip download)')
     parser.add_argument('--force_download', action='store_true',
                        help='Force download for real mode even if files exist')
     
@@ -285,12 +304,29 @@ def main():
                 raise ValueError("Real data mode requires --config parameter")
             
             if process_omim_real_data is None:
-                raise ImportError("Real data processor not available. Check omim_real_data_processor.py")
+                print("=" * 80, file=sys.stderr)
+                print("ERROR: Real data processor not available", file=sys.stderr)
+                print("=" * 80, file=sys.stderr)
+                print("", file=sys.stderr)
+                print("The omim_real_data_processor module could not be imported.", file=sys.stderr)
+                print("This is likely due to:", file=sys.stderr)
+                print("  1. Missing Python dependencies (pandas, numpy, requests, pyyaml, etc.)", file=sys.stderr)
+                print("  2. Incorrect Python environment", file=sys.stderr)
+                print("", file=sys.stderr)
+                print("Debug information:", file=sys.stderr)
+                print(f"  - Python executable: {sys.executable}", file=sys.stderr)
+                print(f"  - Scripts directory: {scripts_dir}", file=sys.stderr)
+                print(f"  - sys.path: {sys.path[:3]}...", file=sys.stderr)
+                print("", file=sys.stderr)
+                print("Please ensure you're using the correct Python environment with all dependencies installed.", file=sys.stderr)
+                print("=" * 80, file=sys.stderr)
+                sys.exit(1)
             
             print("Processing real OMIM data...")
             output_file = process_omim_real_data(
                 config_path=args.config,
                 output_dir=args.output_dir,
+                existing_omim_dir=args.existing_omim_dir,
                 force_download=args.force_download
             )
             print(f"Real OMIM data processing completed!")

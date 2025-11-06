@@ -61,6 +61,7 @@ TOKENIZER_PATH=""  # 空の場合は自動検出
 OUTPUT_DIR="$LEARNING_SOURCE_DIR/genome_sequence/report/omim_real_evaluation"
 DATA_DIR="$LEARNING_SOURCE_DIR/genome_sequence/data/omim_real"
 DEFAULT_CONFIG="$PROJECT_ROOT/configs/omim_real_data.yaml"
+EXISTING_OMIM_DIR=""  # 既存のOMIMデータディレクトリ
 FORCE_DOWNLOAD=false
 SKIP_DATA_PREP=false
 SKIP_EVALUATION=false
@@ -79,6 +80,7 @@ GPT-2 OMIM実データ評価パイプライン
     --batch_size SIZE           バッチサイズ (デフォルト: 16)
     --output_dir DIR            出力ディレクトリ (デフォルト: \$LEARNING_SOURCE_DIR/genome_sequence/report/omim_real_evaluation)
     --config FILE               実データ設定ファイル (デフォルト: configs/omim_real_data.yaml)
+    --existing_omim_dir DIR     既存のOMIMデータディレクトリを指定（ダウンロード済みファイルの再利用）
     --force_download            データを強制再ダウンロード
     --skip_data_prep            データ準備をスキップ
     --skip_evaluation           評価をスキップ
@@ -91,6 +93,9 @@ GPT-2 OMIM実データ評価パイプライン
 
     # カスタムモデルサイズとバッチサイズ
     $0 --model_size medium --batch_size 32
+
+    # 既存のOMIMデータディレクトリを使用
+    $0 --existing_omim_dir /path/to/existing/omim/data
 
     # 強制再ダウンロード付き実行
     $0 --force_download
@@ -130,6 +135,10 @@ while [[ $# -gt 0 ]]; do
             CONFIG_FILE="$2"
             shift 2
             ;;
+        --existing_omim_dir)
+            EXISTING_OMIM_DIR="$2"
+            shift 2
+            ;;
         --force_download)
             FORCE_DOWNLOAD=true
             shift
@@ -165,6 +174,9 @@ echo "バッチサイズ: $BATCH_SIZE"
 echo "出力ディレクトリ: $OUTPUT_DIR"
 echo "データディレクトリ: $DATA_DIR"
 echo "設定ファイル: $CONFIG_FILE"
+if [[ -n "$EXISTING_OMIM_DIR" ]]; then
+    echo "既存OMIMディレクトリ: $EXISTING_OMIM_DIR"
+fi
 echo "強制ダウンロード: $FORCE_DOWNLOAD"
 echo ""
 
@@ -233,7 +245,54 @@ echo ""
 
 if [ "$SKIP_DATA_PREP" = false ]; then
     echo "=== データ準備フェーズ ==="
-    echo "OMIM実データをダウンロード・準備中..."
+    
+    # 既存のOMIMディレクトリが指定されている場合
+    if [[ -n "$EXISTING_OMIM_DIR" ]]; then
+        echo "既存のOMIMデータディレクトリを使用します: $EXISTING_OMIM_DIR"
+        
+        # 既存ディレクトリの検証
+        if [[ ! -d "$EXISTING_OMIM_DIR" ]]; then
+            echo "エラー: 指定されたOMIMディレクトリが存在しません: $EXISTING_OMIM_DIR"
+            exit 1
+        fi
+        
+        # 必要なOMIMファイルの確認
+        REQUIRED_FILES=("mim2gene.txt" "mimTitles.txt" "genemap2.txt" "morbidmap.txt")
+        MISSING_FILES=()
+        
+        for file in "${REQUIRED_FILES[@]}"; do
+            if [[ ! -f "$EXISTING_OMIM_DIR/$file" ]]; then
+                MISSING_FILES+=("$file")
+            fi
+        done
+        
+        if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "警告: 以下のファイルが見つかりません:"
+            for file in "${MISSING_FILES[@]}"; do
+                echo "  - $file"
+            done
+            echo "不完全なデータで処理を続行します..."
+        else
+            echo "✓ 全ての必要なOMIMファイルが見つかりました"
+        fi
+        
+        # 既存ファイルをデータディレクトリにコピーまたはシンボリックリンク
+        mkdir -p "$DATA_DIR"
+        
+        echo "既存のOMIMファイルをリンク中..."
+        for file in "${REQUIRED_FILES[@]}"; do
+            if [[ -f "$EXISTING_OMIM_DIR/$file" ]]; then
+                # シンボリックリンクを作成（既に存在する場合は削除）
+                rm -f "$DATA_DIR/$file"
+                ln -s "$EXISTING_OMIM_DIR/$file" "$DATA_DIR/$file"
+                echo "  ✓ $file"
+            fi
+        done
+        
+        echo "既存データの準備完了"
+    else
+        echo "OMIM実データをダウンロード・準備中..."
+    fi
     
     cd "$PROJECT_ROOT"
     
@@ -244,6 +303,11 @@ if [ "$SKIP_DATA_PREP" = false ]; then
         "--output_dir" "$DATA_DIR"
         "--config" "$CONFIG_FILE"
     )
+    
+    # 既存ディレクトリが指定されている場合は追加
+    if [[ -n "$EXISTING_OMIM_DIR" ]]; then
+        DATA_PREP_ARGS+=("--existing_omim_dir" "$EXISTING_OMIM_DIR")
+    fi
     
     if [[ "$FORCE_DOWNLOAD" == "true" ]]; then
         DATA_PREP_ARGS+=("--force_download")
