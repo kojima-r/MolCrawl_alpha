@@ -231,22 +231,36 @@ fi
 # サンプルデータの作成（必要な場合）
 if [[ "$CREATE_SAMPLE" == true ]]; then
     echo "=== データ準備フェーズ ==="
-    if [[ -z "$DATA_PATH" ]]; then
-        DATA_PATH="$DATA_DIR/sample_proteingym_data.csv"
-    fi
-    
-    echo "サンプルデータを作成中: $DATA_PATH"
+    echo "テスト用サンプルデータを準備中..."
     
     cd "$PROJECT_ROOT"
     
+    # まず、推奨データセットをダウンロード
     python scripts/evaluation/gpt2/proteingym_data_preparation.py \
-        --output_dir "$DATA_DIR" \
-        --sample_only \
-        --create_sample_data
+        --data_dir "$DATA_DIR" \
+        --download recommended
     
     if [[ $? -ne 0 ]]; then
-        echo "エラー: サンプルデータの作成に失敗しました"
-        exit 1
+        echo "警告: データダウンロードに失敗しました。ローカルデータを探します..."
+    fi
+    
+    # ダウンロードされたアッセイファイルを探す
+    FIRST_ASSAY=$(find "$DATA_DIR" -name "*.csv" -path "*/DMS_ProteinGym_substitutions/*" | head -1)
+    
+    if [[ -n "$FIRST_ASSAY" ]]; then
+        DATA_PATH="$FIRST_ASSAY"
+        echo "✓ ダウンロードされたデータを使用: $DATA_PATH"
+    else
+        # フォールバック：任意のアッセイファイル
+        FIRST_ASSAY=$(find "$DATA_DIR" -name "*.csv" | head -1)
+        if [[ -n "$FIRST_ASSAY" ]]; then
+            DATA_PATH="$FIRST_ASSAY"
+            echo "✓ 既存データを使用: $DATA_PATH"
+        else
+            echo "エラー: サンプルデータが見つかりません"
+            echo "手動でデータをダウンロードするか、--data_pathでデータファイルを指定してください"
+            exit 1
+        fi
     fi
     echo ""
 fi
