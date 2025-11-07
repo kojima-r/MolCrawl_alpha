@@ -5,6 +5,9 @@
 
 set -e  # エラー時に停止
 
+# エラー時に行番号を表示
+trap 'echo "エラー: $BASH_SOURCE:$LINENO でコマンドが失敗しました" >&2' ERR
+
 echo "🧬 Independent BERT Genome Sequence - ClinVar Evaluation"
 echo "================================================================"
 echo "🤖 BERT-based pathogenicity prediction (Independent Implementation)"
