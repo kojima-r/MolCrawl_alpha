@@ -110,22 +110,6 @@ class COSMICEvaluator(ModelEvaluator):
 
         return model
 
-    def encode_sequence(self, sequence):
-        """DNA配列をトークンIDにエンコード"""
-        # 配列を適切にフォーマット
-        sequence = sequence.upper().replace("N", "").replace("-", "")
-
-        # SentencePieceでエンコード
-        tokens = self.tokenizer.encode(sequence)
-
-        if not tokens:
-            logger.warning(f"Empty tokenization for sequence: {sequence[:50]}...")
-            tokens = (
-                [self.tokenizer.unk_id()] if hasattr(self.tokenizer, "unk_id") else [0]
-            )
-
-        return torch.tensor(tokens, dtype=torch.long)
-
     def get_oncogenic_probability(self, reference_seq, variant_seq, context_length=512):
         """
         変異の癌原性確率を計算

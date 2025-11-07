@@ -52,7 +52,7 @@ sys.path.append(
 )
 
 try:
-    from src.config.paths import get_genome_tokenizer_path, get_gpt2_output_path
+    from src.config.paths import get_genome_tokenizer_path
     from gpt2.model import GPTConfig, GPT
     from src.utils.evaluation_output import (
         get_evaluation_output_dir,
@@ -316,7 +316,7 @@ class OMIMEvaluator(ModelEvaluator):
             fpr, tpr, thresholds = roc_curve(true_labels, scores)
             optimal_idx = np.argmax(tpr - fpr)
             return thresholds[optimal_idx]
-        except:
+        except (ValueError, IndexError):
             return np.median(scores)
 
     def calculate_metrics(
@@ -337,12 +337,12 @@ class OMIMEvaluator(ModelEvaluator):
         # ROC-AUC, PR-AUC
         try:
             roc_auc = roc_auc_score(true_labels, scores)
-        except:
+        except (ValueError, RuntimeError):
             roc_auc = 0.5
 
         try:
             pr_auc = average_precision_score(true_labels, scores)
-        except:
+        except (ValueError, RuntimeError):
             pr_auc = 0.0
 
         # 感度・特異度
@@ -561,7 +561,7 @@ def main():
 
         # データロードと評価
         df = evaluator.load_omim_data(args.data_path)
-        results = evaluator.evaluate_variants(df, batch_size=args.batch_size)
+        evaluator.evaluate_variants(df, batch_size=args.batch_size)
 
         # 結果保存
         evaluator.save_results(args.output_dir)

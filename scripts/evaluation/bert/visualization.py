@@ -685,25 +685,6 @@ The BERT model was evaluated using masked language modeling (MLM) based fitness 
         plt.title("BERT ProteinGym Evaluation Summary")
         self._save_plot("bert_summary_dashboard")
 
-    def generate_all_visualizations(self):
-        """全ての可視化を生成"""
-        self.logger.info("Generating all BERT visualizations")
-
-        self.plot_performance_metrics()
-        self.create_summary_dashboard()
-
-        # 汎用ダッシュボードも生成
-        try:
-            self._create_comprehensive_evaluation_dashboard()
-        except Exception as e:
-            self.logger.warning(f"Could not create comprehensive dashboard: {e}")
-
-        self.logger.info(f"Generated {len(self.generated_files)} visualization files")
-        return {
-            "output_directory": str(self.output_dir),
-            "generated_files": len(self.generated_files),
-        }
-
     def _create_comprehensive_evaluation_dashboard(self):
         """BERT ProteinGym用の包括的評価ダッシュボードを作成"""
         self.logger.info("Creating comprehensive BERT ProteinGym evaluation dashboard")

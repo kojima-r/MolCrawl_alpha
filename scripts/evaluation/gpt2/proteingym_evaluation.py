@@ -368,7 +368,6 @@ class ProteinGymEvaluator(ModelEvaluator):
             return torch.tensor(0.0, device=tokens.device)
 
         # 最後のトークンを除く（予測対象がないため）
-        input_tokens = tokens[:, :-1]
         target_tokens = tokens[:, 1:]
         pred_log_probs = log_probs[:, :-1, :]
 
@@ -477,7 +476,7 @@ class ProteinGymEvaluator(ModelEvaluator):
                     if pos < len(wt_seq) and wt_seq[pos] == mut_aa:
                         wt_seq[pos] = orig_aa
                         return "".join(wt_seq)
-                except:
+                except (ValueError, IndexError, AttributeError):
                     pass
 
             return mutated_seq
@@ -507,7 +506,6 @@ class ProteinGymEvaluator(ModelEvaluator):
         logger.info(f"Available columns: {list(proteingym_data.columns)}")
         logger.info(f"Sample data:\n{proteingym_data.head(3)}")
 
-        predictions = []
         true_scores = []
         fitness_scores = []
 

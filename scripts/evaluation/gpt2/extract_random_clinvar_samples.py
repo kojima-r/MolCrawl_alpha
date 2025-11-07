@@ -165,7 +165,7 @@ def extract_from_csv(csv_path, num_samples, output_path, seed=42):
         # まずタブ区切りを試す
         try:
             df = pd.read_csv(csv_path, compression="gzip", sep="\t", low_memory=False)
-        except:
+        except (ValueError, pd.errors.ParserError):
             df = pd.read_csv(csv_path, compression="gzip", sep=",", low_memory=False)
     else:
         # まずタブ区切りを試す
@@ -174,7 +174,7 @@ def extract_from_csv(csv_path, num_samples, output_path, seed=42):
             # 1つの列しかない場合はカンマ区切りを試す
             if len(df.columns) == 1:
                 df = pd.read_csv(csv_path, sep=",", low_memory=False)
-        except:
+        except (ValueError, pd.errors.ParserError):
             df = pd.read_csv(csv_path, sep=",", low_memory=False)
 
     print(f"Total records: {len(df)}")

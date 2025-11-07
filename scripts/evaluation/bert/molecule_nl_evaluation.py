@@ -34,7 +34,6 @@ PROJECT_ROOT = os.path.dirname(
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
 from utils.evaluation_output import (
-    get_model_name_from_path,
     setup_evaluation_logging,
 )
 from utils.model_evaluator import ModelEvaluator
@@ -756,7 +755,6 @@ def main():
     if args.output_dir is None:
         # LEARNING_SOURCE_DIR環境変数を使用
         learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR", ".")
-        model_name = get_model_name_from_path(args.model_path)
         args.output_dir = os.path.join(
             learning_source_dir,
             "molecule_nl",
@@ -769,7 +767,7 @@ def main():
     output_dir_path.mkdir(parents=True, exist_ok=True)
 
     # ログ設定（Path型を渡す）
-    log_file = setup_evaluation_logging(output_dir_path, "bert_molecule_nl_evaluation")
+    setup_evaluation_logging(output_dir_path, "bert_molecule_nl_evaluation")
     logger.info("Starting BERT Molecule NL model evaluation...")
     logger.info(f"Model path: {args.model_path}")
     logger.info(f"Dataset path: {args.dataset_path}")

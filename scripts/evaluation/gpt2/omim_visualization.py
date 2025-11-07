@@ -795,43 +795,6 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         self.logger.info(f"HTML report saved to {html_file}")
         return html_file
 
-    def generate_all_visualizations(self):
-        """すべての可視化を生成"""
-        self.logger.info("Generating all OMIM evaluation visualizations")
-
-        # 各可視化生成
-        confusion_matrix_file = self.generate_confusion_matrix()
-        metrics_file = self.generate_performance_metrics()
-        inheritance_file = self.generate_inheritance_analysis()
-        curves_file = self.generate_roc_pr_curves()
-        distribution_file = self.generate_score_distribution()
-        html_file = self.generate_html_report()
-
-        # 汎用ダッシュボードも生成
-        try:
-            self._create_comprehensive_evaluation_dashboard()
-        except Exception as e:
-            self.logger.warning(f"Could not create comprehensive dashboard: {e}")
-
-        # 生成されたファイルをログ出力
-        generated_files = [
-            f
-            for f in [
-                confusion_matrix_file,
-                metrics_file,
-                inheritance_file,
-                curves_file,
-                distribution_file,
-                html_file,
-            ]
-            if f
-        ]
-
-        self.logger.info(f"All visualizations completed. Files saved to {self.viz_dir}")
-        self.logger.info(f"Generated {len(generated_files)} visualization files")
-
-        return generated_files
-
     def _create_comprehensive_evaluation_dashboard(self):
         """OMIM用の包括的評価ダッシュボードを作成"""
         self.logger.info("Creating comprehensive OMIM evaluation dashboard")

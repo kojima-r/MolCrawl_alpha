@@ -539,7 +539,6 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         # 二値分類用のラベルを作成（閾値ベース）
         threshold = np.median(true_scores)
         labels = (true_scores > threshold).astype(int)
-        pred_labels = (predicted_scores > threshold).astype(int)
 
         # DataFrameを作成
         results_df = pd.DataFrame(
