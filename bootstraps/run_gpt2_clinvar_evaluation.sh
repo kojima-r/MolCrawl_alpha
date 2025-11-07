@@ -150,12 +150,58 @@ if [[ "$EVAL_ONLY" != true ]]; then
     echo "=== データ準備フェーズ ==="
     
     if [[ "$DOWNLOAD" == true ]]; then
-        echo "ClinVarデータをダウンロード中..."
-        python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_data_preparation.py" \
-            --download \
-            --output_dir "$DATA_DIR" \
-            --max_samples "$MAX_SAMPLES" \
-            --sequence_length "$SEQUENCE_LENGTH"
+        echo "ClinVarデータをダウンロードしてバランスサンプリング中..."
+        echo "陽性（病原性）1000件、陰性（良性）1000件をランダム抽出"
+        
+        # ステップ1: データセットから直接ランダム抽出（配列生成含む）
+        # 参照ゲノムファイルのパスを設定
+        REF_FASTA="$LEARNING_SOURCE_DIR/genome_sequence/data/GCA_000001405.28_GRCh38.p13_genomic.fna"
+        
+        if [[ ! -f "$REF_FASTA" ]]; then
+            # .gzファイルを確認
+            if [[ -f "$REF_FASTA.gz" ]]; then
+                REF_FASTA="$REF_FASTA.gz"
+                echo "参照ゲノム: $REF_FASTA (圧縮版)"
+            else
+                echo "警告: 参照ゲノムが見つかりません: $REF_FASTA"
+                echo "HuggingFace Datasetsから直接取得します（配列生成なし）"
+                REF_FASTA=""
+            fi
+        else
+            echo "参照ゲノム: $REF_FASTA"
+        fi
+        
+        # extract_random_clinvar_samples.pyを使用してバランスサンプリング
+        if [[ -n "$REF_FASTA" ]]; then
+            # 参照ゲノムがある場合: データセットから直接抽出して配列生成
+            python "$PROJECT_ROOT/scripts/evaluation/gpt2/extract_random_clinvar_samples.py" \
+                --ref_fasta "$REF_FASTA" \
+                --output_csv "$DATA_DIR/clinvar_evaluation_dataset.csv" \
+                --num_samples 2000 \
+                --flank "$((SEQUENCE_LENGTH / 2))" \
+                --seed 42
+        else
+            # 参照ゲノムがない場合: 既存の前処理スクリプトで取得後にサンプリング
+            echo "従来の方法でデータ準備..."
+            python "$PROJECT_ROOT/scripts/evaluation/gpt2/clinvar_data_preparation.py" \
+                --download \
+                --output_dir "$DATA_DIR" \
+                --max_samples "$MAX_SAMPLES" \
+                --sequence_length "$SEQUENCE_LENGTH"
+            
+            # 生成されたファイルからバランスサンプリング
+            if [[ -f "$DATA_DIR/clinvar_evaluation_dataset.csv" ]]; then
+                echo "バランスサンプリングを適用中..."
+                python "$PROJECT_ROOT/scripts/evaluation/gpt2/extract_random_clinvar_samples.py" \
+                    --input_csv "$DATA_DIR/clinvar_evaluation_dataset.csv" \
+                    --output_csv "$DATA_DIR/clinvar_evaluation_dataset_balanced.csv" \
+                    --num_samples 2000 \
+                    --seed 42
+                
+                # バランス版を使用
+                mv "$DATA_DIR/clinvar_evaluation_dataset_balanced.csv" "$DATA_DIR/clinvar_evaluation_dataset.csv"
+            fi
+        fi
     else
         echo "サンプルClinVarデータを作成中（モック実装）..."
         # --downloadなしの場合は既存データを使用、または手動でサンプルを作成
@@ -170,6 +216,23 @@ if [[ "$EVAL_ONLY" != true ]]; then
     fi
     
     echo "データ準備完了"
+    
+    # データセットのバランス確認
+    if [[ -f "$DATA_DIR/clinvar_evaluation_dataset.csv" ]]; then
+        echo ""
+        echo "データセット統計:"
+        python -c "
+import pandas as pd
+df = pd.read_csv('$DATA_DIR/clinvar_evaluation_dataset.csv')
+print(f'総サンプル数: {len(df)}')
+if 'ClinicalSignificance' in df.columns:
+    print('ClinicalSignificance分布:')
+    print(df['ClinicalSignificance'].value_counts())
+elif 'classification' in df.columns:
+    print('Classification分布:')
+    print(df['classification'].value_counts())
+" 2>/dev/null || echo "統計表示に失敗しました"
+    fi
 fi
 
 # 2. モデル評価

@@ -15,19 +15,21 @@ cd /path/to/riken-dataset-fundational-model
 ## 🚀 AI Model Evaluation Scripts
 
 ### BERT Model Evaluations
-| Script | Purpose | Dataset | Output Location |
-|--------|---------|---------|----------------|
-| `run_bert_proteingym_evaluation.sh` | BERT protein fitness prediction (統合版) | ProteinGym | `$LEARNING_SOURCE_DIR/protein_sequence/report/bert_proteingym_*` |
-| `run_bert_clinvar_evaluation.sh` | BERT variant pathogenicity prediction | ClinVar | `$LEARNING_SOURCE_DIR/genome_sequence/report/bert_clinvar_*` |
+| Script | Purpose | Dataset | Dataset Size | Output Location |
+|--------|---------|---------|--------------|-----------------|
+| `run_bert_proteingym_evaluation.sh` | BERT protein fitness prediction (統合版) | ProteinGym | 可変 | `$LEARNING_SOURCE_DIR/protein_sequence/report/bert_proteingym_*` |
+| `run_bert_clinvar_evaluation.sh` | BERT variant pathogenicity prediction | ClinVar | 2000件（陽性1000+陰性1000） | `$LEARNING_SOURCE_DIR/genome_sequence/report/bert_clinvar_*` |
 
-**Note**: BERT ProteinGymスクリプトは、データ準備・評価・可視化の3フェーズを統合した単一スクリプトです。
+**Note**: 
+- BERT ProteinGymスクリプトは、データ準備・評価・可視化の3フェーズを統合した単一スクリプト
+- **ClinVarバランスサンプリング**: 病原性（pathogenic）1000件と良性（benign）1000件をランダム抽出してバランスの取れた評価を実現
 
 ### GPT-2 Model Evaluations
 
 #### Genome Sequence (ゲノム配列)
-| Script | Purpose | Dataset | Data Type | Default Device | Output Location |
-|--------|---------|---------|-----------|----------------|-----------------|
-| `run_gpt2_clinvar_evaluation.sh` | 病原性バリアント予測 | ClinVar | サンプル | GPU (cuda) | `$LEARNING_SOURCE_DIR/genome_sequence/report/clinvar_*` |
+| Script | Purpose | Dataset | Dataset Size | Default Device | Output Location |
+|--------|---------|---------|--------------|----------------|-----------------|
+| `run_gpt2_clinvar_evaluation.sh` | 病原性バリアント予測 | ClinVar | 2000件（陽性1000+陰性1000） | GPU (cuda) | `$LEARNING_SOURCE_DIR/genome_sequence/report/clinvar_*` |
 | `run_gpt2_cosmic_evaluation.sh` | がん関連バリアント分析 | COSMIC | サンプル | GPU (cuda) | `$LEARNING_SOURCE_DIR/genome_sequence/report/cosmic_*` |
 | `run_gpt2_omim_evaluation_dummy.sh` | 遺伝性疾患予測（テスト用） | OMIM | サンプル | GPU (cuda) | `$LEARNING_SOURCE_DIR/genome_sequence/report/omim_evaluation` |
 | `run_gpt2_omim_evaluation_real.sh` | 遺伝性疾患予測（本番用） | OMIM | 実データ | GPU (cuda) | `$LEARNING_SOURCE_DIR/genome_sequence/report/omim_real_evaluation` |
@@ -37,6 +39,7 @@ cd /path/to/riken-dataset-fundational-model
 - `_real.sh`: 本番評価用。OMIM公式データベースから実データを取得（認証必要）
 - **GPU最適化**: すべてのスクリプトはデフォルトでGPU (cuda)を使用（CPUより約4倍高速）
 - **既存データ再利用**: `run_gpt2_omim_evaluation_real.sh`は`--existing_omim_dir`オプションでダウンロード済みデータを再利用可能
+- **ClinVarバランスサンプリング**: 病原性（pathogenic）1000件と良性（benign）1000件をランダム抽出してバランスの取れた評価を実現
 
 #### Protein Sequence (タンパク質配列)
 | Script | Purpose | Dataset | Default Model | Default Device | Output Location |
@@ -125,14 +128,31 @@ $LEARNING_SOURCE_DIR/
 # 評価のみ実行（データ準備をスキップ）
 ./bootstraps/run_bert_proteingym_evaluation.sh --skip_data_prep
 
-# BERT ClinVar評価
+# BERT ClinVar評価（バランスサンプリング: 陽性1000件+陰性1000件）
+# 初回実行: データ準備から実行
+./bootstraps/run_bert_clinvar_evaluation.sh --prepare-data
+
+# データ準備済みの場合: 評価のみ実行
 ./bootstraps/run_bert_clinvar_evaluation.sh
+
+# データ再ダウンロード（強制）
+./bootstraps/run_bert_clinvar_evaluation.sh --force-download
 ```
 
 #### GPT-2 Genome Sequence Evaluations
 ```bash
-# ClinVar評価
-./bootstraps/run_gpt2_clinvar_evaluation.sh --model_size medium --max_samples 100
+# ClinVar評価（バランスサンプリング: 陽性1000件+陰性1000件）
+# 初回実行: HuggingFaceからデータダウンロード＆バランスサンプリング
+./bootstraps/run_gpt2_clinvar_evaluation.sh --download --model-size medium
+
+# データ準備済みの場合: 評価のみ実行
+./bootstraps/run_gpt2_clinvar_evaluation.sh --model-size small
+
+# 評価のみ（データ準備スキップ）
+./bootstraps/run_gpt2_clinvar_evaluation.sh --eval-only --model-size medium
+
+# 可視化のみ実行
+./bootstraps/run_gpt2_clinvar_evaluation.sh --visualize-only
 
 # COSMIC評価
 ./bootstraps/run_gpt2_cosmic_evaluation.sh --model_size small --batch_size 32
@@ -356,6 +376,40 @@ source src/config/env.sh
 - **ProteinGymサンプルデータ**: `--create-sample`で推奨データセットを自動ダウンロード
 - **OMIM既存データ再利用**: `--existing_omim_dir`でダウンロード済みデータを活用
 - **デフォルトモデル**: Protein Classificationはモデル指定なしで実行可能
+- **ClinVarバランスサンプリング**: 病原性・良性が1000件ずつのバランスの取れたデータセットで正確な評価
+
+### ClinVarバランスサンプリングの詳細
+
+#### 背景
+従来のClinVarデータ準備では数件しか抽出されず、評価の信頼性が低い問題がありました。
+
+#### 改善点
+`extract_random_clinvar_samples.py`を使用して以下を実現：
+
+**データ構成**:
+- 病原性（Pathogenic）バリアント: 1000件
+- 良性（Benign）バリアント: 1000件
+- 合計: 2000件のバランスの取れたデータセット
+
+**サンプリング方法**:
+1. HuggingFace DatasetsからClinVarデータを取得
+2. Clinical Significanceを自動分類（病原性/良性）
+3. 各クラスから1000件ずつランダムサンプリング
+4. 参照ゲノムから周辺配列を抽出（flanking領域含む）
+
+**利点**:
+- クラス不均衡を解消し、正確な精度評価が可能
+- 再現可能なランダムサンプリング（seed=42固定）
+- 自動化されたデータ準備フロー
+
+**使用方法**:
+```bash
+# GPT-2 ClinVar評価
+./bootstraps/run_gpt2_clinvar_evaluation.sh --download
+
+# BERT ClinVar評価
+./bootstraps/run_bert_clinvar_evaluation.sh --prepare-data
+```
 
 ## 📞 Troubleshooting
 
@@ -400,6 +454,12 @@ source src/config/env.sh
    # ProteinGymサンプルデータの自動作成
    ./bootstraps/run_gpt2_proteingym_evaluation.sh \
      -m model.pt --create-sample
+   
+   # ClinVarバランスサンプリングデータの作成
+   # GPT-2の場合
+   ./bootstraps/run_gpt2_clinvar_evaluation.sh --download
+   # BERTの場合
+   ./bootstraps/run_bert_clinvar_evaluation.sh --prepare-data
    ```
 
 5. **OMIM実データアクセスエラー**
@@ -444,6 +504,39 @@ source src/config/env.sh
    # Protein Classificationの詳細レポート
    # → visualizations/ディレクトリに10種類以上のグラフ + HTML
    ```
+
+9. **ClinVarデータが数件しか抽出されない**
+   ```bash
+   # 問題: 従来の方法では少数のサンプルのみ
+   # 解決策: バランスサンプリングスクリプトを使用
+   
+   # GPT-2の場合（2000件のバランスデータを自動生成）
+   ./bootstraps/run_gpt2_clinvar_evaluation.sh --download
+   
+   # BERTの場合（2000件のバランスデータを自動生成）
+   ./bootstraps/run_bert_clinvar_evaluation.sh --prepare-data
+   
+   # データセットの統計を確認
+   python -c "
+   import pandas as pd
+   df = pd.read_csv('$LEARNING_SOURCE_DIR/genome_sequence/data/clinvar/clinvar_evaluation_dataset.csv')
+   print(f'総サンプル数: {len(df)}')
+   print(df['ClinicalSignificance'].value_counts())
+   "
+   # 期待結果: 病原性 1000件、良性 1000件
+   ```
+
+10. **参照ゲノムファイルが見つからない（ClinVarバランスサンプリング）**
+    ```bash
+    # 参照ゲノムのダウンロード
+    wget -P $LEARNING_SOURCE_DIR/genome_sequence/data/ \
+      https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.28_GRCh38.p13/GCA_000001405.28_GRCh38.p13_genomic.fna.gz
+    
+    # または既にダウンロード済みの場合はパスを確認
+    ls -lh $LEARNING_SOURCE_DIR/genome_sequence/data/GCA_000001405.28_GRCh38.p13_genomic.fna*
+    
+    # .gzファイルはそのまま使用可能（スクリプトが自動展開）
+    ```
 
 ### ログの確認
 各スクリプトは詳細なログを出力します：
