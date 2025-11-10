@@ -55,7 +55,7 @@ else:
     meta_vocab_size = 60666  # Default size based on previous RNA experiments
 
 # Import necessary components for custom data collator
-import torch
+import torch  # noqa: E402
 
 
 # Create a simple tokenizer placeholder (BERT will use its own tokenizer)

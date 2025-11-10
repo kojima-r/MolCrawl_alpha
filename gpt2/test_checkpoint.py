@@ -29,8 +29,8 @@ if str(src_path) not in sys.path:
 
 # GPT2モデルクラスをインポート
 sys.path.append(str(project_root / "gpt2"))
-from model import GPT, GPTConfig
-from core.dataset import PreparedDataset
+from model import GPT, GPTConfig  # noqa: E402
+from core.dataset import PreparedDataset  # noqa: E402
 
 
 def load_gpt2_checkpoint(checkpoint_path, device="cuda"):

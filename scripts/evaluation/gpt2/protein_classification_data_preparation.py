@@ -19,7 +19,7 @@ PROJECT_ROOT = os.path.dirname(
 )
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
-from utils.evaluation_output import get_learning_source_dir
+from utils.evaluation_output import get_learning_source_dir  # noqa: E402
 
 # ロギング設定
 logging.basicConfig(

@@ -33,14 +33,14 @@ PROJECT_ROOT = os.path.dirname(
 )
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
-from utils.evaluation_output import (
+from utils.evaluation_output import (  # noqa: E402
     setup_evaluation_logging,
 )
-from utils.model_evaluator import ModelEvaluator
+from utils.model_evaluator import ModelEvaluator  # noqa: E402
 
 # Molecule NL tokenizer
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
-from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
+from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer  # noqa: E402
 
 # ログ設定は後でsetup_evaluation_loggingで行う
 logger = logging.getLogger(__name__)

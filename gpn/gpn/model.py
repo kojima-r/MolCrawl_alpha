@@ -643,7 +643,7 @@ AutoModelForMaskedLM.register(GPNConfig, GPNForMaskedLM)
 AutoModelForSequenceClassification.register(GPNConfig, GPNForSequenceClassification)
 AutoModelForTokenClassification.register(GPNConfig, GPNForTokenClassification)
 
-from .legacy import (
+from .legacy import (  # noqa: E402
     ConvNetConfig,
     ConvNetModel,
     ConvNetForMaskedLM,
@@ -657,7 +657,7 @@ AutoModelForSequenceClassification.register(
     ConvNetConfig, ConvNetForSequenceClassification
 )
 
-from .legacy import GPNRoFormerConfig, GPNRoFormerModel, GPNRoFormerForMaskedLM
+from .legacy import GPNRoFormerConfig, GPNRoFormerModel, GPNRoFormerForMaskedLM  # noqa: E402
 
 AutoConfig.register("GPNRoFormer", GPNRoFormerConfig)
 AutoModel.register(GPNRoFormerConfig, GPNRoFormerModel)

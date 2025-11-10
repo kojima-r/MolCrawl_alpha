@@ -11,7 +11,7 @@ import pyBigWig
 from tqdm import tqdm
 
 tqdm.pandas()
-import zarr
+import zarr  # noqa: E402
 
 
 DEFINED_SYMBOLS = np.frombuffer("ACGTacgt".encode("ascii"), dtype="S1")
