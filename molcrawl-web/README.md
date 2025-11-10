@@ -121,16 +121,44 @@ LEARNING_SOURCE_DIR="learning_source_202508" npm run dev
 
 **解決方法**: `npm start`ではなく`npm run dev`を使用してください
 
+## 機能
+
+### 📊 データセット準備進捗モニタリング
+
+5つのデータセット準備スクリプトの進捗状況をリアルタイムで監視できます：
+
+- **Protein Sequence (Uniprot)** - 3ステップ
+  - Uniprot Download → FASTA to Raw → Tokenization
+- **Genome Sequence (RefSeq)** - 4ステップ
+  - RefSeq Download → FASTA to Raw → Tokenizer Training → Raw to Parquet
+- **RNA (CellxGene)** - 5ステップ
+  - Build List → Download → H5AD to Loom → Tokenization → Vocabulary
+- **Molecule NL (SMolInstruct)** - 2ステップ
+  - Dataset Download/Copy → Tokenization & Processing
+- **Compounds (OrganiX13)** - 3ステップ
+  - OrganiX13 Download → SMILES & Scaffolds Tokenization → Statistics
+
+各データセットの進捗状況は、マーカーファイルと出力ファイルの存在で自動判定されます。
+
+#### 使用方法
+
+1. Webブラウザで http://localhost:3000 にアクセス
+2. 「Preparation」タブをクリック
+3. 各データセットの進捗を確認
+4. 自動更新オプションで5秒ごとにリフレッシュ可能
+
 ## プロジェクト構造
 
 ```
 molcrawl-web/
 ├── api/                    # バックエンドAPI
 │   ├── directory.js       # ディレクトリAPI
+│   ├── dataset-progress.js # データセット準備進捗API
 │   ├── genome-species.js  # ゲノム種API
 │   └── zinc-checker.js    # ZINC20データチェッカー
 ├── src/                    # Reactフロントエンド
 │   ├── App.js             # メインアプリケーション
+│   ├── DatasetProgress.js # データセット準備進捗コンポーネント
 │   ├── ExperimentDashboard.js
 │   ├── GenomeSpeciesList.js
 │   └── ZincChecker.js
@@ -157,6 +185,11 @@ molcrawl-web/
 ### ZINC20データ
 - `GET /api/zinc/check` - ZINC20データチェック
 - `GET /api/zinc/count` - ZINC20データ件数取得
+
+### データセット準備進捗
+- `GET /api/dataset-progress` - 全データセットの準備進捗取得
+- `GET /api/dataset-progress/:datasetKey` - 特定データセットの詳細進捗取得
+  - `datasetKey`: `protein_sequence`, `genome_sequence`, `rna`, `molecule_nl`, `compounds`
 
 ## 開発
 

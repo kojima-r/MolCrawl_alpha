@@ -19,6 +19,7 @@ if (!process.env.LEARNING_SOURCE_DIR) {
 
 const { getDirectoryStructure, expandDirectory, getFullDirectoryTree, checkZincData, getZincDataCounts } = require('./api/directory');
 const { getGenomeSpeciesList, getGenomeSpeciesByCategory } = require('./api/genome-species');
+const datasetProgressRouter = require('./api/dataset-progress');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.get('/api/zinc/check', checkZincData);
 app.get('/api/zinc/count', getZincDataCounts);
 app.get('/api/genome/species', getGenomeSpeciesList);
 app.get('/api/genome/species/category', getGenomeSpeciesByCategory);
+app.use('/api/dataset-progress', datasetProgressRouter);
 
 // ヘルスチェック
 app.get('/api/health', (req, res) => {
@@ -63,7 +65,9 @@ app.get('/api/health', (req, res) => {
       '/api/zinc/check - ZINC20データチェック',
       '/api/zinc/count - ZINC20データ件数取得',
       '/api/genome/species - ゲノム種リスト取得',
-      '/api/genome/species/category?category=<category> - カテゴリ別種リスト取得'
+      '/api/genome/species/category?category=<category> - カテゴリ別種リスト取得',
+      '/api/dataset-progress - 全データセット準備進捗取得',
+      '/api/dataset-progress/:datasetKey - 特定データセット詳細進捗取得'
     ]
   });
 });
