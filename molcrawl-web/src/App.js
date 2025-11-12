@@ -3,6 +3,7 @@ import './App.css';
 import ZincChecker from './ZincChecker';
 import GenomeSpeciesList from './GenomeSpeciesList';
 import ExperimentDashboard from './ExperimentDashboard';
+import DatasetProgressCard from './DatasetProgressCard';
 
 // データセットタブの定義
 const DATASET_TABS = [
@@ -17,37 +18,42 @@ const DATASET_TABS = [
   {
     id: 'compounds',
     name: 'Compounds',
-    icon: '💊',
+    icon: '�',
     description: '化合物データセット',
-    path: 'compounds'
+    path: 'compounds',
+    progressKey: 'compounds'
   },
   {
     id: 'genome_sequence',
     name: 'Genome Sequence',
     icon: '🧬',
     description: 'ゲノム配列データセット',
-    path: 'genome_sequence'
+    path: 'genome_sequence',
+    progressKey: 'genome_sequence'
   },
   {
     id: 'protein_sequence',
     name: 'Protein Sequence',
     icon: '🧬',
     description: 'タンパク質配列データセット',
-    path: 'protein_sequence'
+    path: 'protein_sequence',
+    progressKey: 'protein_sequence'
   },
   {
     id: 'rna',
     name: 'RNA',
     icon: '🧬',
     description: 'RNAデータセット',
-    path: 'rna'
+    path: 'rna',
+    progressKey: 'rna'
   },
   {
     id: 'molecule_nl',
     name: 'Molecule NL',
     icon: '💬',
     description: '分子自然言語データセット',
-    path: 'molecule_nl'
+    path: 'molecule_nl',
+    progressKey: 'molecule_nl'
   }
 ];
 
@@ -413,6 +419,13 @@ function App() {
               <ExperimentDashboard />
             ) : (
             <div className="tree-container">
+              {/* データセット準備進捗カード */}
+              {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
+                <DatasetProgressCard 
+                  datasetKey={DATASET_TABS.find(tab => tab.id === activeTab).progressKey}
+                />
+              )}
+              
               <div className="tree-header">
                 <div className="controls">
                   <button 
