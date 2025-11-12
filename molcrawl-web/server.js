@@ -1,6 +1,22 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+
+// 環境変数チェック（API読み込み前に実行）
+if (!process.env.LEARNING_SOURCE_DIR) {
+  console.error('');
+  console.error('❌ ERROR: LEARNING_SOURCE_DIR environment variable is required!');
+  console.error('');
+  console.error('Please set it before starting the server:');
+  console.error('  export LEARNING_SOURCE_DIR="learning_source_202508"');
+  console.error('  npm run dev');
+  console.error('');
+  console.error('Or run with inline environment variable:');
+  console.error('  LEARNING_SOURCE_DIR="learning_source_202508" npm run dev');
+  console.error('');
+  process.exit(1);
+}
+
 const { getDirectoryStructure, expandDirectory, getFullDirectoryTree, checkZincData, getZincDataCounts } = require('./api/directory');
 const { getGenomeSpeciesList, getGenomeSpeciesByCategory } = require('./api/genome-species');
 
@@ -8,8 +24,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // model_dirの値をサーバー起動時に確認
-console.log('Server starting with model_dir configuration...');
-console.log('Current working directory:', process.cwd());
+console.log('✅ Server starting with configuration:');
+console.log('   LEARNING_SOURCE_DIR:', process.env.LEARNING_SOURCE_DIR);
+console.log('   Working directory:', process.cwd());
 
 // CORS設定
 app.use(cors({

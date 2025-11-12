@@ -5,19 +5,41 @@ const { checkZincFiles, getZincDataCount } = require('./zinc-checker');
 
 // paths.pyからLEARNING_SOURCE_DIRを動的に取得
 function getLearningSourcePath() {
+  // 環境変数が設定されているか確認
+  if (!process.env.LEARNING_SOURCE_DIR) {
+    console.error('');
+    console.error('❌ ERROR: LEARNING_SOURCE_DIR environment variable is not set!');
+    console.error('');
+    console.error('Please set the LEARNING_SOURCE_DIR environment variable before starting the server.');
+    console.error('');
+    console.error('Available learning_source directories:');
+    const projectRoot = path.resolve(__dirname, '../..');
+    try {
+      const dirs = require('fs').readdirSync(projectRoot)
+        .filter(name => name.startsWith('learning_source'));
+      if (dirs.length > 0) {
+        dirs.forEach(dir => console.error(`  - ${dir}`));
+        console.error('');
+        console.error('Example:');
+        console.error(`  export LEARNING_SOURCE_DIR="${dirs[0]}"`);
+        console.error(`  npm run dev`);
+      } else {
+        console.error('  (no learning_source directories found)');
+      }
+    } catch (e) {
+      console.error('  (could not list directories)');
+    }
+    console.error('');
+    process.exit(1);
+  }
+
   try {
     const scriptPath = path.join(__dirname, '..', 'get_learning_source_dir.py');
     const projectRoot = path.resolve(__dirname, '../..');
     
-    // 環境変数LEARNING_SOURCE_DIRを設定してスクリプトを実行
-    const envVars = {
-      ...process.env,
-      LEARNING_SOURCE_DIR: process.env.LEARNING_SOURCE_DIR || 'learning_source_20250818'
-    };
-    
     const result = execSync(`cd "${projectRoot}" && python3 "${scriptPath}"`, { 
       encoding: 'utf8',
-      env: envVars
+      env: process.env
     });
     
     const config = JSON.parse(result.trim());
@@ -28,14 +50,17 @@ function getLearningSourcePath() {
     
     return config.absolute_path;
   } catch (error) {
-    console.error('Error getting learning source path from paths.py:', error.message);
-    console.error('Please ensure LEARNING_SOURCE_DIR environment variable is set.');
-    console.error('Example: export LEARNING_SOURCE_DIR="learning_source_20250818"');
-    
-    // フォールバック: デフォルトパス
-    const fallbackPath = path.resolve(__dirname, '../../learning_source_20250818');
-    console.warn(`Using fallback path: ${fallbackPath}`);
-    return fallbackPath;
+    console.error('');
+    console.error('❌ ERROR: Failed to get learning source path');
+    console.error('');
+    console.error('Details:', error.message);
+    console.error('');
+    console.error('Please ensure:');
+    console.error('  1. LEARNING_SOURCE_DIR environment variable is set correctly');
+    console.error('  2. The specified directory exists');
+    console.error(`  3. Current value: ${process.env.LEARNING_SOURCE_DIR}`);
+    console.error('');
+    process.exit(1);
   }
 }
 
