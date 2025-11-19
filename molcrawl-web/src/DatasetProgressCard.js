@@ -11,6 +11,9 @@ const DatasetProgressCard = ({ datasetKey }) => {
   const [filesLoading, setFilesLoading] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalType, setModalType] = useState(null); // 'step' or 'output'
+  const [filePreview, setFilePreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const fetchProgress = async () => {
     try {
@@ -134,6 +137,50 @@ const DatasetProgressCard = ({ datasetKey }) => {
     setFilesData(null);
     setModalTitle('');
     setModalType(null);
+  };
+
+  const handleFileClick = async (file) => {
+    // テキストファイルかどうか判定
+    const textExtensions = ['.txt', '.json', '.csv', '.tsv', '.py', '.js', '.md', 
+                           '.log', '.yaml', '.yml', '.xml', '.html', '.css', 
+                           '.sh', '.bash', '.sql', '.r', '.java', '.cpp', '.c'];
+    
+    const fileExt = '.' + file.type;
+    if (!textExtensions.includes(fileExt)) {
+      alert('このファイルタイプはプレビューできません');
+      return;
+    }
+
+    setPreviewLoading(true);
+    setShowPreviewModal(true);
+    setFilePreview(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:3001/api/dataset-progress/file-preview?filePath=${encodeURIComponent(file.path)}&datasetKey=${encodeURIComponent(datasetKey)}`
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+      const data = await response.json();
+      setFilePreview(data);
+    } catch (err) {
+      console.error(`Failed to fetch file preview:`, err);
+      // エラー情報をプレビューモーダルに設定して表示
+      setFilePreview({
+        error: true,
+        errorMessage: err.message || 'ファイルプレビューの取得に失敗しました',
+      });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePreviewModal = () => {
+    setShowPreviewModal(false);
+    setFilePreview(null);
   };
 
   if (loading) {
@@ -355,8 +402,13 @@ const DatasetProgressCard = ({ datasetKey }) => {
                             📄 {typeGroup.type.toUpperCase()} ファイル ({typeGroup.count}件)
                           </h4>
                           <div className="files-list scrollable">
-                            {typeGroup.files.map((file, index) => (
-                              <div key={index} className="file-item">
+                            {typeGroup.files.map((file) => (
+                              <div 
+                                key={file.path} 
+                                className="file-item clickable-file"
+                                onClick={() => handleFileClick(file)}
+                                title="クリックしてファイル内容をプレビュー"
+                              >
                                 <div className="file-icon">
                                   {file.type === 'parquet' ? '📊' :
                                     file.type === 'json' ? '📋' :
@@ -398,6 +450,55 @@ const DatasetProgressCard = ({ datasetKey }) => {
                 <div className="modal-error">
                   <span>⚠️</span>
                   <p>ファイル一覧の取得に失敗しました</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ファイルプレビューモーダル */}
+      {showPreviewModal && (
+        <div className="modal-overlay" onClick={closePreviewModal}>
+          <div className="modal-content preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{filePreview ? filePreview.fileName : 'ファイルプレビュー'}</h3>
+              <button className="modal-close-btn" onClick={closePreviewModal}>
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              {previewLoading ? (
+                <div className="modal-loading">
+                  <div className="card-spinner"></div>
+                  <span>ファイルを読み込み中...</span>
+                </div>
+              ) : filePreview ? (
+                filePreview.error ? (
+                  <div className="modal-error">
+                    <span>⚠️</span>
+                    <h4>ファイルを表示できません</h4>
+                    <p className="error-message">{filePreview.errorMessage}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="preview-info">
+                      <span className="preview-meta">サイズ: {filePreview.sizeFormatted}</span>
+                      <span className="preview-meta">拡張子: {filePreview.extension}</span>
+                      <span className="preview-meta">表示行数: {filePreview.linesShown}行</span>
+                      {filePreview.truncated && (
+                        <span className="preview-warning">⚠️ 内容が省略されています</span>
+                      )}
+                    </div>
+                    <div className="preview-content">
+                      <pre>{filePreview.content}</pre>
+                    </div>
+                  </>
+                )
+              ) : (
+                <div className="modal-error">
+                  <span>⚠️</span>
+                  <p>プレビューの読み込みに失敗しました</p>
                 </div>
               )}
             </div>

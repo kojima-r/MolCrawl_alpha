@@ -399,6 +399,133 @@ router.get('/', (req, res) => {
 });
 
 /**
+ * GET /api/dataset-progress/file-preview
+ * ファイルの冒頭部分をプレビュー取得
+ * 注意: このルートは /:datasetKey より前に定義する必要があります
+ */
+router.get('/file-preview', (req, res) => {
+  const { filePath, datasetKey } = req.query;
+
+  console.log('[file-preview] Received request');
+  console.log('[file-preview] req.query:', req.query);
+  console.log('[file-preview] filePath:', filePath);
+  console.log('[file-preview] datasetKey:', datasetKey);
+
+  if (!filePath) {
+    return res.status(400).json({
+      error: 'filePath query parameter is required',
+    });
+  }
+
+  const projectRoot = path.resolve(__dirname, '..', '..');
+  let fullPath;
+
+  // datasetKeyが指定されている場合は、learning_source_dir配下のパスとして解決
+  if (datasetKey) {
+    const learningSourceDir = process.env.LEARNING_SOURCE_DIR;
+    if (!learningSourceDir) {
+      return res.status(500).json({
+        error: 'LEARNING_SOURCE_DIR environment variable is not set',
+      });
+    }
+
+    const dataset = DATASETS[datasetKey];
+    if (!dataset) {
+      console.log('[file-preview] Dataset not found:', datasetKey);
+      console.log('[file-preview] Available:', Object.keys(DATASETS));
+      return res.status(404).json({
+        error: 'Dataset not found',
+        availableDatasets: Object.keys(DATASETS),
+      });
+    }
+
+    const learningSourcePath = path.join(projectRoot, learningSourceDir);
+    const datasetPath = path.join(learningSourcePath, dataset.baseDir);
+    fullPath = path.join(datasetPath, filePath);
+  } else {
+    // datasetKeyがない場合は、プロジェクトルートからの相対パスとして解決
+    fullPath = path.join(projectRoot, filePath);
+  }
+
+  console.log('[file-preview] fullPath:', fullPath);
+  console.log('[file-preview] exists:', checkExists(fullPath));
+
+  if (!checkExists(fullPath)) {
+    return res.status(404).json({
+      error: 'ファイルが見つかりません',
+      message: `指定されたファイルが存在しないか、アクセスできません: ${path.basename(filePath)}`,
+      path: filePath,
+      fullPath: fullPath,
+    });
+  }
+
+  try {
+    const stats = fs.statSync(fullPath);
+    
+    if (stats.isDirectory()) {
+      return res.status(400).json({
+        error: 'ディレクトリです',
+        message: '指定されたパスはディレクトリのため、プレビューできません',
+      });
+    }
+
+    if (stats.size > 100 * 1024 * 1024) {
+      return res.status(400).json({
+        error: 'ファイルサイズが大きすぎます',
+        message: `ファイルサイズ ${formatFileSize(stats.size)} は大きすぎてプレビューできません（上限: 100MB）`,
+        size: stats.size,
+        sizeFormatted: formatFileSize(stats.size),
+      });
+    }
+
+    const ext = path.extname(fullPath).toLowerCase();
+    const textExtensions = ['.txt', '.json', '.csv', '.tsv', '.py', '.js', '.md', 
+                           '.log', '.yaml', '.yml', '.xml', '.html', '.css', 
+                           '.sh', '.bash', '.sql', '.r', '.java', '.cpp', '.c'];
+    
+    if (!textExtensions.includes(ext)) {
+      return res.status(400).json({
+        error: 'サポートされていないファイル形式',
+        message: `${ext || '(拡張子なし)'} 形式のファイルはテキストプレビューに対応していません`,
+        extension: ext,
+      });
+    }
+
+    const maxBytes = 50 * 1024;
+    const buffer = Buffer.alloc(maxBytes);
+    const fd = fs.openSync(fullPath, 'r');
+    const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, 0);
+    fs.closeSync(fd);
+
+    let content = buffer.toString('utf8', 0, bytesRead);
+    
+    const lines = content.split('\n');
+    if (lines.length > 100) {
+      content = lines.slice(0, 100).join('\n');
+      content += '\n\n... (truncated)';
+    }
+
+    res.json({
+      fileName: path.basename(fullPath),
+      filePath: filePath,
+      size: stats.size,
+      sizeFormatted: formatFileSize(stats.size),
+      extension: ext,
+      content: content,
+      truncated: bytesRead === maxBytes || lines.length > 100,
+      linesShown: Math.min(lines.length, 100),
+    });
+  } catch (err) {
+    console.error('Error reading file for preview:', err);
+    return res.status(500).json({
+      error: 'ファイルの読み込みに失敗しました',
+      message: `ファイルの読み込み中にエラーが発生しました: ${err.message}`,
+      details: err.code || 'UNKNOWN_ERROR',
+    });
+  }
+});
+
+/**
  * GET /api/dataset-progress/:datasetKey
  * 特定のデータセットの詳細な進捗情報を取得
  */
@@ -544,8 +671,13 @@ router.get('/:datasetKey/step/:stepId/files', (req, res) => {
   if (step.outputDirs) {
     for (const dir of step.outputDirs) {
       const dirPath = dir === '.' ? datasetPath : path.join(datasetPath, dir);
+      console.log(`[step-files] Checking dir: ${dir}, dirPath: ${dirPath}, exists: ${checkExists(dirPath)}`);
       if (checkExists(dirPath)) {
         const dirFiles = getFilesRecursively(dirPath, dir === '.' ? '' : dir, 3);
+        console.log(`[step-files] Found ${dirFiles.length} files in ${dir}`);
+        if (dirFiles.length > 0) {
+          console.log(`[step-files] Sample file paths:`, dirFiles.slice(0, 3).map(f => f.path));
+        }
         files.push(...dirFiles);
       }
     }
