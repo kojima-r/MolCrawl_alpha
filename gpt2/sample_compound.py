@@ -47,6 +47,7 @@ dtype = (
 )  # 'float32' or 'bfloat16' or 'float16'
 compile = False  # use PyTorch 2.0 to compile the model to be faster
 exec(open("gpt2/configurator.py").read())  # overrides from command line or config file
+tokenizer, batch_size = None, 1
 # -----------------------------------------------------------------------------
 
 torch.manual_seed(seed)
