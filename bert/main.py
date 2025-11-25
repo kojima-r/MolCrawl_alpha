@@ -35,9 +35,7 @@ class RNADatasetForBERT:
         try:
             arrow_files = list(Path(data_dir).glob("*.arrow"))
             if arrow_files:
-                print(
-                    f"📁 Found {len(arrow_files)} arrow files: {[f.name for f in arrow_files]}"
-                )
+                print(f"📁 Found {len(arrow_files)} arrow files: {[f.name for f in arrow_files]}")
 
                 all_batches = []
                 for arrow_file in arrow_files:
@@ -55,9 +53,7 @@ class RNADatasetForBERT:
                 if all_batches:
                     # Combine all tables
                     combined_table = pa.concat_tables(all_batches)
-                    print(
-                        f"📊 Combined {len(all_batches)} tables: {len(combined_table)} total rows"
-                    )
+                    print(f"📊 Combined {len(all_batches)} tables: {len(combined_table)} total rows")
 
                     # Convert PyArrow table to pandas DataFrame, then to HuggingFace Dataset
                     df = combined_table.to_pandas()
@@ -65,9 +61,7 @@ class RNADatasetForBERT:
 
                     # Convert numpy arrays to lists for HuggingFace compatibility
                     if "token" in df.columns:
-                        df["token"] = df["token"].apply(
-                            lambda x: x.tolist() if hasattr(x, "tolist") else x
-                        )
+                        df["token"] = df["token"].apply(lambda x: x.tolist() if hasattr(x, "tolist") else x)
 
                     # Create dataset from pandas DataFrame (bypasses metadata issues)
                     self.dataset = Dataset.from_pandas(df)
@@ -83,24 +77,16 @@ class RNADatasetForBERT:
             raise FileNotFoundError(f"Could not load data from {data_dir}") from e
 
         # Split into train/valid if needed
-        if (
-            hasattr(self.dataset, "keys")
-            and isinstance(self.dataset, dict)
-            and "train" in self.dataset
-        ):
+        if hasattr(self.dataset, "keys") and isinstance(self.dataset, dict) and "train" in self.dataset:
             # Already has splits
             if split == "train":
                 self.data = self.dataset["train"]
             elif split in ["valid", "val", "test"]:
-                self.data = self.dataset.get(
-                    "valid", self.dataset.get("test", self.dataset["train"])
-                )
+                self.data = self.dataset.get("valid", self.dataset.get("test", self.dataset["train"]))
         else:
             # Create splits
             if test_size > 0:
-                split_dataset = self.dataset.train_test_split(
-                    test_size=test_size, seed=42
-                )
+                split_dataset = self.dataset.train_test_split(test_size=test_size, seed=42)
                 if split == "train":
                     self.data = split_dataset["train"]
                 elif split in ["valid", "val", "test"]:
@@ -124,6 +110,7 @@ class RNADatasetForBERT:
         """Return the HuggingFace Dataset object"""
         return self.data
 
+
 model_size = None
 use_custom_rna_dataset = False
 tokenizer = None
@@ -141,17 +128,9 @@ gradient_accumulation_steps = 5 * 8
 per_device_eval_batch_size = 1
 log_interval = 100
 # -----------------------------------------------------------------------------
-config_keys = [
-    k
-    for k, v in globals().items()
-    if not k.startswith("_") and isinstance(v, (int, float, bool, str))
-]
+config_keys = [k for k, v in globals().items() if not k.startswith("_") and isinstance(v, (int, float, bool, str))]
 # Handle configurator path
-configurator_path = (
-    "bert/configurator.py"
-    if os.path.exists("bert/configurator.py")
-    else "configurator.py"
-)
+configurator_path = "bert/configurator.py" if os.path.exists("bert/configurator.py") else "configurator.py"
 exec(open(configurator_path).read())  # overrides from command line or config file
 config = {k: globals()[k] for k in config_keys}  # will be useful for logging
 # -----------------------------------------------------------------------------
@@ -166,9 +145,7 @@ if not ("meta_vocab_size" in vars() and "meta_vocab_size" in globals()):
         ) from e
 
 if model_size == "small":
-    model_config = BertConfig(
-        vocab_size=meta_vocab_size, max_position_embeddings=max_length
-    )
+    model_config = BertConfig(vocab_size=meta_vocab_size, max_position_embeddings=max_length)
 elif model_size == "medium":
     # Note that this would be bert-large but the size is equivalent to gpt2-medium so we name it medium here as well
     model_config = BertConfig(
@@ -190,9 +167,7 @@ elif model_size == "large":
         intermediate_size=4608,  # Size of intermediate (feed-forward) layer
     )
 else:
-    raise ValueError(
-        "model_size: {model_size} is not supported choose between small, medium and large"
-    )
+    raise ValueError("model_size: {model_size} is not supported choose between small, medium and large")
 
 model = BertForMaskedLM(config=model_config)
 
@@ -202,9 +177,7 @@ if "data_collator" in globals():
     # data_collator is already defined in the config file
 else:
     print("Using default DataCollatorForLanguageModeling")
-    data_collator = DataCollatorForLanguageModeling(
-        tokenizer=globals()["tokenizer"], mlm=True, mlm_probability=0.2
-    )
+    data_collator = DataCollatorForLanguageModeling(tokenizer=globals()["tokenizer"], mlm=True, mlm_probability=0.2)
 
 training_args = TrainingArguments(
     output_dir=model_path,  # output directory to where save model checkpoint
@@ -234,12 +207,8 @@ if "use_custom_rna_dataset" in globals() and use_custom_rna_dataset:
     vocab_file_path = globals().get("rna_vocab_file", None)
 
     # Load training and test datasets using custom loader
-    train_data_loader = RNADatasetForBERT(
-        dataset_dir, split="train", vocab_file=vocab_file_path, test_size=0.1
-    )
-    test_data_loader = RNADatasetForBERT(
-        dataset_dir, split="test", vocab_file=vocab_file_path, test_size=0.1
-    )
+    train_data_loader = RNADatasetForBERT(dataset_dir, split="train", vocab_file=vocab_file_path, test_size=0.1)
+    test_data_loader = RNADatasetForBERT(dataset_dir, split="test", vocab_file=vocab_file_path, test_size=0.1)
 
     train_dataset = train_data_loader.get_dataset()
     test_dataset = test_data_loader.get_dataset()
@@ -250,15 +219,39 @@ if "use_custom_rna_dataset" in globals() and use_custom_rna_dataset:
         print("📊 Limited test dataset to 10000 samples for faster evaluation")
 else:
     print("📂 Using standard HuggingFace dataset loading")
-    train_dataset = load_from_disk(dataset_dir)["train"]
-    test_dataset = load_from_disk(dataset_dir)["test"].select(
-        range(min(10000, load_from_disk(dataset_dir)["test"].num_rows))
-    )  # for testing purposes, select only 10000 samples
+    from pathlib import Path
+
+    dataset_path = Path(dataset_dir)
+
+    # Try to load from arrow format (with .arrow suffix)
+    train_arrow = dataset_path / "train.arrow"
+    test_arrow = dataset_path / "test.arrow"
+    valid_arrow = dataset_path / "valid.arrow"
+
+    if train_arrow.exists():
+        print(f"Loading from arrow format: {train_arrow}")
+        train_dataset = load_from_disk(str(train_arrow))
+        # Try test first, fall back to valid
+        if test_arrow.exists():
+            test_dataset = load_from_disk(str(test_arrow))
+        elif valid_arrow.exists():
+            test_dataset = load_from_disk(str(valid_arrow))
+        else:
+            raise FileNotFoundError(f"No test or valid split found in {dataset_path}")
+    else:
+        # Fall back to standard format
+        dataset = load_from_disk(dataset_dir)
+        train_dataset = dataset["train"]
+        test_split_name = "test" if "test" in dataset else "valid"
+        test_dataset = dataset[test_split_name]
+
+    # Limit test dataset size for faster evaluation
+    if len(test_dataset) > 10000:
+        test_dataset = test_dataset.select(range(10000))
+        print(f"📊 Limited test dataset to 10000 samples for faster evaluation")
 
 # Apply preprocessing for RNA data if using custom dataset
-if "use_custom_rna_dataset" in globals() and globals().get(
-    "use_custom_rna_dataset", False
-):
+if "use_custom_rna_dataset" in globals() and globals().get("use_custom_rna_dataset", False):
     print("🧬 Applying RNA-specific preprocessing...")
 
     def preprocess_rna_for_bert(examples):
@@ -294,12 +287,8 @@ if "use_custom_rna_dataset" in globals() and globals().get(
         return {"input_ids": input_ids, "attention_mask": attention_masks}
 
     print("🔄 Mapping preprocessing function to datasets...")
-    train_dataset = train_dataset.map(
-        preprocess_rna_for_bert, batched=True, remove_columns=train_dataset.column_names
-    )
-    test_dataset = test_dataset.map(
-        preprocess_rna_for_bert, batched=True, remove_columns=test_dataset.column_names
-    )
+    train_dataset = train_dataset.map(preprocess_rna_for_bert, batched=True, remove_columns=train_dataset.column_names)
+    test_dataset = test_dataset.map(preprocess_rna_for_bert, batched=True, remove_columns=test_dataset.column_names)
 
     print("✅ RNA preprocessing completed.")
     print("Train dataset columns after preprocessing:", train_dataset.column_names)

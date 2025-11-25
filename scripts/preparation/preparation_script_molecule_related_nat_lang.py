@@ -5,6 +5,7 @@ import logging
 import logging.config
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 
 from pathlib import Path
 
@@ -311,3 +312,44 @@ if __name__ == "__main__":
 
     logger.info(msg="Saving processed dataset to {}.".format(parquet_file))
     save_dataset(processed_dataset, parquet_file)
+
+    # Also save in arrow format for BERT training (keeps individual samples)
+    arrow_output_dir = Path(learning_source_dir) / "molecule_nl" / "arrow_splits"
+    logger.info(msg=f"Saving BERT-compatible arrow format to {arrow_output_dir}")
+    os.makedirs(arrow_output_dir, exist_ok=True)
+
+    for split_name, split_dataset in processed_dataset.items():
+        # Filter out invalid samples for training
+        valid_split = split_dataset.filter(lambda x: x.get("valid_sample", True))
+        logger.info(f"Saving {split_name} split: {len(valid_split)} valid samples out of {len(split_dataset)}")
+
+        split_path = arrow_output_dir / f"{split_name}.arrow"
+        valid_split.save_to_disk(str(split_path))
+        logger.info(f"Saved {split_name} to {split_path}")
+
+    logger.info(msg="BERT-compatible arrow datasets saved successfully")
+
+    # Save GPT-2 compatible format (concatenated token stream)
+    logger.info(msg="Creating GPT-2-compatible token stream format...")
+    gpt2_output_dir = Path(learning_source_dir) / "molecule_nl" / "gpt2_format"
+    os.makedirs(gpt2_output_dir, exist_ok=True)
+
+    for split_name, split_dataset in processed_dataset.items():
+        # Filter valid samples
+        valid_split = split_dataset.filter(lambda x: x.get("valid_sample", True))
+
+        # Concatenate all input_ids into a single token stream
+        all_tokens = []
+        for sample in valid_split:
+            # Combine input_ids and output_ids for full sequence
+            full_sequence = sample["input_ids"] + sample["output_ids"]
+            all_tokens.extend(full_sequence)
+
+        # Convert to tensor and save
+        token_tensor = torch.tensor(all_tokens, dtype=torch.long)
+        output_file = gpt2_output_dir / f"{split_name}.pt"
+        torch.save(token_tensor, output_file)
+
+        logger.info(f"Saved GPT-2 format for {split_name}: {len(all_tokens):,} tokens to {output_file}")
+
+    logger.info(msg="GPT-2-compatible token stream format saved successfully")
