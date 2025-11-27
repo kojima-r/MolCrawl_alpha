@@ -50,13 +50,27 @@ def get_dataset_path(dataset_type, relative_path=""):
     データセットのパスを取得する関数
 
     Args:
-        dataset_type (str): データセットタイプ ('uniprot', 'refseq', 'cellxgene')
+        dataset_type (str): データセットタイプ ('protein_sequence', 'genome_sequence', 'rna', 'molecule_nl', 'compounds')
         relative_path (str): データセット内の相対パス
 
     Returns:
         str: 完全なパス
     """
-    base_path = os.path.join(PROJECT_ROOT, GENOME_SEQUENCE_DIR, dataset_type)
+    # データセットタイプに応じたベースディレクトリを選択
+    dataset_dirs = {
+        "protein_sequence": PROTEIN_SEQUENCE_DIR,
+        "genome_sequence": GENOME_SEQUENCE_DIR,
+        "rna": RNA_DATASET_DIR,
+        "molecule_nl": MOLECULE_NL_DATASET_DIR,
+        "compounds": COMPOUNDS_DIR,
+    }
+
+    if dataset_type in dataset_dirs:
+        base_path = os.path.join(PROJECT_ROOT, dataset_dirs[dataset_type])
+    else:
+        # 後方互換性: 旧形式（GENOME_SEQUENCE_DIR配下）
+        base_path = os.path.join(PROJECT_ROOT, GENOME_SEQUENCE_DIR, dataset_type)
+
     if relative_path:
         return os.path.join(base_path, relative_path)
     return base_path
