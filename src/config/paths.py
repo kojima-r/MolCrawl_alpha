@@ -85,7 +85,8 @@ COMPOUNDS_DIR = LEARNING_SOURCE_DIR + "/compounds"
 UNIPROT_DATASET_DIR = get_dataset_path("training_ready_hf_dataset")
 REFSEQ_DATASET_DIR = get_dataset_path("training_ready_hf_dataset")
 CELLXGENE_DATASET_DIR = RNA_DATASET_DIR + "/training_ready_hf_dataset"
-COMPOUNDS_DATASET_DIR = get_dataset_path("training_ready_hf_dataset")
+# Compounds uses GuacaMol benchmark data in a specific subdirectory
+COMPOUNDS_DATASET_DIR = COMPOUNDS_DIR + "/benchmark/GuacaMol/compounds/training_ready_hf_dataset"
 
 # 絶対パス版（WebアプリケーションやAPIで使用）
 ABSOLUTE_LEARNING_SOURCE_PATH = os.path.join(PROJECT_ROOT, LEARNING_SOURCE_DIR)
