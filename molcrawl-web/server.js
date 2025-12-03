@@ -20,6 +20,7 @@ if (!process.env.LEARNING_SOURCE_DIR) {
 const { getDirectoryStructure, expandDirectory, getFullDirectoryTree, checkZincData, getZincDataCounts } = require('./api/directory');
 const { getGenomeSpeciesList, getGenomeSpeciesByCategory } = require('./api/genome-species');
 const datasetProgressRouter = require('./api/dataset-progress');
+const gpt2TrainingStatusRouter = require('./api/gpt2-training-status');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -51,6 +52,7 @@ app.get('/api/zinc/count', getZincDataCounts);
 app.get('/api/genome/species', getGenomeSpeciesList);
 app.get('/api/genome/species/category', getGenomeSpeciesByCategory);
 app.use('/api/dataset-progress', datasetProgressRouter);
+app.use('/api/gpt2-training-status', gpt2TrainingStatusRouter);
 
 // ヘルスチェック
 app.get('/api/health', (req, res) => {
@@ -67,7 +69,10 @@ app.get('/api/health', (req, res) => {
       '/api/genome/species - ゲノム種リスト取得',
       '/api/genome/species/category?category=<category> - カテゴリ別種リスト取得',
       '/api/dataset-progress - 全データセット準備進捗取得',
-      '/api/dataset-progress/:datasetKey - 特定データセット詳細進捗取得'
+      '/api/dataset-progress/:datasetKey - 特定データセット詳細進捗取得',
+      '/api/gpt2-training-status - 全GPT-2モデルの学習状況取得',
+      '/api/gpt2-training-status/:dataset - 特定データセットのGPT-2学習状況',
+      '/api/gpt2-training-status/:dataset/:size - 特定モデルの詳細情報'
     ]
   });
 });

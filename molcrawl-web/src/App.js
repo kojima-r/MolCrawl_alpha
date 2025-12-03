@@ -4,6 +4,7 @@ import ZincChecker from './ZincChecker';
 import GenomeSpeciesList from './GenomeSpeciesList';
 import ExperimentDashboard from './ExperimentDashboard';
 import DatasetProgressCard from './DatasetProgressCard';
+import GPT2TrainingStatus from './GPT2TrainingStatus';
 
 // データセットタブの定義
 const DATASET_TABS = [
@@ -431,6 +432,13 @@ function App() {
                 {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
                   <DatasetProgressCard
                     datasetKey={DATASET_TABS.find(tab => tab.id === activeTab).progressKey}
+                  />
+                )}
+
+                {/* GPT-2 Training Status - Show for all dataset tabs */}
+                {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
+                  <GPT2TrainingStatus
+                    dataset={DATASET_TABS.find(tab => tab.id === activeTab).progressKey.replace('_guacamol', '')}
                   />
                 )}
 
