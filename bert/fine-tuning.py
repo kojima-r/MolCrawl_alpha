@@ -212,7 +212,10 @@ for pretrained in [True, False]:
             # -----------------------------
             # 設定
             # -----------------------------
-            output_dir = f"/data2/sagawatatsuya/riken-dataset-fundational-model/benchmark/MoleculeNet/small/pretrained_{pretrained}/{benchmark_name}"
+            # Use LEARNING_SOURCE_DIR for relative path
+            import os
+            learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR", "learning_20251104")
+            output_dir = f"{learning_source_dir}/compounds/benchmark/MoleculeNet/small/pretrained_{pretrained}/{benchmark_name}"
             learning_rate = 3e-5
             weight_decay = 0.0
             warmup_steps = 0
@@ -262,8 +265,10 @@ for pretrained in [True, False]:
             )
 
             if pretrained:
+                # Use relative path for pretrained model checkpoint
+                pretrained_model_path = "runs_train_bert_compounds/checkpoint-4000"
                 model = BertForSequenceClassification.from_pretrained(
-                    "/data2/matsubara/MolCrawl/riken-dataset-fundational-model/runs_train_bert_compounds/checkpoint-4000",
+                    pretrained_model_path,
                     config=model_config,
                 )
             else:
@@ -363,7 +368,7 @@ for pretrained in [True, False]:
                     training_args.run_name = f"{tasks[i]}_pretrained{pretrained}_seed{seed}"
                     if pretrained:
                         model = BertForSequenceClassification.from_pretrained(
-                            "/data2/matsubara/MolCrawl/riken-dataset-fundational-model/runs_train_bert_compounds/checkpoint-4000",
+                            pretrained_model_path,
                             config=model_config,
                         )
                     else:
