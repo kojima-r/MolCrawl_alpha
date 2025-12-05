@@ -1,5 +1,10 @@
 from argparse import ArgumentParser
+import os
+import sys
 from pathlib import Path
+
+# プロジェクトルートのsrcディレクトリをパスに追加
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import pandas as pd
 from compounds.utils.config import CompoundConfig
