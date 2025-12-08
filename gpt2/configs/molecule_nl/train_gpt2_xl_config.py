@@ -7,7 +7,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
-from config.paths import get_gpt2_output_path
+from config.paths import MOLECULE_NL_DATASET_DIR, get_gpt2_output_path
 from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer as Tokenizer
 
 # EX-Large-Sized GPT2 Model
@@ -15,8 +15,7 @@ n_layer = 48
 n_head = 25
 n_embd = 1600
 
-# dataset_dir = MOLECULE_NL_DATASET_DIR  # Adjust the path as necessary for your generated dataset.
-dataset_dir = "learning_source_20251020-molecule-nl/molecule_nl/molecule_related_natural_language_tokenized.parquet"
+dataset_dir = os.path.join(MOLECULE_NL_DATASET_DIR, "molecule_related_natural_language_tokenized.parquet")
 
 tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = get_gpt2_output_path("molecule_nl", "xl")

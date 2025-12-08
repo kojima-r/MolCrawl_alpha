@@ -4,8 +4,11 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
-// Get LEARNING_SOURCE_DIR from environment or fallback
-const LEARNING_SOURCE_DIR = process.env.LEARNING_SOURCE_DIR || 'learning_source_202508';
+// Get LEARNING_SOURCE_DIR from environment (required)
+const LEARNING_SOURCE_DIR = process.env.LEARNING_SOURCE_DIR;
+if (!LEARNING_SOURCE_DIR) {
+    throw new Error('LEARNING_SOURCE_DIR environment variable is required');
+}
 const MODEL_BASE_DIR = path.join(__dirname, '..', '..', LEARNING_SOURCE_DIR);
 
 /**

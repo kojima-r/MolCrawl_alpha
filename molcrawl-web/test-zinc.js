@@ -7,7 +7,10 @@ const zincChecker = require('./api/zinc-checker');
 async function testZincCount() {
   try {
     // 環境変数からベースディレクトリを取得
-    const learningSourceDir = process.env.LEARNING_SOURCE_DIR || 'learning_source_20250818';
+    const learningSourceDir = process.env.LEARNING_SOURCE_DIR;
+    if (!learningSourceDir) {
+        throw new Error('LEARNING_SOURCE_DIR environment variable is required');
+    }
     const baseDir = path.resolve(__dirname, '..', learningSourceDir);
     const zincBasePath = path.join(baseDir, 'compounds', 'zinc20');
     

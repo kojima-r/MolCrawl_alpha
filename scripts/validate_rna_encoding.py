@@ -301,14 +301,33 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="RNA Encoding Validation")
+    # デフォルトパスを環境変数から動的に構築
+    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
+    default_dataset_dir = None
+    if learning_source_dir:
+        default_dataset_dir = f"/data2/matsubara/MolCrawl/riken-dataset-fundational-model/{learning_source_dir}/cellxgene"
+    
     parser.add_argument(
         "--dataset_dir",
         type=str,
-        default="/data2/matsubara/MolCrawl/riken-dataset-fundational-model/learning_source_202508/cellxgene",
-        help="RNA dataset directory",
+        default=default_dataset_dir,
+        help="RNA dataset directory (uses LEARNING_SOURCE_DIR environment variable if not specified)",
     )
 
     args = parser.parse_args()
+    
+    # dataset_dirが指定されていない場合のチェック
+    if not args.dataset_dir:
+        print("❌ ERROR: No dataset directory specified!")
+        print("")
+        print("Please either:")
+        print("  1. Set LEARNING_SOURCE_DIR environment variable:")
+        print("     export LEARNING_SOURCE_DIR='path'")
+        print("     python scripts/validate_rna_encoding.py")
+        print("")
+        print("  2. Or specify --dataset_dir explicitly:")
+        print("     python scripts/validate_rna_encoding.py --dataset_dir /path/to/dataset")
+        sys.exit(1)
 
     validator = RNAEncodingValidator(args.dataset_dir)
     success = validator.run_full_validation()

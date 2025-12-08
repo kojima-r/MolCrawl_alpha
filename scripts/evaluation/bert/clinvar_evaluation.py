@@ -639,13 +639,19 @@ class BERTClinVarEvaluator(ModelEvaluator):
 
 
 def main():
+    # 環境変数からデフォルトのトークナイザーパスを構築
+    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
+    default_tokenizer_path = None
+    if learning_source_dir:
+        default_tokenizer_path = f"{learning_source_dir}/genome_sequence/spm_tokenizer.model"
+    
     parser = argparse.ArgumentParser(description="BERT ClinVar evaluation for genome sequence model")
     parser.add_argument("--model_path", type=str, required=True, help="Path to trained BERT model")
     parser.add_argument(
         "--tokenizer_path",
         type=str,
-        default="learning_source_202508/genome_sequence/spm_tokenizer.model",
-        help="Path to SentencePiece tokenizer model",
+        default=default_tokenizer_path,
+        help="Path to SentencePiece tokenizer model (uses LEARNING_SOURCE_DIR if not specified)",
     )
     parser.add_argument(
         "--dataset_path",
@@ -669,6 +675,19 @@ def main():
     parser.add_argument("--max_length", type=int, default=512, help="Maximum sequence length")
 
     args = parser.parse_args()
+    
+    # トークナイザーパスのチェック
+    if not args.tokenizer_path:
+        print("❌ ERROR: No tokenizer path specified!")
+        print("")
+        print("Please either:")
+        print("  1. Set LEARNING_SOURCE_DIR environment variable:")
+        print("     export LEARNING_SOURCE_DIR='...'")
+        print("     python scripts/evaluation/bert/clinvar_evaluation.py --model_path <path>")
+        print("")
+        print("  2. Or specify --tokenizer_path explicitly:")
+        print("     python scripts/evaluation/bert/clinvar_evaluation.py --model_path <path> --tokenizer_path <path>")
+        sys.exit(1)
 
     # 出力ディレクトリを自動生成または指定されたものを使用
     if args.output_dir is None:
