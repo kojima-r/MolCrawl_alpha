@@ -1,14 +1,12 @@
 import logging
-
-from rdkit import Chem, RDLogger
-from rdchiral.chiral import copy_chirality
-from rdkit.Chem.AllChem import AssignStereochemistry
-
-from transformers import AutoTokenizer
-from core.base import TrainableTokenizer
-
-### added by YI 21204
 import os
+
+from rdchiral.chiral import copy_chirality
+from rdkit import Chem, RDLogger
+from rdkit.Chem.AllChem import AssignStereochemistry
+from transformers import AutoTokenizer
+
+from core.base import TrainableTokenizer
 
 RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(__name__)
@@ -193,10 +191,9 @@ class MoleculeNatLangTokenizer(TrainableTokenizer):
             try:
                 print("Trying GPT-2 tokenizer with local files only...")
 
-                ### added by YI 1204
                 gpt2_dir = os.environ.get("GPT2_TOKENIZER_DIR", "gpt2")
-                self.tokenizer = AutoTokenizer.from_pretrained(gpt2_dir, local_files_only=True)                
-                #self.tokenizer = AutoTokenizer.from_pretrained("gpt2", local_files_only=True)
+                self.tokenizer = AutoTokenizer.from_pretrained(gpt2_dir, local_files_only=True)
+                # self.tokenizer = AutoTokenizer.from_pretrained("gpt2", local_files_only=True)
 
             except Exception as e2:
                 print(f"Warning: Failed to load GPT-2 tokenizer locally: {e2}")

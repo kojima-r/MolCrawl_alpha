@@ -11,13 +11,13 @@ You can call this script with the following command:
     python scripts/preparation_script_rna.py assets/configs/rna.yaml
 """
 
-from argparse import ArgumentParser
-from pathlib import Path
-import logging
-import json
 import datetime
+import json
+import logging
 import os
 import sys
+from argparse import ArgumentParser
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 from datasets import load_dataset
@@ -26,14 +26,14 @@ from datasets.utils.logging import enable_progress_bar
 # プロジェクトルートのsrcディレクトリをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
+from config.paths import RNA_DATASET_DIR
+from core.base import setup_logging
 from rna.dataset.cellxgene.script.build_list import build_list
 from rna.dataset.cellxgene.script.download import download
 from rna.dataset.cellxgene.script.h5ad_to_loom import h5ad_to_loom
 from rna.dataset.cellxgene.script.scgpt_tokenization import get_census_gene_vocab
 from rna.dataset.tokenization import tokenize
 from rna.utils.config import RnaConfig
-from core.base import setup_logging
-from config.paths import RNA_DATASET_DIR
 
 logger = logging.getLogger(__name__)
 enable_progress_bar()
@@ -47,7 +47,9 @@ def create_distribution_plot(data):
     plt.tight_layout()
     plt.savefig("assets/img/rna_tokenized_lengths_dist.png")
     plt.close()
-    logger.info("Saved distribution of tokenized dataset lengths to assets/img/rna_tokenized_lengths_dist.png")
+    logger.info(
+        "Saved distribution of tokenized dataset lengths to assets/img/rna_tokenized_lengths_dist.png"
+    )
 
 
 # より詳細な遺伝子情報を含むTSVファイルの生成
@@ -162,7 +164,21 @@ if __name__ == "__main__":
     else:
         if args.force:
             logger.info("Force option specified. Re-downloading...")
-        logger.info("Downloading datasets...")
+        
+        # Show estimated workload before starting
+        from pathlib import Path
+        from rna.dataset.cellxgene.script.download import divide_workload
+        metadata_dir = Path(RNA_DATASET_DIR) / "metadata_preparation_dir"
+        workload = divide_workload(metadata_dir, cfg.size_workload)
+        
+        logger.info("=" * 60)
+        logger.info("Starting CellxGene dataset download")
+        logger.info(f"Total download tasks: {len(workload)}")
+        logger.info(f"Samples per task: {cfg.size_workload}")
+        logger.info(f"Parallel workers: {cfg.num_worker}")
+        logger.info(f"Estimated time: ~{len(workload) * 7 // cfg.num_worker // 60} minutes")
+        logger.info("=" * 60)
+        
         download(
             RNA_DATASET_DIR,
             cfg.census_version,
@@ -170,7 +186,9 @@ if __name__ == "__main__":
             cfg.size_workload,
         )
         download_marker.touch()
-        logger.info("Download completed.")
+        logger.info("=" * 60)
+        logger.info("Download completed successfully!")
+        logger.info("=" * 60)
 
     # 3. H5AD to Loom conversion
     if not args.force and h5ad_to_loom_marker.exists():

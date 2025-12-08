@@ -1,6 +1,11 @@
 from argparse import ArgumentParser
+import os
+import sys
 from pathlib import Path
 from functools import partial
+
+# プロジェクトルートのsrcディレクトリをパスに追加
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 # from transformers import AutoTokenizer
 from datasets import load_dataset, DatasetDict

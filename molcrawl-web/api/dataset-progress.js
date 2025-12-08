@@ -40,6 +40,23 @@ const DATASETS = {
         outputDirs: ['parquet_files'],
         outputFiles: ['parquet_files/train.parquet', 'parquet_files/valid.parquet'],
       },
+      {
+        id: 'gpt2_prepare',
+        name: 'GPT-2 Training Dataset Preparation',
+        marker: null,
+        checkFiles: ['training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid'],
+        outputDirs: ['training_ready_hf_dataset', 'training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid', 'training_ready_hf_dataset/test'],
+        outputFiles: [
+          'training_ready_hf_dataset/dataset_dict.json',
+          'training_ready_hf_dataset/train/dataset_info.json',
+          'training_ready_hf_dataset/train/state.json',
+          'training_ready_hf_dataset/valid/dataset_info.json',
+          'training_ready_hf_dataset/valid/state.json',
+          'training_ready_hf_dataset/test/dataset_info.json',
+          'training_ready_hf_dataset/test/state.json',
+        ],
+        description: 'GPT-2学習用にチャンク化されたデータセットを生成 (context_length=1024, train/valid/test splits)',
+      },
     ],
     outputs: {
       plot: '../assets/img/protein_sequence_tokenized_lengths_dist.png',
@@ -80,6 +97,23 @@ const DATASETS = {
         checkFiles: ['parquet_files'],
         outputDirs: ['parquet_files'],
         outputFiles: ['parquet_files/train.parquet', 'parquet_files/valid.parquet'],
+      },
+      {
+        id: 'gpt2_prepare',
+        name: 'GPT-2 Training Dataset Preparation',
+        marker: null,
+        checkFiles: ['training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid'],
+        outputDirs: ['training_ready_hf_dataset', 'training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid', 'training_ready_hf_dataset/test'],
+        outputFiles: [
+          'training_ready_hf_dataset/dataset_dict.json',
+          'training_ready_hf_dataset/train/dataset_info.json',
+          'training_ready_hf_dataset/train/state.json',
+          'training_ready_hf_dataset/valid/dataset_info.json',
+          'training_ready_hf_dataset/valid/state.json',
+          'training_ready_hf_dataset/test/dataset_info.json',
+          'training_ready_hf_dataset/test/state.json',
+        ],
+        description: 'GPT-2学翕用にチャンク化されたデータセットを生成 (context_length=1024, SentencePiece tokenizer)',
       },
     ],
     outputs: {
@@ -130,6 +164,23 @@ const DATASETS = {
         outputDirs: ['.'],
         outputFiles: ['gene_vocab.json', 'gene_list_with_stats.tsv'],
       },
+      {
+        id: 'gpt2_prepare',
+        name: 'GPT-2 Training Dataset Preparation',
+        marker: null,
+        checkFiles: ['training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid'],
+        outputDirs: ['training_ready_hf_dataset', 'training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid', 'training_ready_hf_dataset/test'],
+        outputFiles: [
+          'training_ready_hf_dataset/dataset_dict.json',
+          'training_ready_hf_dataset/train/dataset_info.json',
+          'training_ready_hf_dataset/train/state.json',
+          'training_ready_hf_dataset/valid/dataset_info.json',
+          'training_ready_hf_dataset/valid/state.json',
+          'training_ready_hf_dataset/test/dataset_info.json',
+          'training_ready_hf_dataset/test/state.json',
+        ],
+        description: 'GPT-2学習用にチャンク化されたデータセットを生成 (context_length=1024, gene token sequences)',
+      },
     ],
     outputs: {
       plot: '../assets/img/rna_tokenized_lengths_dist.png',
@@ -177,6 +228,23 @@ const DATASETS = {
         outputDirs: ['gpt2_format'],
         outputFiles: ['gpt2_format/train.pt', 'gpt2_format/valid.pt', 'gpt2_format/test.pt'],
         description: 'GPT-2トレーニング用にトークンストリーム形式で保存（連結シーケンス）',
+      },
+      {
+        id: 'gpt2_prepare',
+        name: 'GPT-2 Training Dataset Preparation',
+        marker: null,
+        checkFiles: ['training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid'],
+        outputDirs: ['training_ready_hf_dataset', 'training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid', 'training_ready_hf_dataset/test'],
+        outputFiles: [
+          'training_ready_hf_dataset/dataset_dict.json',
+          'training_ready_hf_dataset/train/dataset_info.json',
+          'training_ready_hf_dataset/train/state.json',
+          'training_ready_hf_dataset/valid/dataset_info.json',
+          'training_ready_hf_dataset/valid/state.json',
+          'training_ready_hf_dataset/test/dataset_info.json',
+          'training_ready_hf_dataset/test/state.json',
+        ],
+        description: 'GPT-2学習用にチャンク化されたHuggingFace Dataset形式で保存 (context_length=1024, 50k samples)',
       },
     ],
     outputs: {
@@ -241,12 +309,67 @@ const DATASETS = {
         outputFiles: ['organix13/statistics.json', 'parquet_files/train.parquet', 'parquet_files/valid.parquet'],
         description: '統計情報生成と学習用Parquetファイル作成',
       },
+      {
+        id: 'gpt2_prepare',
+        name: 'GPT-2 Training Dataset Preparation',
+        marker: null,
+        checkFiles: ['training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid'],
+        outputDirs: ['training_ready_hf_dataset', 'training_ready_hf_dataset/train', 'training_ready_hf_dataset/valid', 'training_ready_hf_dataset/test'],
+        outputFiles: [
+          'training_ready_hf_dataset/dataset_dict.json',
+          'training_ready_hf_dataset/train/dataset_info.json',
+          'training_ready_hf_dataset/train/state.json',
+          'training_ready_hf_dataset/valid/dataset_info.json',
+          'training_ready_hf_dataset/valid/state.json',
+          'training_ready_hf_dataset/test/dataset_info.json',
+          'training_ready_hf_dataset/test/state.json',
+        ],
+        description: 'GPT-2学習用にチャンク化されたデータセットを生成 (SMILES tokenization for molecular generation)',
+      },
     ],
     outputs: {
       plot: '../assets/img/compounds_tokenized_SMILES_lengths_dist.png',
       scaffoldPlot: '../assets/img/compounds_tokenized_Scaffolds_lengths_dist.png',
       statistics: null,
       parquetFiles: 'parquet_files',
+    },
+  },
+  compounds_guacamol: {
+    name: 'Compounds (GuacaMol Benchmark)',
+    baseDir: 'compounds/benchmark/GuacaMol',
+    steps: [
+      {
+        id: 'download',
+        name: 'GuacaMol Dataset Download',
+        marker: null,
+        checkFiles: ['guacamol_v1_train.smiles', 'guacamol_v1_valid.smiles', 'guacamol_v1_test.smiles'],
+        outputDirs: [],
+        outputFiles: ['guacamol_v1_train.smiles', 'guacamol_v1_valid.smiles', 'guacamol_v1_test.smiles'],
+        description: 'GuacaMolベンチマークデータ（train/valid/test splits）をFigshareからダウンロード',
+      },
+      {
+        id: 'gpt2_prepare',
+        name: 'GPT-2 Training Dataset Preparation',
+        marker: null,
+        checkFiles: ['compounds/training_ready_hf_dataset/train', 'compounds/training_ready_hf_dataset/valid'],
+        outputDirs: ['compounds', 'compounds/training_ready_hf_dataset', 'compounds/training_ready_hf_dataset/train', 'compounds/training_ready_hf_dataset/valid', 'compounds/training_ready_hf_dataset/test'],
+        outputFiles: [
+          'compounds/training_ready_hf_dataset/dataset_dict.json',
+          'compounds/training_ready_hf_dataset/train/dataset_info.json',
+          'compounds/training_ready_hf_dataset/train/state.json',
+          'compounds/training_ready_hf_dataset/valid/dataset_info.json',
+          'compounds/training_ready_hf_dataset/valid/state.json',
+          'compounds/training_ready_hf_dataset/test/dataset_info.json',
+          'compounds/training_ready_hf_dataset/test/state.json',
+        ],
+        description: 'GPT-2学習用にGuacaMol SMILESデータをチャンク化 (context_length=256 for molecular generation)',
+      },
+    ],
+    outputs: {
+      plot: null,
+      scaffoldPlot: null,
+      statistics: null,
+      parquetFiles: null,
     },
   },
 };
@@ -511,7 +634,7 @@ router.get('/file-preview', (req, res) => {
 
   try {
     const stats = fs.statSync(fullPath);
-    
+
     if (stats.isDirectory()) {
       return res.status(400).json({
         error: 'ディレクトリです',
@@ -529,10 +652,10 @@ router.get('/file-preview', (req, res) => {
     }
 
     const ext = path.extname(fullPath).toLowerCase();
-    const textExtensions = ['.txt', '.json', '.csv', '.tsv', '.py', '.js', '.md', 
-                           '.log', '.yaml', '.yml', '.xml', '.html', '.css', 
-                           '.sh', '.bash', '.sql', '.r', '.java', '.cpp', '.c'];
-    
+    const textExtensions = ['.txt', '.json', '.csv', '.tsv', '.py', '.js', '.md',
+      '.log', '.yaml', '.yml', '.xml', '.html', '.css',
+      '.sh', '.bash', '.sql', '.r', '.java', '.cpp', '.c'];
+
     if (!textExtensions.includes(ext)) {
       return res.status(400).json({
         error: 'サポートされていないファイル形式',
@@ -548,7 +671,7 @@ router.get('/file-preview', (req, res) => {
     fs.closeSync(fd);
 
     let content = buffer.toString('utf8', 0, bytesRead);
-    
+
     const lines = content.split('\n');
     if (lines.length > 100) {
       content = lines.slice(0, 100).join('\n');

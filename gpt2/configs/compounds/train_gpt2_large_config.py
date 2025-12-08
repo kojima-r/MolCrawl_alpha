@@ -2,14 +2,13 @@
 # launch as the following (e.g. in a screen session) and wait ~5 days:
 # $ torchrun --standalone --nproc_per_node=8 train.py config/train_gpt2.py
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 from config.paths import COMPOUNDS_DATASET_DIR, get_gpt2_output_path
-
 
 # Large-Sized GPT2 Model
 
@@ -18,6 +17,7 @@ n_head = 20
 n_embd = 1280
 
 dataset_dir = COMPOUNDS_DATASET_DIR  # path to the dataset directory
+out_dir = get_gpt2_output_path("compounds", "large")
 
 tokenizer_path = "assets/molecules/vocab.txt"  # path to the tokenizer vocab file
 
@@ -26,6 +26,7 @@ tensorboard_dir = get_gpt2_output_path("compounds", "large")
 out_dir = get_gpt2_output_path("compounds", "large")
 
 tokenizer = Tokenizer(tokenizer_path, 256)
+meta_vocab_size = tokenizer.vocab_size
 
 # these make the total batch size be ~0.5M
 # 12 batch size * 1024 block size * 5 gradaccum * 8 GPUs = 491,520
