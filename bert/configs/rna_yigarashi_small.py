@@ -26,7 +26,13 @@ os.makedirs(model_path, exist_ok=True)
 use_custom_rna_dataset = True
 
 # Dataset configuration
-learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR", "learning_source_20250818")
+learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
+if not learning_source_dir:
+    print("❌ ERROR: LEARNING_SOURCE_DIR environment variable is required!")
+    print("Please set it before running:")
+    print("  export LEARNING_SOURCE_DIR='......'")
+    sys.exit(1)
+
 dataset_dir = "/wren/yigarashi/molcrawl/parquet_sample_1pct"
 
 # Try to load vocabulary file

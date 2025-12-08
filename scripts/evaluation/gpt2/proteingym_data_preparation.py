@@ -657,11 +657,29 @@ class ProteinGymDataDownloader:
 
 
 def main():
+    # LEARNING_SOURCE_DIRの設定
+    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
+    if not learning_source_dir:
+        print("❌ ERROR: LEARNING_SOURCE_DIR environment variable is required!")
+        print("")
+        print("Please set it before running:")
+        print("  export LEARNING_SOURCE_DIR='...'")
+        print("  python scripts/evaluation/gpt2/proteingym_data_preparation.py --data_dir <dir>")
+        print("")
+        print("Available learning directories:")
+        try:
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            dirs = [d for d in os.listdir(project_root) if d.startswith('learning_')]
+            for d in sorted(dirs):
+                print(f"  - {d}")
+        except:
+            print("  (unable to list directories)")
+        return 1
+
     parser = argparse.ArgumentParser(description="ProteinGym data downloader and preparation utility")
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="./learning_source_202508/protein_sequence/gym",
         help="Data directory for ProteinGym datasets",
     )
     parser.add_argument(
@@ -755,6 +773,20 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # デフォルトのdata_dirを環境変数から設定
+    if args.data_dir is None:
+        args.data_dir = f"{learning_source_dir}/protein_sequence/gym"
+    
+    # data_dirの存在確認
+    if not os.path.exists(os.path.dirname(args.data_dir)):
+        print(f"❌ ERROR: Parent directory does not exist: {os.path.dirname(args.data_dir)}")
+        print(f"Expected structure: {learning_source_dir}/protein_sequence/")
+        print("")
+        print("Please verify that:")
+        print(f"1. LEARNING_SOURCE_DIR='{learning_source_dir}' is correct")
+        print("2. The protein_sequence directory structure exists")
+        return 1
 
     downloader = ProteinGymDataDownloader(data_dir=args.data_dir)
 

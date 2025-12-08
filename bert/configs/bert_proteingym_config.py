@@ -14,7 +14,7 @@ class BERTProteinGymConfig:
 
     # モデル設定
     MODEL_PATH = "runs_train_bert_protein_sequence/checkpoint-5000"
-    TOKENIZER_PATH = "learning_source_202508/protein_sequence/spm_tokenizer.model"
+    TOKENIZER_PATH = f"{os.environ.get('LEARNING_SOURCE_DIR', '')}/protein_sequence/spm_tokenizer.model"
 
     # 評価設定
     DEVICE = "cuda"

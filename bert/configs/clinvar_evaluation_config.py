@@ -28,7 +28,10 @@ gradient_accumulation_steps = 5 * 8
 # Tokenizer instantiation for ClinVar evaluation
 # -----------------------------------------------------------------------------
 # 実際に存在するトークナイザーファイルを使用
-tokenizer_path = "learning_source_202508/genome_sequence/spm_tokenizer.model"
+learning_source_dir = os.environ.get('LEARNING_SOURCE_DIR')
+if not learning_source_dir:
+    raise ValueError("LEARNING_SOURCE_DIR environment variable is required")
+tokenizer_path = f"{learning_source_dir}/genome_sequence/spm_tokenizer.model"
 sp = spm.SentencePieceProcessor(model_file=tokenizer_path)
 # Get vocabulary size
 vocab_size = sp.get_piece_size()
