@@ -4,71 +4,36 @@ BERT版ProteinGymデータセットの前処理スクリプト
 
 BERTモデル用にProteinGymデータセットを前処理し、
 評価に適した形式で保存します。
-
-注意: LEARNING_SOURCE_DIR環境変数の設定が必須です。
 """
 
-import argparse
-import json
-import logging
 import os
 import sys
+import argparse
+import requests
+import pandas as pd
+import numpy as np
 import zipfile
-from datetime import datetime
+import logging
 from pathlib import Path
 from urllib.parse import urlparse
-
-import numpy as np
-import pandas as pd
-import requests
 from tqdm import tqdm
+import json
+from datetime import datetime
 
-
-def get_learning_source_dir():
-    """LEARNING_SOURCE_DIR環境変数を取得（必須）"""
-    learning_source = os.environ.get("LEARNING_SOURCE_DIR")
-    if not learning_source:
-        print(
-            "ERROR: LEARNING_SOURCE_DIR environment variable is not set.",
-            file=sys.stderr,
-        )
-        print("Please set it before running this script:", file=sys.stderr)
-        print("  export LEARNING_SOURCE_DIR=/path/to/learning_source", file=sys.stderr)
-        print("  # or", file=sys.stderr)
-        print(
-            "  LEARNING_SOURCE_DIR=learning_20251104 python {}".format(sys.argv[0]),
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    return learning_source
-
-
-def get_default_output_dir():
-    """デフォルト出力ディレクトリを取得"""
-    learning_source = get_learning_source_dir()
-    return os.path.join(learning_source, "protein_sequence", "data", "proteingym")
-
-
-def get_log_dir():
-    """ログディレクトリを取得"""
-    learning_source = get_learning_source_dir()
-    log_dir = os.path.join(learning_source, "protein_sequence", "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    return log_dir
-
+# 共通モジュールを追加
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
+from utils.environment_check import check_learning_source_dir
 
 # ログ設定
-log_dir = get_log_dir()
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler(f"{log_dir}/bert_proteingym_prep_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
+        logging.FileHandler(f"logs/bert_proteingym_prep_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
         logging.StreamHandler(),
     ],
 )
 logger = logging.getLogger(__name__)
-logger.info(f"LEARNING_SOURCE_DIR: {get_learning_source_dir()}")
 
 
 class BERTProteinGymDataProcessor:
@@ -81,20 +46,18 @@ class BERTProteinGymDataProcessor:
         "reference_substitutions": "https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_substitutions.csv",
     }
 
-    def __init__(self, output_dir=None):
+    def __init__(self, output_dir="./bert_proteingym_data"):
         """
         初期化
 
         Args:
-            output_dir (str): 出力ディレクトリ（Noneの場合は$LEARNING_SOURCE_DIR/protein_sequence/data/proteingym）
+            output_dir (str): 出力ディレクトリ
         """
-        if output_dir is None:
-            output_dir = get_default_output_dir()
-
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Output directory: {self.output_dir}")
+        # ログディレクトリの作成
+        Path("logs").mkdir(exist_ok=True)
 
     def download_file(self, url, filename=None):
         """
@@ -313,17 +276,14 @@ class BERTProteinGymDataProcessor:
                     if 0 <= pos < len(wt_seq) and wt_seq[pos] == mut_aa:
                         wt_seq[pos] = orig_aa
                         return "".join(wt_seq)
-                except (ValueError, IndexError, KeyError):
+                except:
                     pass
 
             return mutated_seq
 
         # mutantカラムがある場合
         if "mutant" in df.columns:
-            df["target_seq"] = df.apply(
-                lambda row: infer_wildtype(row["mutated_sequence"], row.get("mutant", "")),
-                axis=1,
-            )
+            df["target_seq"] = df.apply(lambda row: infer_wildtype(row["mutated_sequence"], row.get("mutant", "")), axis=1)
         else:
             # mutant情報がない場合は、mutated_sequenceをそのまま使用
             df["target_seq"] = df["mutated_sequence"]
@@ -386,10 +346,7 @@ class BERTProteinGymDataProcessor:
             "metadata": {
                 "total_variants": len(df),
                 "unique_assays": df["assay_name"].nunique() if "assay_name" in df.columns else 1,
-                "dms_score_range": [
-                    float(df["DMS_score"].min()),
-                    float(df["DMS_score"].max()),
-                ],
+                "dms_score_range": [float(df["DMS_score"].min()), float(df["DMS_score"].max())],
                 "avg_sequence_length": float(df["mutated_sequence"].str.len().mean()),
                 "processing_date": datetime.now().isoformat(),
             },
@@ -440,36 +397,14 @@ class BERTProteinGymDataProcessor:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="BERT ProteinGym data preprocessing",
-        epilog="Note: LEARNING_SOURCE_DIR environment variable must be set.",
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Output directory for processed data (default: $LEARNING_SOURCE_DIR/protein_sequence/data/proteingym)",
-    )
+    parser = argparse.ArgumentParser(description="BERT ProteinGym data preprocessing")
+    parser.add_argument("--output_dir", type=str, default="./bert_proteingym_data", help="Output directory for processed data")
     parser.add_argument("--download", action="store_true", help="Download ProteinGym data")
-    parser.add_argument(
-        "--max_variants_per_assay",
-        type=int,
-        default=1000,
-        help="Maximum variants per assay",
-    )
+    parser.add_argument("--max_variants_per_assay", type=int, default=1000, help="Maximum variants per assay")
     parser.add_argument("--sample_only", action="store_true", help="Create sample dataset only")
-    parser.add_argument(
-        "--data_dir",
-        type=str,
-        default=None,
-        help="Directory containing ProteinGym data (default: $LEARNING_SOURCE_DIR/protein_sequence/data/proteingym)",
-    )
+    parser.add_argument("--data_dir", type=str, default="./bert_proteingym_data", help="Directory containing ProteinGym data")
 
     args = parser.parse_args()
-
-    # data_dirのデフォルト設定
-    if args.data_dir is None:
-        args.data_dir = get_default_output_dir()
 
     processor = BERTProteinGymDataProcessor(args.output_dir)
 

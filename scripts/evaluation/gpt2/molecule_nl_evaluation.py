@@ -25,6 +25,8 @@ from datasets import load_from_disk
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
+from utils.environment_check import check_learning_source_dir
+
 from model import GPT, GPTConfig
 
 from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
@@ -695,23 +697,7 @@ def main():
     args = parser.parse_args()
 
     # LEARNING_SOURCE_DIRの設定
-    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
-    if not learning_source_dir:
-        print("❌ ERROR: LEARNING_SOURCE_DIR environment variable is required!")
-        print("")
-        print("Please set it before running:")
-        print("  export LEARNING_SOURCE_DIR='...'")
-        print("  python scripts/evaluation/gpt2/molecule_nl_evaluation.py --model_path <path>")
-        print("")
-        print("Available learning directories:")
-        try:
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-            dirs = [d for d in os.listdir(project_root) if d.startswith('learning_')]
-            for d in sorted(dirs):
-                print(f"  - {d}")
-        except:
-            print("  (unable to list directories)")
-        sys.exit(1)
+    learning_source_dir = check_learning_source_dir()
 
     # 画像のみ生成モード
     if args.visualize_only:
@@ -791,7 +777,7 @@ def main():
     # デフォルトパスの設定
     if args.dataset_path is None:
         args.dataset_path = f"{learning_source_dir}/molecule_nl/training_ready_hf_dataset/test"
-    
+
     # データセットパスの存在確認
     if not os.path.exists(args.dataset_path):
         print(f"❌ ERROR: Dataset path does not exist: {args.dataset_path}")

@@ -114,12 +114,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Use LEARNING_SOURCE_DIR environment variable for dataset storage
-    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
-    if learning_source_dir is None:
-        print("ERROR: Environment variable 'LEARNING_SOURCE_DIR' is not set.")
-        print("Please set LEARNING_SOURCE_DIR environment variable before running this script.")
-        print("Example: export LEARNING_SOURCE_DIR='learning_source'")
-        exit(1)
+    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+    from utils.environment_check import check_learning_source_dir
+
+    learning_source_dir = check_learning_source_dir()
 
     cfg = MoleculeNLConfig.from_file(args.config).data_preparation
 

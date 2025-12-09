@@ -13,6 +13,8 @@ GPT2とは完全に独立した実装で、BERT特有の評価手法を活用し
 """
 
 import argparse
+import os
+import sys
 import json
 import logging
 import os
@@ -44,6 +46,9 @@ from utils.model_evaluator import ModelEvaluator
 # プロジェクトルートを追加
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
+
+# 共通環境チェックモジュールを追加
+from utils.environment_check import check_learning_source_dir
 
 # ログ設定は後でsetup_evaluation_loggingで行う
 logger = logging.getLogger(__name__)
@@ -640,11 +645,12 @@ class BERTClinVarEvaluator(ModelEvaluator):
 
 def main():
     # 環境変数からデフォルトのトークナイザーパスを構築
-    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
-    default_tokenizer_path = None
-    if learning_source_dir:
+    try:
+        learning_source_dir = check_learning_source_dir()
         default_tokenizer_path = f"{learning_source_dir}/genome_sequence/spm_tokenizer.model"
-    
+    except SystemExit:
+        default_tokenizer_path = None
+
     parser = argparse.ArgumentParser(description="BERT ClinVar evaluation for genome sequence model")
     parser.add_argument("--model_path", type=str, required=True, help="Path to trained BERT model")
     parser.add_argument(
@@ -675,7 +681,7 @@ def main():
     parser.add_argument("--max_length", type=int, default=512, help="Maximum sequence length")
 
     args = parser.parse_args()
-    
+
     # トークナイザーパスのチェック
     if not args.tokenizer_path:
         print("❌ ERROR: No tokenizer path specified!")

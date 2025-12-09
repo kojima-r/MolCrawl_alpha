@@ -12,6 +12,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
+from utils.environment_check import check_learning_source_dir
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -300,36 +301,33 @@ def main():
     """メイン関数"""
     import argparse
 
+    # LEARNING_SOURCE_DIRを取得
+    learning_source_dir = check_learning_source_dir()
+
     parser = argparse.ArgumentParser(description="RNA Encoding Validation")
-    # デフォルトパスを環境変数から動的に構築
-    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
-    default_dataset_dir = None
-    if learning_source_dir:
-        default_dataset_dir = f"/data2/matsubara/MolCrawl/riken-dataset-fundational-model/{learning_source_dir}/cellxgene"
-    
     parser.add_argument(
-        "--dataset_dir",
+        "--dataset_subdir",
         type=str,
-        default=default_dataset_dir,
-        help="RNA dataset directory (uses LEARNING_SOURCE_DIR environment variable if not specified)",
+        default="rna",
+        help="Dataset subdirectory relative to LEARNING_SOURCE_DIR (default: rna)",
     )
 
     args = parser.parse_args()
+
+    # データセットディレクトリを構築
+    dataset_dir = os.path.join(learning_source_dir, args.dataset_subdir)
     
-    # dataset_dirが指定されていない場合のチェック
-    if not args.dataset_dir:
-        print("❌ ERROR: No dataset directory specified!")
+    # ディレクトリの存在確認
+    if not os.path.exists(dataset_dir):
+        print(f"❌ ERROR: Dataset directory does not exist: {dataset_dir}")
+        print(f"Expected structure: {learning_source_dir}/{args.dataset_subdir}")
         print("")
-        print("Please either:")
-        print("  1. Set LEARNING_SOURCE_DIR environment variable:")
-        print("     export LEARNING_SOURCE_DIR='path'")
-        print("     python scripts/validate_rna_encoding.py")
-        print("")
-        print("  2. Or specify --dataset_dir explicitly:")
-        print("     python scripts/validate_rna_encoding.py --dataset_dir /path/to/dataset")
+        print("Please verify that:")
+        print(f"1. LEARNING_SOURCE_DIR='{learning_source_dir}' is correct")
+        print(f"2. The RNA dataset directory exists: {args.dataset_subdir}")
         sys.exit(1)
 
-    validator = RNAEncodingValidator(args.dataset_dir)
+    validator = RNAEncodingValidator(dataset_dir)
     success = validator.run_full_validation()
 
     sys.exit(0 if success else 1)
