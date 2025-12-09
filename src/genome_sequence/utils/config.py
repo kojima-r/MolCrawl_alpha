@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from config.paths import GENOME_SEQUENCE_DIR
 from core.config import Config
 
+from typing import Optional
 
 @dataclass
 class RefSeqPreparationConfig:
@@ -25,6 +26,10 @@ class RefSeqPreparationConfig:
     # So input_sentence_size * 2 / max_lines_per_file will be randomly selected for the BPE training.
     input_sentence_size: int = 700000
 
+    # 追加: 高速化用オプション（任意）
+    num_proc_parquet: Optional[int] = None
+    parquet_batch_size: Optional[int] = None
+    local_base_dir: Optional[str] = None
 
 @dataclass
 class GenomeSequenceConfig(Config):
