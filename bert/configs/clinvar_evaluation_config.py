@@ -1,14 +1,16 @@
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-
 import sentencepiece as spm
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 from config.paths import REFSEQ_DATASET_DIR
+
+# 共通環境チェックモジュールを追加
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+from utils.environment_check import check_learning_source_dir
 
 # ClinVar評価用BERT設定
 model_path = "runs_train_bert_genome_sequence"
@@ -28,9 +30,7 @@ gradient_accumulation_steps = 5 * 8
 # Tokenizer instantiation for ClinVar evaluation
 # -----------------------------------------------------------------------------
 # 実際に存在するトークナイザーファイルを使用
-learning_source_dir = os.environ.get('LEARNING_SOURCE_DIR')
-if not learning_source_dir:
-    raise ValueError("LEARNING_SOURCE_DIR environment variable is required")
+learning_source_dir = check_learning_source_dir()
 tokenizer_path = f"{learning_source_dir}/genome_sequence/spm_tokenizer.model"
 sp = spm.SentencePieceProcessor(model_file=tokenizer_path)
 # Get vocabulary size

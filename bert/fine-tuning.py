@@ -1,4 +1,6 @@
 import copy
+import os
+import sys
 from functools import partial
 
 import numpy as np
@@ -20,6 +22,10 @@ from transformers import (
 )
 
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
+
+# 共通環境チェックモジュールを追加
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+from utils.environment_check import check_learning_source_dir
 
 # -----------------------------
 # 既存の前処理ヘルパ
@@ -212,9 +218,7 @@ for pretrained in [True, False]:
             # -----------------------------
             # 設定
             # -----------------------------
-            # Use LEARNING_SOURCE_DIR for relative path
-            import os
-            learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR", "learning_20251104")
+            learning_source_dir = check_learning_source_dir()
             output_dir = f"{learning_source_dir}/compounds/benchmark/MoleculeNet/small/pretrained_{pretrained}/{benchmark_name}"
             learning_rate = 3e-5
             weight_decay = 0.0

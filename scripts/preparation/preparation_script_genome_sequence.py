@@ -30,9 +30,7 @@ def create_distribution_plot(data):
         plt.title("Distribution of tokenized lengths")
         plt.savefig("assets/img/genome_sequence_tokenized_lengths_dist.png")
         plt.close()
-        logger.info(
-            "Saved distribution of tokenized dataset lengths to assets/img/genome_sequence_tokenized_lengths_dist.png"
-        )
+        logger.info("Saved distribution of tokenized dataset lengths to assets/img/genome_sequence_tokenized_lengths_dist.png")
         return True
     except Exception as e:
         logger.error(f"Failed to create distribution plot: {e}")

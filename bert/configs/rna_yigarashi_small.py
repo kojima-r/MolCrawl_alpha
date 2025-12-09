@@ -9,6 +9,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__)) if "__file__" in global
 src_path = os.path.join(current_dir, "..", "..", "src")
 sys.path.append(src_path)
 
+# 共通環境チェックモジュールを追加
+from utils.environment_check import check_learning_source_dir
+
 try:
     from config.paths import get_gpt2_output_path
 
@@ -26,12 +29,7 @@ os.makedirs(model_path, exist_ok=True)
 use_custom_rna_dataset = True
 
 # Dataset configuration
-learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
-if not learning_source_dir:
-    print("❌ ERROR: LEARNING_SOURCE_DIR environment variable is required!")
-    print("Please set it before running:")
-    print("  export LEARNING_SOURCE_DIR='......'")
-    sys.exit(1)
+learning_source_dir = check_learning_source_dir()
 
 dataset_dir = "/wren/yigarashi/molcrawl/parquet_sample_1pct"
 

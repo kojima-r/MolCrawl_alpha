@@ -6,24 +6,12 @@
 import os
 import sys
 
+# 共通モジュールをインポート
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from utils.environment_check import check_learning_source_dir
+
 # データセット保存先ディレクトリの定数定義
-# 環境変数LEARNING_SOURCE_DIRから取得（必須）
-LEARNING_SOURCE_DIR = os.environ.get("LEARNING_SOURCE_DIR")
-
-if not LEARNING_SOURCE_DIR:
-    print("ERROR: Environment variable 'LEARNING_SOURCE_DIR' is not set.", file=sys.stderr)
-    print(
-        "Please set LEARNING_SOURCE_DIR environment variable before running this script.",
-        file=sys.stderr,
-    )
-    print("Example: export LEARNING_SOURCE_DIR='learning_source'", file=sys.stderr)
-    sys.exit(1)
-
-# 環境変数の値をログ出力（デバッグ用）
-print(
-    f"INFO: Using LEARNING_SOURCE_DIR='{LEARNING_SOURCE_DIR}' from environment variable",
-    file=sys.stderr,
-)
+LEARNING_SOURCE_DIR = check_learning_source_dir()
 
 # プロジェクトルートディレクトリの取得
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -43,34 +31,19 @@ def get_genome_tokenizer_path():
     # RefSeqゲノム配列用のトークナイザーを使用
     return get_refseq_tokenizer_path()
 
-
 # 各データセットの基本パス
 def get_dataset_path(dataset_type, relative_path=""):
     """
     データセットのパスを取得する関数
 
     Args:
-        dataset_type (str): データセットタイプ ('protein_sequence', 'genome_sequence', 'rna', 'molecule_nl', 'compounds')
+        dataset_type (str): データセットタイプ ('uniprot', 'refseq', 'cellxgene')
         relative_path (str): データセット内の相対パス
 
     Returns:
         str: 完全なパス
     """
-    # データセットタイプに応じたベースディレクトリを選択
-    dataset_dirs = {
-        "protein_sequence": PROTEIN_SEQUENCE_DIR,
-        "genome_sequence": GENOME_SEQUENCE_DIR,
-        "rna": RNA_DATASET_DIR,
-        "molecule_nl": MOLECULE_NL_DATASET_DIR,
-        "compounds": COMPOUNDS_DIR,
-    }
-
-    if dataset_type in dataset_dirs:
-        base_path = os.path.join(PROJECT_ROOT, dataset_dirs[dataset_type])
-    else:
-        # 後方互換性: 旧形式（GENOME_SEQUENCE_DIR配下）
-        base_path = os.path.join(PROJECT_ROOT, GENOME_SEQUENCE_DIR, dataset_type)
-
+    base_path = os.path.join(PROJECT_ROOT, GENOME_SEQUENCE_DIR, dataset_type)
     if relative_path:
         return os.path.join(base_path, relative_path)
     return base_path
@@ -85,8 +58,7 @@ COMPOUNDS_DIR = LEARNING_SOURCE_DIR + "/compounds"
 UNIPROT_DATASET_DIR = get_dataset_path("training_ready_hf_dataset")
 REFSEQ_DATASET_DIR = get_dataset_path("training_ready_hf_dataset")
 CELLXGENE_DATASET_DIR = RNA_DATASET_DIR + "/training_ready_hf_dataset"
-# Compounds uses GuacaMol benchmark data in a specific subdirectory
-COMPOUNDS_DATASET_DIR = COMPOUNDS_DIR + "/benchmark/GuacaMol/compounds/training_ready_hf_dataset"
+COMPOUNDS_DATASET_DIR = get_dataset_path("training_ready_hf_dataset")
 
 # 絶対パス版（WebアプリケーションやAPIで使用）
 ABSOLUTE_LEARNING_SOURCE_PATH = os.path.join(PROJECT_ROOT, LEARNING_SOURCE_DIR)

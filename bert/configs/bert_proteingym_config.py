@@ -3,7 +3,12 @@ BERT版ProteinGym評価の設定ファイル
 """
 
 import os
+import sys
 from pathlib import Path
+
+# 共通環境チェックモジュールを追加
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+from utils.environment_check import check_learning_source_dir
 
 # プロジェクトルートの取得
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -14,7 +19,8 @@ class BERTProteinGymConfig:
 
     # モデル設定
     MODEL_PATH = "runs_train_bert_protein_sequence/checkpoint-5000"
-    TOKENIZER_PATH = f"{os.environ.get('LEARNING_SOURCE_DIR', '')}/protein_sequence/spm_tokenizer.model"
+    learning_source_dir = check_learning_source_dir()
+    TOKENIZER_PATH = f"{learning_source_dir}/protein_sequence/spm_tokenizer.model"
 
     # 評価設定
     DEVICE = "cuda"

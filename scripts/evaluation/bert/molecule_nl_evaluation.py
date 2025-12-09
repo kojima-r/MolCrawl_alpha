@@ -27,10 +27,12 @@ import torch
 import torch.nn.functional as F
 from datasets import load_from_disk
 from transformers import BertConfig, BertForMaskedLM
+from utils.environment_check import check_learning_source_dir
 
 # プロジェクトルートを追加
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
+
 
 from utils.evaluation_output import (  # noqa: E402
     setup_evaluation_logging,
@@ -682,7 +684,7 @@ def main():
     # 出力ディレクトリの設定
     if args.output_dir is None:
         # LEARNING_SOURCE_DIR環境変数を使用
-        learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR", ".")
+        learning_source_dir = check_learning_source_dir()
         args.output_dir = os.path.join(
             learning_source_dir,
             "molecule_nl",
