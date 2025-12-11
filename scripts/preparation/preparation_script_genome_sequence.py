@@ -299,7 +299,7 @@ def main():
     setup_logging(GENOME_SEQUENCE_DIR)
 
     # 重い処理用 base_dir（ローカルSSDなどに逃がしたい場合は config で指定）
-    base_dir = getattr(cfg, "local_base_dir", GENOME_SEQUENCE_DIR)
+    base_dir = GENOME_SEQUENCE_DIR + getattr(cfg, "local_base_dir", "scratch")
     logger.info(f"Using base_dir: {base_dir}")
 
     # 進捗状況の確認
