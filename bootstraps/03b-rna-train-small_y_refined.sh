@@ -1,5 +1,16 @@
 #!/bin/bash
-export LEARNING_SOURCE_DIR="learning_source_20250818"
-cd /wren/matsubara/riken-dataset-fundational-model
-nohup bash -c 'CUDA_VISIBLE_DEVICES=1 python gpt2/train.py gpt2/configs/rna/train_gpt2_config_yigarashi.py' > \
-    logs/rna-yigarashi-train-small-`date +%Y-%m-%d_%H-%M-%S`.log 2>&1 &
+
+set -e
+
+# Check LEARNING_SOURCE_DIR
+if [ -z "$LEARNING_SOURCE_DIR" ]; then
+    echo "ERROR: LEARNING_SOURCE_DIR environment variable is not set."
+    echo "Please set it before running this script:"
+    echo "  export LEARNING_SOURCE_DIR='...'"
+    exit 1
+fi
+
+echo "DatabaseDir: $LEARNING_SOURCE_DIR"
+mkdir -p ${LEARNING_SOURCE_DIR}/rna/logs
+nohup bash -c 'python gpt2/train.py gpt2/configs/rna/train_gpt2_config_yigarashi.py' > \
+    ${LEARNING_SOURCE_DIR}/rna/logs/rna-yigarashi-train-small-`date +%Y-%m-%d_%H-%M-%S`.log 2>&1 &
