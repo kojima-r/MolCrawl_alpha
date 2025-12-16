@@ -131,11 +131,17 @@ def combine_all(raw_data_path: str, save_path: str):
     llamol_dir = os.path.join(data_dir, "Fraunhofer-SCAI-llamol")
     
     logging.info("Processing df_pc9")
-    df_pc9 = pd.read_parquet(os.path.join(llamol_dir, "Full_PC9_GAP.parquet"))
+    df_pc9 = safe_read_parquet(
+        os.path.join(llamol_dir, "Full_PC9_GAP.parquet"),
+        "PC9 GAP"
+    )
     df_pc9 = calculateProperties(df_pc9)
 
     logging.info("Processing df_zinc_full")
-    df_zinc_full = pd.read_parquet(os.path.join(data_dir, "zinc20", "zinc_processed.parquet"))
+    df_zinc_full = safe_read_parquet(
+        os.path.join(data_dir, "zinc20", "zinc_processed.parquet"),
+        "ZINC20 Full"
+    )
     df_zinc_full = df_zinc_full.sample(n=5_000_000)
     df_zinc_full = calculateProperties(df_zinc_full)
 
