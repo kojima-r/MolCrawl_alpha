@@ -4,6 +4,7 @@ import os
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 import multiprocessing
+from pathlib import Path
 
 from rdkit.Chem import RDConfig
 import sys
@@ -17,6 +18,46 @@ sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
 import sascorer  # noqa: E402
 
 np.random.seed(42)
+
+
+def safe_read_parquet(file_path, dataset_name):
+    """
+    Safely read a parquet file with error handling
+    
+    Args:
+        file_path: Path to the parquet file
+        dataset_name: Name of the dataset for logging
+        
+    Returns:
+        DataFrame or None if file is corrupted
+        
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        ValueError: If file is corrupted
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(
+            f"{dataset_name} parquet file not found: {file_path}\n"
+            f"Please re-run the download step to obtain this file."
+        )
+    
+    try:
+        logger.info(f"Reading {dataset_name} from {file_path}")
+        df = pd.read_parquet(file_path)
+        logger.info(f"Successfully loaded {dataset_name}: {len(df)} rows")
+        return df
+    except Exception as e:
+        error_msg = (
+            f"Failed to read {dataset_name} parquet file: {file_path}\n"
+            f"Error: {str(e)}\n"
+            f"The file may be corrupted or incomplete.\n"
+            f"Solution: Delete the file and re-run the download:\n"
+            f"  rm {file_path}\n"
+            f"  LEARNING_SOURCE_DIR=<your_dir> ./bootstraps/01_compounds_prepare.sh"
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg) from e
+
 
 
 def calcLogPIfMol(smi):
@@ -99,31 +140,45 @@ def combine_all(raw_data_path: str, save_path: str):
     df_zinc_full = calculateProperties(df_zinc_full)
 
     logging.info("Processing df_zinc_qm9")
-    df_zinc_qm9 = pd.read_parquet(
-        os.path.join(llamol_dir, "qm9_zinc250_cep.parquet")
+    df_zinc_qm9 = safe_read_parquet(
+        os.path.join(llamol_dir, "qm9_zinc250_cep.parquet"),
+        "ZINC QM9"
     )
     df_zinc_qm9 = calculateProperties(df_zinc_qm9)
 
     logging.info("Processing df_opv")
-    df_opv = pd.read_parquet(os.path.join(data_dir, "opv", "opv.parquet"))
+    df_opv = safe_read_parquet(
+        os.path.join(data_dir, "opv", "opv.parquet"),
+        "OPV"
+    )
     df_opv = calculateProperties(df_opv)
 
     logging.info("Processing df_reddb")
     # Source: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/F3QFSQ
-    df_reddb = pd.read_parquet(os.path.join(llamol_dir, "RedDB_Full.parquet"))
+    df_reddb = safe_read_parquet(
+        os.path.join(llamol_dir, "RedDB_Full.parquet"),
+        "RedDB"
+    )
     df_reddb = calculateProperties(df_reddb)
 
     logging.info("Processing df_chembl")
-    df_chembl = pd.read_parquet(os.path.join(llamol_dir, "chembl_log_sascore.parquet"))
+    df_chembl = safe_read_parquet(
+        os.path.join(llamol_dir, "chembl_log_sascore.parquet"),
+        "ChEMBL"
+    )
     df_chembl = calculateProperties(df_chembl)
 
     logging.info("Processing df_pubchemqc_2017")
-    df_pubchemqc_2017 = pd.read_parquet(os.path.join(llamol_dir, "pubchemqc_energy.parquet"))
+    df_pubchemqc_2017 = safe_read_parquet(
+        os.path.join(llamol_dir, "pubchemqc_energy.parquet"),
+        "PubChemQC 2017"
+    )
     df_pubchemqc_2017 = calculateProperties(df_pubchemqc_2017)
 
     logging.info("Processing df_pubchemqc_2020")
-    df_pubchemqc_2020 = pd.read_parquet(
-        os.path.join(llamol_dir, "pubchemqc2020_energy.parquet")
+    df_pubchemqc_2020 = safe_read_parquet(
+        os.path.join(llamol_dir, "pubchemqc2020_energy.parquet"),
+        "PubChemQC 2020"
     )
     df_pubchemqc_2020 = calculateProperties(df_pubchemqc_2020)
 
