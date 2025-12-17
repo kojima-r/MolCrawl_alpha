@@ -9,5 +9,5 @@ source "${SCRIPT_DIR}/common_functions.sh"
 # Check LEARNING_SOURCE_DIR
 check_learning_source_dir
 mkdir -p ${LEARNING_SOURCE_DIR}/compounds/logs/
-nohup bash -c 'python src/compounds/dataset/prepare_gpt2.py assets/configs/compounds.yaml' > \
-    ${LEARNING_SOURCE_DIR}/compounds/logs/compounds-prepare-gpt2-`date +%Y-%m-%d_%H-%M-%S`.log 2>&1 &
+nohup python scripts/preparation/preparation_script_compounds.py assets/configs/compounds.yaml --force \
+> ${LEARNING_SOURCE_DIR}/compounds/logs/compounds-preparation-$(date +%Y-%m-%d_%H-%M-%S).log 2>&1 &

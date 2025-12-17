@@ -9,5 +9,5 @@ source "${SCRIPT_DIR}/common_functions.sh"
 # Check LEARNING_SOURCE_DIR
 check_learning_source_dir
 mkdir -p ${LEARNING_SOURCE_DIR}/rna/logs
-nohup bash -c 'python src/rna/dataset/prepare_gpt2.py assets/configs/rna.yaml' > \
-    ${LEARNING_SOURCE_DIR}/rna/logs/rna-prepare-gpt2-`date +%Y-%m-%d_%H-%M-%S`.log 2>&1 &
+nohup bash -c 'python gpt2/train.py gpt2/configs/rna/train_gpt2_config_yigarashi.py' > \
+    ${LEARNING_SOURCE_DIR}/rna/logs/rna-yigarashi-train-small-`date +%Y-%m-%d_%H-%M-%S`.log 2>&1 &
