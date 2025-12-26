@@ -3,10 +3,11 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
-from config.paths import CELLXGENE_DATASET_DIR, get_gpt2_output_path
+from config.paths import CELLXGENE_DATASET_DIR, RNA_DATASET_DIR, get_gpt2_output_path
 from rna.dataset.geneformer.tokenizer import TranscriptomeTokenizer
 
 tokenizer = TranscriptomeTokenizer()
+meta_vocab_size = len(tokenizer)  # TranscriptomeTokenizer uses __len__ instead of vocab_size
 
 tensorboard = True  # log training metrics to tensorboard
 
@@ -36,5 +37,9 @@ weight_decay = 1e-1
 
 # dataset
 dataset = "rna"
+
+# RNA specific parameters
+rna_data_dir = CELLXGENE_DATASET_DIR
+rna_vocab_file = os.path.join(RNA_DATASET_DIR, "gene_vocab.json")
 
 dataset_params = {"dataset_dir": CELLXGENE_DATASET_DIR}

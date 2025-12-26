@@ -144,9 +144,9 @@ ptdtype = {
 }[dtype]
 ctx = nullcontext() if device_type == "cpu" else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
-# RNA data loader
-rna_data_dir = "path-to-rna-parquet"  # TODO
-rna_vocab_file = "path-to-rna-vocab"  # TODO
+# RNA data loader - get paths from config if available
+rna_data_dir = globals().get('rna_data_dir', 'path-to-rna-parquet')
+rna_vocab_file = globals().get('rna_vocab_file', 'path-to-rna-vocab')
 
 # Use RNADataset if dataset is "rna", otherwise use PreparedDataset
 if dataset == "rna":
