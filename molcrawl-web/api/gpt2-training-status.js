@@ -64,9 +64,137 @@ const GPT2_CONFIGS = {
 };
 
 /**
- * Read checkpoint metadata using Python script
+ * Find all HuggingFace checkpoint directories (checkpoint-{step}/)
  */
-async function readCheckpointMetadata(checkpointPath) {
+function findCheckpointDirectories(outputDir) {
+    try {
+        if (!fs.existsSync(outputDir)) {
+            return [];
+        }
+        
+        const entries = fs.readdirSync(outputDir, { withFileTypes: true });
+        const checkpoints = entries
+            .filter(entry => entry.isDirectory() && entry.name.startsWith('checkpoint-'))
+            .map(entry => {
+                const step = parseInt(entry.name.split('-')[1]);
+                return {
+                    name: entry.name,
+                    step: step,
+                    path: path.join(outputDir, entry.name),
+                };
+            })
+            .filter(cp => !isNaN(cp.step))
+            .sort((a, b) => b.step - a.step); // Sort by step descending
+        
+        return checkpoints;
+    } catch (error) {
+        console.error('Error finding checkpoint directories:', error);
+        return [];
+    }
+}
+
+/**
+ * Read HuggingFace checkpoint metadata (training_args.json)
+ * Current implementation uses custom format with training_args.json
+ */
+function readHFCheckpointMetadata(checkpointPath) {
+    try {
+        const trainingArgsPath = path.join(checkpointPath, 'training_args.json');
+        if (!fs.existsSync(trainingArgsPath)) {
+            return null;
+        }
+        
+        const argsData = JSON.parse(fs.readFileSync(trainingArgsPath, 'utf8'));
+        
+        // Extract model args from training_args.json
+        const modelArgs = argsData.model_args || {};
+        return {
+            n_layer: modelArgs.n_layer || 0,
+            n_head: modelArgs.n_head || 0,
+            n_embd: modelArgs.n_embd || 0,
+            vocab_size: modelArgs.vocab_size || 0,
+            block_size: modelArgs.block_size || 0,
+            // Also return training info
+            iteration: argsData.iteration || 0,
+            best_val_loss: argsData.best_val_loss || 0.0,
+            learning_rate: argsData.learning_rate || 0,
+            batch_size: argsData.batch_size || 0,
+        };
+    } catch (error) {
+        console.error('Error reading HF checkpoint metadata:', error);
+        return null;
+    }
+}
+
+/**
+ * Read training state from trainer_state.json if available
+ * Note: Current implementation uses training_args.json instead
+ */
+function readTrainerState(checkpointPath) {
+    try {
+        const statePath = path.join(checkpointPath, 'trainer_state.json');
+        if (fs.existsSync(statePath)) {
+            const stateData = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+            return {
+                best_val_loss: stateData.best_val_loss || 0.0,
+                global_step: stateData.global_step || 0,
+            };
+        }
+        
+        // Fallback: try training_args.json
+        const trainingArgsPath = path.join(checkpointPath, 'training_args.json');
+        if (fs.existsSync(trainingArgsPath)) {
+            const argsData = JSON.parse(fs.readFileSync(trainingArgsPath, 'utf8'));
+            return {
+                best_val_loss: argsData.best_val_loss || 0.0,
+                global_step: argsData.iteration || 0,
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * Read logging CSV file for loss information
+ */
+function readLoggingCSV(outputDir) {
+    try {
+        const loggingPath = path.join(outputDir, 'logging.csv');
+        if (!fs.existsSync(loggingPath)) {
+            return null;
+        }
+        
+        const content = fs.readFileSync(loggingPath, 'utf8');
+        const lines = content.trim().split('\n');
+        if (lines.length < 2) {
+            return null;
+        }
+        
+        // Get last line (most recent)
+        const lastLine = lines[lines.length - 1];
+        const parts = lastLine.split(',').map(p => p.trim());
+        
+        if (parts.length >= 3) {
+            return {
+                iter: parseInt(parts[0]) || 0,
+                train_loss: parseFloat(parts[1]) || 0.0,
+                val_loss: parseFloat(parts[2]) || 0.0,
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * Legacy: Read checkpoint metadata from ckpt.pt using Python script
+ */
+async function readLegacyCheckpointMetadata(checkpointPath) {
     return new Promise((resolve, reject) => {
         const pythonScript = `
 import sys
@@ -156,45 +284,111 @@ async function getModelStatus(dataset, size) {
     }
 
     const outputDir = path.join(MODEL_BASE_DIR, config.outputDirs[size]);
-    const checkpointPath = path.join(outputDir, 'ckpt.pt');
-
-    if (!fs.existsSync(checkpointPath)) {
-        return {
-            dataset,
-            size,
-            status: 'not_started',
-            exists: false,
+    
+    // First, try to find HuggingFace format checkpoints
+    const checkpoints = findCheckpointDirectories(outputDir);
+    
+    if (checkpoints.length > 0) {
+        // Use the latest checkpoint
+        const latestCheckpoint = checkpoints[0];
+        const checkpointData = readHFCheckpointMetadata(latestCheckpoint.path);
+        const loggingData = readLoggingCSV(outputDir);
+        
+        if (!checkpointData) {
+            return {
+                dataset,
+                size,
+                status: 'error',
+                exists: true,
+                error: 'Could not read checkpoint training_args.json',
+            };
+        }
+        
+        // Extract model args (removing training-specific fields)
+        const modelArgs = {
+            n_layer: checkpointData.n_layer,
+            n_head: checkpointData.n_head,
+            n_embd: checkpointData.n_embd,
+            vocab_size: checkpointData.vocab_size,
+            block_size: checkpointData.block_size,
         };
-    }
-
-    try {
-        const metadata = await readCheckpointMetadata(checkpointPath);
-        const modTime = getFileModTime(checkpointPath);
-        const modelSize = calculateModelSize(metadata.model_args);
-
+        
+        const modTime = getFileModTime(latestCheckpoint.path);
+        const modelSize = calculateModelSize(modelArgs);
+        
+        // Use data from training_args.json (most reliable) or fallback to logging.csv
+        const iteration = checkpointData.iteration || latestCheckpoint.step;
+        const best_val_loss = checkpointData.best_val_loss || loggingData?.val_loss || 0.0;
+        const train_loss = loggingData?.train_loss || 0.0;
+        const learning_rate = checkpointData.learning_rate || 0;
+        const batch_size = checkpointData.batch_size || 0;
+        
         return {
             dataset,
             size,
             status: 'training',
             exists: true,
+            checkpoint_format: 'huggingface',
+            checkpoint_count: checkpoints.length,
             checkpoint: {
                 path: config.outputDirs[size],
-                iteration: metadata.iter_num,
-                best_val_loss: metadata.best_val_loss,
+                checkpoint_name: latestCheckpoint.name,
+                iteration: iteration,
+                train_loss: train_loss,
+                best_val_loss: best_val_loss,
+                learning_rate: learning_rate,
+                batch_size: batch_size,
                 last_updated: modTime,
-                model_args: metadata.model_args,
+                model_args: modelArgs,
                 model_size_m: modelSize,
             },
         };
-    } catch (error) {
-        return {
-            dataset,
-            size,
-            status: 'error',
-            exists: true,
-            error: error.message,
-        };
     }
+    
+    // Fallback: Try legacy ckpt.pt format
+    const legacyCheckpointPath = path.join(outputDir, 'ckpt.pt');
+    if (fs.existsSync(legacyCheckpointPath)) {
+        try {
+            const metadata = await readLegacyCheckpointMetadata(legacyCheckpointPath);
+            const modTime = getFileModTime(legacyCheckpointPath);
+            const modelSize = calculateModelSize(metadata.model_args);
+
+            return {
+                dataset,
+                size,
+                status: 'training',
+                exists: true,
+                checkpoint_format: 'legacy',
+                checkpoint: {
+                    path: config.outputDirs[size],
+                    checkpoint_name: 'ckpt.pt',
+                    iteration: metadata.iter_num,
+                    train_loss: 0.0,
+                    best_val_loss: metadata.best_val_loss,
+                    last_updated: modTime,
+                    model_args: metadata.model_args,
+                    model_size_m: modelSize,
+                },
+            };
+        } catch (error) {
+            return {
+                dataset,
+                size,
+                status: 'error',
+                exists: true,
+                checkpoint_format: 'legacy',
+                error: error.message,
+            };
+        }
+    }
+    
+    // No checkpoints found
+    return {
+        dataset,
+        size,
+        status: 'not_started',
+        exists: false,
+    };
 }
 
 /**

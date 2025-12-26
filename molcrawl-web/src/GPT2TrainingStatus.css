@@ -133,6 +133,8 @@
   margin-bottom: 15px;
   padding-bottom: 12px;
   border-bottom: 2px solid #ecf0f1;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .model-header h4 {
@@ -149,6 +151,16 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.format-badge {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #90caf9;
 }
 
 .status-not-started {
