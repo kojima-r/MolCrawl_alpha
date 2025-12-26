@@ -106,6 +106,11 @@ const GPT2TrainingStatus = ({ dataset }) => {
                 <div className="model-header">
                     <h4>{size.toUpperCase()}</h4>
                     {getStatusBadge('training')}
+                    {modelData.checkpoint_format && (
+                        <span className="format-badge">
+                            {modelData.checkpoint_format === 'huggingface' ? '🤗 HF' : '📦 Legacy'}
+                        </span>
+                    )}
                 </div>
 
                 <div className="model-stats">
@@ -113,6 +118,12 @@ const GPT2TrainingStatus = ({ dataset }) => {
                         <span className="stat-label">Iteration:</span>
                         <span className="stat-value">{formatNumber(checkpoint.iteration)}</span>
                     </div>
+                    {checkpoint.train_loss > 0 && (
+                        <div className="stat-row">
+                            <span className="stat-label">Train Loss:</span>
+                            <span className="stat-value">{checkpoint.train_loss.toFixed(4)}</span>
+                        </div>
+                    )}
                     <div className="stat-row">
                         <span className="stat-label">Val Loss:</span>
                         <span className="stat-value">{checkpoint.best_val_loss.toFixed(4)}</span>
@@ -121,10 +132,28 @@ const GPT2TrainingStatus = ({ dataset }) => {
                         <span className="stat-label">Model Size:</span>
                         <span className="stat-value">{checkpoint.model_size_m}M params</span>
                     </div>
+                    {checkpoint.learning_rate > 0 && (
+                        <div className="stat-row">
+                            <span className="stat-label">Learning Rate:</span>
+                            <span className="stat-value">{checkpoint.learning_rate.toExponential(1)}</span>
+                        </div>
+                    )}
+                    {checkpoint.batch_size > 0 && (
+                        <div className="stat-row">
+                            <span className="stat-label">Batch Size:</span>
+                            <span className="stat-value">{checkpoint.batch_size}</span>
+                        </div>
+                    )}
                     <div className="stat-row">
                         <span className="stat-label">Last Updated:</span>
                         <span className="stat-value stat-date">{formatDate(checkpoint.last_updated)}</span>
                     </div>
+                    {modelData.checkpoint_count > 0 && (
+                        <div className="stat-row">
+                            <span className="stat-label">Checkpoints:</span>
+                            <span className="stat-value">{modelData.checkpoint_count}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="model-architecture">
@@ -150,7 +179,7 @@ const GPT2TrainingStatus = ({ dataset }) => {
                 </div>
 
                 <div className="checkpoint-path">
-                    <small>{checkpoint.path}/ckpt.pt</small>
+                    <small>{checkpoint.path}/{checkpoint.checkpoint_name}</small>
                 </div>
             </div>
         );
