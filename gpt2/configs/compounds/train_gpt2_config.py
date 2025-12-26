@@ -8,9 +8,10 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
-from config.paths import COMPOUNDS_DATASET_DIR, get_gpt2_output_path
+from config.paths import LEARNING_SOURCE_DIR, get_gpt2_output_path
 
-dataset_dir = COMPOUNDS_DATASET_DIR  # path to the dataset directory
+# compounds データセットのパスを直接指定
+dataset_dir = os.path.join(LEARNING_SOURCE_DIR, "compounds", "organix13", "compounds", "training_ready_hf_dataset")
 
 tokenizer_path = "assets/molecules/vocab.txt"  # path to the tokenizer vocab file
 
