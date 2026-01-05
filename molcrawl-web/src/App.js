@@ -5,6 +5,7 @@ import GenomeSpeciesList from './GenomeSpeciesList';
 import ExperimentDashboard from './ExperimentDashboard';
 import DatasetProgressCard from './DatasetProgressCard';
 import GPT2TrainingStatus from './GPT2TrainingStatus';
+import BERTTrainingStatus from './BERTTrainingStatus';
 
 // データセットタブの定義
 const DATASET_TABS = [
@@ -438,6 +439,13 @@ function App() {
                 {/* GPT-2 Training Status - Show for all dataset tabs */}
                 {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
                   <GPT2TrainingStatus
+                    dataset={DATASET_TABS.find(tab => tab.id === activeTab).progressKey.replace('_guacamol', '')}
+                  />
+                )}
+
+                {/* BERT Training Status - Show for all dataset tabs */}
+                {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
+                  <BERTTrainingStatus
                     dataset={DATASET_TABS.find(tab => tab.id === activeTab).progressKey.replace('_guacamol', '')}
                   />
                 )}

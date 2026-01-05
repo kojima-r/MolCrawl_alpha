@@ -52,6 +52,7 @@ const { getDirectoryStructure, expandDirectory, getFullDirectoryTree, checkZincD
 const { getGenomeSpeciesList, getGenomeSpeciesByCategory } = require('./api/genome-species');
 const datasetProgressRouter = require('./api/dataset-progress');
 const gpt2TrainingStatusRouter = require('./api/gpt2-training-status');
+const bertTrainingStatusRouter = require('./api/bert-training-status');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -84,6 +85,7 @@ app.get('/api/genome/species', validateDirectoryExists, getGenomeSpeciesList);
 app.get('/api/genome/species/category', validateDirectoryExists, getGenomeSpeciesByCategory);
 app.use('/api/dataset-progress', validateDirectoryExists, datasetProgressRouter);
 app.use('/api/gpt2-training-status', validateDirectoryExists, gpt2TrainingStatusRouter);
+app.use('/api/bert-training-status', validateDirectoryExists, bertTrainingStatusRouter);
 
 // ヘルスチェック
 app.get('/api/health', (req, res) => {
@@ -114,7 +116,10 @@ app.get('/api/health', (req, res) => {
       '/api/dataset-progress/:datasetKey - 特定データセット詳細進捗取得',
       '/api/gpt2-training-status - 全GPT-2モデルの学習状況取得',
       '/api/gpt2-training-status/:dataset - 特定データセットのGPT-2学習状況',
-      '/api/gpt2-training-status/:dataset/:size - 特定モデルの詳細情報'
+      '/api/gpt2-training-status/:dataset/:size - 特定モデルの詳細情報',
+      '/api/bert-training-status - 全BERTモデルの学習状況取得',
+      '/api/bert-training-status/:dataset - 特定データセットのBERT学習状況',
+      '/api/bert-training-status/:dataset/:size - 特定BERTモデルの詳細情報'
     ]
   });
 });
