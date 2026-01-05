@@ -33,7 +33,7 @@ if (!fs.existsSync(learningSourcePath)) {
     const directories = fs.readdirSync(projectRoot, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory() && dirent.name.startsWith('learning_'))
       .map(dirent => `  - ${dirent.name}`);
-    
+
     if (directories.length > 0) {
       console.error(directories.join('\n'));
       console.error('');
@@ -79,6 +79,9 @@ app.use(express.static(__dirname));
 app.get('/api/directory', validateDirectoryExists, getDirectoryStructure);
 app.get('/api/directory/expand', validateDirectoryExists, expandDirectory);
 app.get('/api/directory/tree', validateDirectoryExists, getFullDirectoryTree);
+
+// 画像API
+app.use('/api/images', require('./api/images'));
 app.get('/api/zinc/check', validateDirectoryExists, checkZincData);
 app.get('/api/zinc/count', validateDirectoryExists, getZincDataCounts);
 app.get('/api/genome/species', validateDirectoryExists, getGenomeSpeciesList);
@@ -92,11 +95,11 @@ app.get('/api/health', (req, res) => {
   const fsSync = require('fs');
   const learningSourcePath = path.join(__dirname, '..', process.env.LEARNING_SOURCE_DIR);
   const directoryExists = fsSync.existsSync(learningSourcePath);
-  
+
   res.json({
     status: directoryExists ? 'OK' : 'ERROR',
     timestamp: new Date().toISOString(),
-    message: directoryExists 
+    message: directoryExists
       ? 'MolCrawl Web API Server is running'
       : `LEARNING_SOURCE_DIR directory '${process.env.LEARNING_SOURCE_DIR}' not found`,
     configuration: {
@@ -119,7 +122,10 @@ app.get('/api/health', (req, res) => {
       '/api/gpt2-training-status/:dataset/:size - 特定モデルの詳細情報',
       '/api/bert-training-status - 全BERTモデルの学習状況取得',
       '/api/bert-training-status/:dataset - 特定データセットのBERT学習状況',
-      '/api/bert-training-status/:dataset/:size - 特定BERTモデルの詳細情報'
+      '/api/bert-training-status/:dataset/:size - 特定BERTモデルの詳細情報',
+      '/api/images/:modelType - 指定モデルの画像一覧取得',
+      '/api/images/serve/:modelType/:filename - 画像ファイル配信',
+      '/api/images/thumbnail/:modelType/:filename - サムネイル画像配信'
     ]
   });
 });

@@ -41,12 +41,16 @@ logger = logging.getLogger(__name__)
 def create_distribution_plot(data):
     """Create and save distribution plot for tokenized sequence lengths"""
     try:
+        from utils.image_manager import get_image_path
+
         plt.hist(data["token_count"], bins=np.arange(0, 1000, 1))
         plt.xlabel("Length of tokenized dataset")
         plt.title("Distribution of tokenized lengths (cut at 1000)")
-        plt.savefig("assets/img/protein_sequence_tokenized_lengths_dist.png")
+
+        image_path = get_image_path("protein_sequence", "protein_sequence_tokenized_lengths_dist.png")
+        plt.savefig(image_path)
         plt.close()
-        logger.info("Saved distribution of tokenized dataset lengths to assets/img/protein_sequence_tokenized_lengths_dist.png")
+        logger.info(f"Saved distribution of tokenized dataset lengths to {image_path}")
         return True
     except Exception as e:
         logger.error(f"Failed to create distribution plot: {e}")
@@ -251,7 +255,9 @@ def process4_generate_statistics(base_dir, dataset, force=False):
         logger.info(f"Number of tokens: {sum(data['train']['token_count'])}")
 
         # 分布プロットの生成（forceオプションまたはプロットが存在しない場合のみ）
-        plot_file = Path("assets/img/protein_sequence_tokenized_lengths_dist.png")
+        from utils.image_manager import get_image_path
+
+        plot_file = Path(get_image_path("protein_sequence", "protein_sequence_tokenized_lengths_dist.png"))
         if force or not plot_file.exists():
             if force:
                 logger.info("Force option specified. Regenerating distribution plot...")

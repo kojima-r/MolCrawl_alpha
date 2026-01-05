@@ -41,13 +41,17 @@ enable_progress_bar()
 
 def create_distribution_plot(data):
     """トークン長の分布をヒストグラムとして保存"""
+    from utils.image_manager import get_image_path
+
     plt.hist(data["num_tokens"], bins=200)
     plt.xlabel("Length of tokenized dataset")
     plt.title("Distribution of tokenized lengths")
     plt.tight_layout()
-    plt.savefig("assets/img/rna_tokenized_lengths_dist.png")
+
+    image_path = get_image_path("rna", "rna_tokenized_lengths_dist.png")
+    plt.savefig(image_path)
     plt.close()
-    logger.info("Saved distribution of tokenized dataset lengths to assets/img/rna_tokenized_lengths_dist.png")
+    logger.info(f"Saved distribution of tokenized dataset lengths to {image_path}")
 
 
 # より詳細な遺伝子情報を含むTSVファイルの生成
@@ -244,7 +248,9 @@ if __name__ == "__main__":
         logger.info(f"Number of tokens: {sum(data['token_count'])}")
 
         # 分布プロット（必要に応じて再生成）
-        plot_file = Path("assets/img/rna_tokenized_lengths_dist.png")
+        from utils.image_manager import get_image_path
+
+        plot_file = Path(get_image_path("rna", "rna_tokenized_lengths_dist.png"))
         if args.force or not plot_file.exists():
             if args.force:
                 logger.info("Force option specified. Regenerating distribution plot...")

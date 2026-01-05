@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './DatasetInfo.css';
+import ImageGallery from './ImageGallery';
 
 const DatasetInfo = () => {
   const [loading, setLoading] = useState(true);
@@ -80,8 +81,8 @@ const DatasetInfo = () => {
 
       <div className="models-grid">
         {datasetsInfo.models.map((model) => (
-          <div 
-            key={model.model} 
+          <div
+            key={model.model}
             className={`model-card ${!model.exists ? 'no-data' : ''}`}
             onClick={() => model.exists && setSelectedModel(model)}
           >
@@ -90,7 +91,7 @@ const DatasetInfo = () => {
               <h3>{model.displayName}</h3>
             </div>
             <p className="model-description">{model.description}</p>
-            
+
             {model.exists ? (
               <div className="model-stats">
                 <div className="stat">
@@ -121,7 +122,7 @@ const DatasetInfo = () => {
                 )}
               </div>
             )}
-            
+
             {model.exists && (
               <button className="view-details-btn">
                 View Details →
@@ -139,7 +140,7 @@ const DatasetInfo = () => {
     return (
       <div className="model-details">
         <div className="model-details-header">
-          <button 
+          <button
             className="back-btn"
             onClick={() => setSelectedModel(null)}
           >
@@ -183,7 +184,7 @@ const DatasetInfo = () => {
                   )}
                 </div>
               </div>
-              
+
               <div className="dataset-details">
                 <div className="dataset-info">
                   <strong>Path:</strong> <code>{dataset.path}</code>
@@ -209,6 +210,11 @@ const DatasetInfo = () => {
                   </div>
                 </div>
               )}
+
+              {/* Image Gallery for this dataset */}
+              <div className="dataset-images">
+                <ImageGallery modelType={selectedModel.key} />
+              </div>
             </div>
           ))}
         </div>
@@ -251,7 +257,7 @@ const DatasetInfo = () => {
 
       <div className="tabs-container">
         <div className="tabs">
-          <button 
+          <button
             className={`tab ${activeTab === 'overview' ? 'active' : ''}`}
             onClick={() => {
               setActiveTab('overview');
@@ -261,7 +267,7 @@ const DatasetInfo = () => {
             Overview
           </button>
           {selectedModel && (
-            <button 
+            <button
               className={`tab ${activeTab === 'details' ? 'active' : ''}`}
               onClick={() => setActiveTab('details')}
             >
