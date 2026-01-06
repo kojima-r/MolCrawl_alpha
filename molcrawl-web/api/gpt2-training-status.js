@@ -27,38 +27,42 @@ const GPT2_CONFIGS = {
     },
     genome_sequence: {
         name: 'Genome Sequence',
-        sizes: ['small', 'medium', 'large'],
+        sizes: ['small', 'medium', 'large', 'xl'],
         outputDirs: {
             small: 'genome_sequence/gpt2-output/genome_sequence-small',
             medium: 'genome_sequence/gpt2-output/genome_sequence-medium',
             large: 'genome_sequence/gpt2-output/genome_sequence-large',
+            xl: 'genome_sequence/gpt2-output/genome_sequence-ex-large',
         },
     },
     protein_sequence: {
         name: 'Protein Sequence',
-        sizes: ['small', 'medium', 'large'],
+        sizes: ['small', 'medium', 'large', 'xl'],
         outputDirs: {
             small: 'protein_sequence/gpt2-output/protein_sequence-small',
             medium: 'protein_sequence/gpt2-output/protein_sequence-medium',
             large: 'protein_sequence/gpt2-output/protein_sequence-large',
+            xl: 'protein_sequence/gpt2-output/protein_sequence-ex-large',
         },
     },
     rna: {
         name: 'RNA',
-        sizes: ['small', 'medium', 'large'],
+        sizes: ['small', 'medium', 'large', 'xl'],
         outputDirs: {
             small: 'rna/gpt2-output/rna-small',
             medium: 'rna/gpt2-output/rna-medium',
             large: 'rna/gpt2-output/rna-large',
+            xl: 'rna/gpt2-output/rna-ex-large',
         },
     },
     molecule_nl: {
         name: 'Molecule NL',
-        sizes: ['small', 'medium', 'large'],
+        sizes: ['small', 'medium', 'large', 'xl'],
         outputDirs: {
             small: 'molecule_nl/gpt2-output/molecule-nl-small',
             medium: 'molecule_nl/gpt2-output/molecule-nl-medium',
             large: 'molecule_nl/gpt2-output/molecule-nl-large',
+            xl: 'molecule_nl/gpt2-output/molecule-nl-ex-large',
         },
     },
 };

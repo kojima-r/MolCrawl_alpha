@@ -3,6 +3,7 @@ import './GPT2TrainingStatus.css';
 
 const GPT2TrainingStatus = ({ dataset }) => {
     const [trainingData, setTrainingData] = useState(null);
+    const [processData, setProcessData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
@@ -21,6 +22,17 @@ const GPT2TrainingStatus = ({ dataset }) => {
                 setError(null);
             } else {
                 setError(result.error || 'Failed to fetch training status');
+            }
+
+            // Also fetch process status
+            try {
+                const processResponse = await fetch('/api/training-process-status');
+                const processResult = await processResponse.json();
+                if (processResult.success) {
+                    setProcessData(processResult);
+                }
+            } catch (err) {
+                // Silently handle process status fetch errors
             }
         } catch (err) {
             setError(err.message);
@@ -75,8 +87,62 @@ const GPT2TrainingStatus = ({ dataset }) => {
         return <span className={`status-badge ${badge.class}`}>{badge.text}</span>;
     };
 
+    // Function to determine model size from config file name
+    const getModelSizeFromConfig = (configFileName) => {
+        if (configFileName.includes('train_gpt2_medium_config.py')) {
+            return 'medium';
+        } else if (configFileName.includes('train_gpt2_large_config.py')) {
+            return 'large';
+        } else if (configFileName.includes('train_gpt2_xl_config.py')) {
+            return 'xl';
+        } else {
+            // Default to small (train_gpt2_config.py)
+            return 'small';
+        }
+    };
+
     const renderModelCard = (modelData, size) => {
+        // Check if process is running for this dataset and size
+        const runningProcess = processData?.processes?.find(
+            p => {
+                if (p.processType !== 'GPT-2' ||
+                    p.datasetType !== dataset ||
+                    !p.usesCurrentLearningSource) {
+                    return false;
+                }
+                // Check if the config file matches the current size
+                const processSize = getModelSizeFromConfig(p.configFileName);
+                return processSize === size;
+            }
+        );
+
         if (!modelData || !modelData.exists) {
+            if (runningProcess) {
+                // Process is running but no checkpoint yet
+                return (
+                    <div key={size} className="model-card model-starting">
+                        <div className="model-header">
+                            <h4>{size.toUpperCase()}</h4>
+                            <span className="status-badge status-starting">🚀 Starting</span>
+                        </div>
+                        <p className="model-message">Training process running (waiting for checkpoint...)</p>
+                        <div className="process-info">
+                            <div className="stat-row">
+                                <span className="stat-label">PID:</span>
+                                <span className="stat-value">{runningProcess.pid}</span>
+                            </div>
+                            <div className="stat-row">
+                                <span className="stat-label">CPU:</span>
+                                <span className="stat-value">{runningProcess.cpu.toFixed(1)}%</span>
+                            </div>
+                            <div className="stat-row">
+                                <span className="stat-label">Runtime:</span>
+                                <span className="stat-value">{runningProcess.time}</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
             return (
                 <div key={size} className="model-card model-not-started">
                     <div className="model-header">
