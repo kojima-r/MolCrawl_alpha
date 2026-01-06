@@ -122,6 +122,11 @@
     gap: 20px;
 }
 
+.bert-single-model {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
 .bert-model-card {
     background: white;
     border-radius: 8px;

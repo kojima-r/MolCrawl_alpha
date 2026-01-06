@@ -101,7 +101,7 @@ const BERTTrainingStatus = ({ dataset }) => {
                 return (
                     <div key={size} className="bert-model-card bert-model-starting">
                         <div className="bert-model-header">
-                            <h4>{size.toUpperCase()}</h4>
+                            <h4>BERT Model</h4>
                             <span className="status-badge status-starting">🚀 Starting</span>
                         </div>
                         <p className="bert-model-message">Training process running (waiting for checkpoint...)</p>
@@ -125,7 +125,7 @@ const BERTTrainingStatus = ({ dataset }) => {
             return (
                 <div key={size} className="bert-model-card bert-model-not-started">
                     <div className="bert-model-header">
-                        <h4>{size.toUpperCase()}</h4>
+                        <h4>BERT Model</h4>
                         {getStatusBadge('not_started')}
                     </div>
                     <p className="bert-model-message">No checkpoint found</p>
@@ -137,7 +137,7 @@ const BERTTrainingStatus = ({ dataset }) => {
             return (
                 <div key={size} className="bert-model-card bert-model-error">
                     <div className="bert-model-header">
-                        <h4>{size.toUpperCase()}</h4>
+                        <h4>BERT Model</h4>
                         {getStatusBadge('error')}
                     </div>
                     <p className="error-message">{modelData.error}</p>
@@ -149,7 +149,7 @@ const BERTTrainingStatus = ({ dataset }) => {
         return (
             <div key={size} className="bert-model-card bert-model-training">
                 <div className="bert-model-header">
-                    <h4>{size.toUpperCase()}</h4>
+                    <h4>BERT Model</h4>
                     {getStatusBadge('training')}
                     {modelData.checkpoint_format && (
                         <span className="format-badge">
@@ -245,12 +245,22 @@ const BERTTrainingStatus = ({ dataset }) => {
     };
 
     const renderDatasetSection = (datasetKey, datasetData) => {
+        // BERT has only one model size (small), get the first model
+        const modelEntries = Object.entries(datasetData.models);
+        const modelData = modelEntries.length > 0 ? modelEntries[0][1] : null;
+        
         return (
             <div key={datasetKey} className="bert-dataset-section">
                 <h3 className="bert-dataset-title">{datasetData.name || datasetKey}</h3>
-                <div className="bert-models-grid">
-                    {Object.entries(datasetData.models).map(([size, modelData]) =>
-                        renderModelCard(modelData, size)
+                <div className="bert-single-model">
+                    {modelData ? renderModelCard(modelData, 'default') : (
+                        <div className="bert-model-card bert-model-not-started">
+                            <div className="bert-model-header">
+                                <h4>BERT Model</h4>
+                                <span className="status-badge status-not-started">Not Started</span>
+                            </div>
+                            <p className="bert-model-message">No training data available</p>
+                        </div>
                     )}
                 </div>
             </div>
