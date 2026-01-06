@@ -12,6 +12,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from compounds.utils.config import CompoundConfig
+from utils.image_manager import get_image_path
 from compounds.utils.general import (
     combine_datasets,
     download_datasets,
@@ -196,13 +197,11 @@ def compute_tokenization_statistics(dataset, stats_marker, force=False):
         plt.hist(series_length, bins=np.arange(0, 200, 1))
         plt.xlabel("Length of tokenized {}".format(column_name))
         plt.title("Distribution of tokenized {} lengths".format(column_name))
-        plt.savefig("assets/img/compounds_tokenized_{}_lengths_dist.png".format(column_name))
+
+        image_path = get_image_path("compounds", "compounds_tokenized_{}_lengths_dist.png".format(column_name))
+        plt.savefig(image_path)
         plt.close()
-        logger.info(
-            "Saved distribution of tokenized {} lengths to assets/img/compounds_tokenized_{}_lengths_dist.png".format(
-                column_name, column_name
-            )
-        )
+        logger.info(f"Saved distribution of tokenized {column_name} lengths to {image_path}")
 
         return {
             "Number of Samples for {}".format(column_name): len(series_length),

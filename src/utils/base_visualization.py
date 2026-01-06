@@ -17,6 +17,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from utils.image_manager import get_image_output_dir
+
 
 class BaseVisualizationGenerator(ABC):
     """
@@ -36,6 +38,7 @@ class BaseVisualizationGenerator(ABC):
         results_source: Union[str, Dict[str, Any]],
         output_dir: str = "./visualization_results",
         logger: Optional[logging.Logger] = None,
+        model_type: Optional[str] = None,
     ):
         """
         基底クラス初期化
@@ -44,9 +47,27 @@ class BaseVisualizationGenerator(ABC):
             results_source: 評価結果（ファイルパスまたは辞書データ）
             output_dir: 可視化結果の出力ディレクトリ
             logger: ログ出力用のロガー
+            model_type: モデルタイプ（画像保存ディレクトリの判定用）
         """
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        # モデルタイプが指定されている場合は統一画像ディレクトリを使用
+        if model_type:
+            try:
+                self.image_dir = Path(get_image_output_dir(model_type))
+                self.output_dir = Path(output_dir)
+                self.output_dir.mkdir(parents=True, exist_ok=True)
+                self.model_type = model_type
+            except Exception:
+                # 環境変数設定エラーなどの場合はフォールバック
+                self.output_dir = Path(output_dir)
+                self.output_dir.mkdir(parents=True, exist_ok=True)
+                self.image_dir = self.output_dir
+                self.model_type = None
+        else:
+            self.output_dir = Path(output_dir)
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            self.image_dir = self.output_dir
+            self.model_type = self._detect_model_type_from_output_dir(output_dir)
+
         self.logger = logger or self._setup_logger()
 
         # 結果データの読み込み
@@ -67,6 +88,24 @@ class BaseVisualizationGenerator(ABC):
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         return logging.getLogger(self.__class__.__name__)
+
+    def _detect_model_type_from_output_dir(self, output_dir: str) -> Optional[str]:
+        """出力ディレクトリパスからモデルタイプを推定"""
+        output_path = str(output_dir).lower()
+
+        model_keywords = {
+            "protein_sequence": ["protein", "proteingym"],
+            "genome_sequence": ["genome", "clinvar", "cosmic", "omim"],
+            "compounds": ["compound", "smiles", "scaffold"],
+            "rna": ["rna"],
+            "molecule_nl": ["molecule_nl", "molecule-nl", "moleculenl"],
+        }
+
+        for model_type, keywords in model_keywords.items():
+            if any(keyword in output_path for keyword in keywords):
+                return model_type
+
+        return None
 
     def _load_results(self, results_source: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -122,29 +161,36 @@ class BaseVisualizationGenerator(ABC):
 
         self.logger.debug("Plot style configured")
 
-    def _save_plot(self, filename: str, formats: List[str] = None) -> List[Path]:
+    def _save_plot(self, filename: str, formats: List[str] = None, dpi: int = 300) -> List[Path]:
         """
         プロットを指定された形式で保存
 
         Args:
             filename: ファイル名（拡張子なし）
-            formats: 保存する形式のリスト（デフォルト: ['png', 'pdf']）
+            formats: 保存する形式のリスト（デフォルト: ['png']）
+            dpi: 解像度（デフォルト: 300）
 
         Returns:
             保存されたファイルパスのリスト
         """
         if formats is None:
-            formats = ["png", "pdf"]
+            formats = ["png"]  # PNG優先で統一
 
         saved_files = []
         for fmt in formats:
-            filepath = self.output_dir / f"{filename}.{fmt}"
-            plt.savefig(filepath, format=fmt, bbox_inches="tight")
+            # 画像ファイル（png, jpg等）は統一画像ディレクトリに保存
+            if fmt.lower() in ["png", "jpg", "jpeg", "gif", "bmp", "svg"]:
+                filepath = self.image_dir / f"{filename}.{fmt}"
+            else:
+                # PDF等は従来通りoutput_dirに保存
+                filepath = self.output_dir / f"{filename}.{fmt}"
+
+            plt.savefig(filepath, format=fmt, bbox_inches="tight", dpi=dpi)
             saved_files.append(filepath)
             self.generated_files.append(filepath)
 
         plt.close()
-        self.logger.debug(f"Plot saved: {filename} in {formats}")
+        self.logger.debug(f"Plot saved: {filename} in {formats} (image_dir: {self.image_dir})")
         return saved_files
 
     def _create_comprehensive_dashboard(

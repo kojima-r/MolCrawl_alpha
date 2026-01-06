@@ -25,13 +25,17 @@ def run_statistics(series, column_name):
     plt.hist(series_length, bins=np.arange(0, 200, 1))
     plt.xlabel("Length of tokenized {}".format(column_name))
     plt.title("Distribution of tokenized {} lengths".format(column_name))
-    plt.savefig("assets/img/molecule_nl_tokenized_{}_lengths_dist.png".format(column_name))
+
+    # 統一画像ディレクトリに保存
+    import sys, os
+
+    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+    from utils.image_manager import get_image_path
+
+    image_path = get_image_path("molecule_nl", "molecule_nl_tokenized_{}_lengths_dist.png".format(column_name))
+    plt.savefig(image_path)
     plt.close()
-    logger.info(
-        msg="Saved distribution of tokenized {} lengths to assets/img/molecule_nl_tokenized_{}_lengths_dist.png".format(
-            column_name, column_name
-        )
-    )
+    logger.info(msg="Saved distribution of tokenized {} lengths to {}".format(column_name, image_path))
 
 
 def validate_smiles_in_sample(sample):
