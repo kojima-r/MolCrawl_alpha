@@ -32,7 +32,7 @@ const GPT2TrainingStatus = ({ dataset }) => {
                     setProcessData(processResult);
                 }
             } catch (err) {
-                console.log('Could not fetch process status:', err);
+                // Silently handle process status fetch errors
             }
         } catch (err) {
             setError(err.message);
@@ -87,12 +87,33 @@ const GPT2TrainingStatus = ({ dataset }) => {
         return <span className={`status-badge ${badge.class}`}>{badge.text}</span>;
     };
 
+    // Function to determine model size from config file name
+    const getModelSizeFromConfig = (configFileName) => {
+        if (configFileName.includes('train_gpt2_medium_config.py')) {
+            return 'medium';
+        } else if (configFileName.includes('train_gpt2_large_config.py')) {
+            return 'large';
+        } else if (configFileName.includes('train_gpt2_xl_config.py')) {
+            return 'xl';
+        } else {
+            // Default to small (train_gpt2_config.py)
+            return 'small';
+        }
+    };
+
     const renderModelCard = (modelData, size) => {
-        // Check if process is running for this dataset
+        // Check if process is running for this dataset and size
         const runningProcess = processData?.processes?.find(
-            p => p.processType === 'GPT-2' && 
-                 p.datasetType === dataset &&
-                 p.usesCurrentLearningSource
+            p => {
+                if (p.processType !== 'GPT-2' ||
+                    p.datasetType !== dataset ||
+                    !p.usesCurrentLearningSource) {
+                    return false;
+                }
+                // Check if the config file matches the current size
+                const processSize = getModelSizeFromConfig(p.configFileName);
+                return processSize === size;
+            }
         );
 
         if (!modelData || !modelData.exists) {

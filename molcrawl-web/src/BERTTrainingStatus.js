@@ -32,7 +32,7 @@ const BERTTrainingStatus = ({ dataset }) => {
                     setProcessData(processResult);
                 }
             } catch (err) {
-                console.log('Could not fetch process status:', err);
+                // Silently handle process status fetch errors
             }
         } catch (err) {
             setError(err.message);
@@ -90,9 +90,9 @@ const BERTTrainingStatus = ({ dataset }) => {
     const renderModelCard = (modelData, size) => {
         // Check if process is running for this dataset
         const runningProcess = processData?.processes?.find(
-            p => p.processType === 'BERT' && 
-                 p.datasetType === dataset &&
-                 p.usesCurrentLearningSource
+            p => p.processType === 'BERT' &&
+                p.datasetType === dataset &&
+                p.usesCurrentLearningSource
         );
 
         if (!modelData || !modelData.exists) {
@@ -248,7 +248,7 @@ const BERTTrainingStatus = ({ dataset }) => {
         // BERT has only one model size (small), get the first model
         const modelEntries = Object.entries(datasetData.models);
         const modelData = modelEntries.length > 0 ? modelEntries[0][1] : null;
-        
+
         return (
             <div key={datasetKey} className="bert-dataset-section">
                 <h3 className="bert-dataset-title">{datasetData.name || datasetKey}</h3>
