@@ -51,11 +51,28 @@ dataset_dir = MOLECULE_NL_DATASET_DIR
 learning_rate = 6e-6
 weight_decay = 1e-1
 log_interval = 100
+save_steps = 100  # Save checkpoint every 100 steps instead of default 1000
 
 batch_size = 8
 per_device_eval_batch_size = 1
 
 gradient_accumulation_steps = 5 * 16
+
+
+# Add preprocessing function to create attention_mask
+def preprocess_function(examples):
+    """Add attention_mask to the dataset"""
+    if "input_ids" in examples:
+        # Create attention_mask: 1 for real tokens, 0 for padding
+        attention_masks = []
+        for input_ids in examples["input_ids"]:
+            # Assuming pad_token_id is 0
+            attention_mask = [1 if token_id != 0 else 0 for token_id in input_ids]
+            attention_masks.append(attention_mask)
+
+        examples["attention_mask"] = attention_masks
+
+    return examples
 
 
 # Special Tokens
