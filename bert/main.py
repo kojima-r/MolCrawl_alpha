@@ -128,6 +128,7 @@ batch_size = 10
 gradient_accumulation_steps = 5 * 8
 per_device_eval_batch_size = 1
 log_interval = 100
+save_steps = 1000  # Default value, can be overridden in config
 # -----------------------------------------------------------------------------
 config_keys = [k for k, v in globals().items() if not k.startswith("_") and isinstance(v, (int, float, bool, str))]
 # Handle configurator path
@@ -204,7 +205,7 @@ training_args = TrainingArguments(
     per_device_train_batch_size=batch_size,  # the training batch size, put it as high as your GPU memory fits
     gradient_accumulation_steps=gradient_accumulation_steps,  # accumulating the gradients before updating the weights
     per_device_eval_batch_size=per_device_eval_batch_size,  # evaluation batch size
-    save_steps=1000,
+    save_steps=save_steps,  # Use save_steps from config
     warmup_steps=warmup_steps,
     learning_rate=learning_rate,
     weight_decay=weight_decay,
