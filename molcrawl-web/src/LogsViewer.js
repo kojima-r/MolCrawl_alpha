@@ -17,7 +17,9 @@ const LogsViewer = ({ modelPath }) => {
 
     // ログ一覧を取得
     const fetchLogs = useCallback(async () => {
-        if (!modelPath) return;
+        if (!modelPath) {
+            return;
+        }
 
         setLoading(true);
         setError(null);
@@ -93,7 +95,9 @@ const LogsViewer = ({ modelPath }) => {
 
     // ファイルサイズをフォーマット
     const formatFileSize = (bytes) => {
-        if (bytes === 0) return '0 B';
+        if (bytes === 0) {
+            return '0 B';
+        }
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -162,9 +166,9 @@ const LogsViewer = ({ modelPath }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {logs.map((log, index) => (
+                            {logs.map((log) => (
                                 <tr
-                                    key={index}
+                                    key={`${log.path}-${log.name}`}
                                     className="log-row"
                                     onClick={() => handleLogClick(log)}
                                 >
@@ -289,7 +293,9 @@ export const LogsOverview = () => {
     }, [fetchOverview]);
 
     const formatFileSize = (bytes) => {
-        if (bytes === 0) return '0 B';
+        if (bytes === 0) {
+            return '0 B';
+        }
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -324,8 +330,8 @@ export const LogsOverview = () => {
 
             {!loading && !error && overview.length > 0 && (
                 <div className="logs-overview-grid">
-                    {overview.map((model, index) => (
-                        <div key={index} className="logs-overview-card">
+                    {overview.map((model) => (
+                        <div key={model.modelPath} className="logs-overview-card">
                             <h3>{model.modelPath}</h3>
                             {model.exists ? (
                                 <>
@@ -336,8 +342,8 @@ export const LogsOverview = () => {
                                         <div className="logs-overview-recent">
                                             <h4>最新のログ（最大5件）:</h4>
                                             <ul>
-                                                {model.logs.map((log, idx) => (
-                                                    <li key={idx}>
+                                                {model.logs.map((log) => (
+                                                    <li key={`${model.modelPath}-${log.path}`}>
                                                         <span className="log-name">{log.name}</span>
                                                         <span className="log-size">({formatFileSize(log.size)})</span>
                                                     </li>
