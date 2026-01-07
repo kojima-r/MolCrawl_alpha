@@ -220,7 +220,7 @@ const getLogContent = async (req, res) => {
 
         // ファイルサイズチェック（大きすぎる場合は警告）
         const stats = await stat(fullPath);
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = 3 * 1024 * 1024; // 3MB
 
         if (stats.size > maxSize) {
             // 大きなファイルの場合は最後の部分だけ読む
@@ -238,7 +238,7 @@ const getLogContent = async (req, res) => {
                     content: content,
                     size: stats.size,
                     truncated: true,
-                    message: `File is too large (${Math.round(stats.size / 1024 / 1024)}MB). Showing last ${Math.round(maxSize / 1024 / 1024)}MB only.`
+                    message: `File is too large (${Math.round(stats.size / 1024 / 1024)}MB). Showing last ${Math.round(maxSize / 1024 / 1024)}MB only. For better performance, consider using the tail endpoint.`
                 }
             });
         }

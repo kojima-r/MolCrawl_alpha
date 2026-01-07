@@ -41,12 +41,22 @@ const LogsViewer = ({ modelPath }) => {
     }, [modelPath]);
 
     // ログ内容を取得
-    const fetchLogContent = useCallback(async (logPath) => {
+    const fetchLogContent = useCallback(async (logPath, fileSize) => {
         setLoadingContent(true);
         setContentError(null);
 
         try {
-            const response = await fetch(`/api/logs/content?logPath=${encodeURIComponent(logPath)}`);
+            // 3MB以上のファイルは末尾のみ取得
+            const sizeThreshold = 3 * 1024 * 1024; // 3MB
+            let url;
+            if (fileSize > sizeThreshold) {
+                // 大きなファイルは末尾1000行のみ取得
+                url = `/api/logs/tail?logPath=${encodeURIComponent(logPath)}&lines=1000`;
+            } else {
+                url = `/api/logs/content?logPath=${encodeURIComponent(logPath)}`;
+            }
+
+            const response = await fetch(url);
             const result = await response.json();
 
             if (!result.success) {
@@ -71,7 +81,7 @@ const LogsViewer = ({ modelPath }) => {
     // ログをクリックしたときの処理
     const handleLogClick = (log) => {
         setSelectedLog(log);
-        fetchLogContent(log.path);
+        fetchLogContent(log.path, log.size);
     };
 
     // モーダルを閉じる
@@ -210,9 +220,9 @@ const LogsViewer = ({ modelPath }) => {
 
                             {logContent && !loadingContent && (
                                 <>
-                                    {logContent.truncated && (
+                                    {(logContent.truncated || logContent.totalLines) && (
                                         <div className="log-modal-warning">
-                                            ⚠️ {logContent.message}
+                                            ⚠️ {logContent.message || `Large file (${Math.round(selectedLog.size / 1024 / 1024)}MB). Showing last ${logContent.displayedLines || logContent.totalLines} lines only.`}
                                         </div>
                                     )}
                                     <pre className="log-content">
@@ -231,7 +241,7 @@ const LogsViewer = ({ modelPath }) => {
                             </button>
                             <button
                                 className="button-primary"
-                                onClick={() => fetchLogContent(selectedLog.path)}
+                                onClick={() => fetchLogContent(selectedLog.path, selectedLog.size)}
                                 disabled={loadingContent}
                             >
                                 🔄 再読み込み
