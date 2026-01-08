@@ -9,5 +9,5 @@ source "${SCRIPT_DIR}/common_functions.sh"
 # Check LEARNING_SOURCE_DIR
 check_learning_source_dir
 mkdir -p ${LEARNING_SOURCE_DIR}/compounds/logs
-nohup bash -c 'python gpt2/train.py gpt2/configs/compounds/train_gpt2_large_config.py' > \
+CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0} nohup bash -c 'python gpt2/train.py gpt2/configs/compounds/train_gpt2_large_config.py' > \
     ${LEARNING_SOURCE_DIR}/compounds/logs/compounds-train-large-`date +%Y-%m-%d_%H-%M-%S`.log 2>&1 &
