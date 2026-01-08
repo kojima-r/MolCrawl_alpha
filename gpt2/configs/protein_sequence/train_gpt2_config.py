@@ -33,8 +33,18 @@ eval_interval = 1000
 eval_iters = 200
 log_interval = 10
 
-# weight decay
+# checkpoint management - 定期保存で過学習前のモデルを確保
+always_save_checkpoint = False  # best modelのみ保存（過学習対策）
+save_checkpoint_steps = 5000  # 5000ステップごとに定期保存
+max_checkpoints = 10  # 過学習前のcheckpointを保持するため多めに
+
+# early stopping - 過学習を検知して自動停止
+early_stopping = True
+early_stopping_patience = 5  # 5回（5000ステップ）改善がなければ停止
+
+# regularization - 過学習を抑制
 weight_decay = 1e-1
+dropout = 0.1  # Dropoutを有効化（デフォルトは0.0）
 
 # dataset
 dataset = "protein_sequence"
