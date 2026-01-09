@@ -16,10 +16,10 @@ function DatasetProgressCard({ datasetKey }) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  const fetchProgress = async () => {
+  const fetchProgress = async (retryCount = 0, maxRetries = 3) => {
     try {
       const url = `/api/dataset-progress/${datasetKey}`;
-      console.log(`⚠️ Fetching progress for ${datasetKey} from ${url}`);
+      console.log(`⚠️ Fetching progress for ${datasetKey} from ${url} (attempt ${retryCount + 1}/${maxRetries + 1})`);
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -37,26 +37,45 @@ function DatasetProgressCard({ datasetKey }) {
       setError(null);
       console.log(`✅ Progress loaded for ${datasetKey}`);
     } catch (err) {
-      console.error(`❌ Failed to fetch progress for ${datasetKey}:`, err);
-      setError(`Failed to load progress: ${err.message}`);
-      setProgress(null); // エラー時はnullを設定
+      console.error(`❌ Failed to fetch progress for ${datasetKey} (attempt ${retryCount + 1}):`, err);
+      
+      // リトライ処理
+      if (retryCount < maxRetries) {
+        const delayMs = Math.pow(2, retryCount) * 1000; // 指数バックオフ: 1秒, 2秒, 4秒
+        console.log(`⏳ Retrying in ${delayMs / 1000} seconds...`);
+        setError(`Failed to load progress. Retrying... (${retryCount + 1}/${maxRetries})`);
+        
+        setTimeout(() => {
+          fetchProgress(retryCount + 1, maxRetries);
+        }, delayMs);
+      } else {
+        // 最大リトライ回数に達した
+        console.error(`❌ Max retries reached for ${datasetKey}`);
+        setError(`Failed to load progress after ${maxRetries + 1} attempts: ${err.message}`);
+        setProgress(null);
+        setLoading(false);
+      }
     } finally {
-      setLoading(false);
+      if (retryCount === 0) {
+        // 初回のみローディング状態を解除
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    // 自動fetchを完全に無効化（無限リロード対策）
-    console.log(`DatasetProgressCard: Auto-fetch disabled for ${datasetKey} to prevent infinite reload`);
+    // 初回マウント時に遅延ロードを実行（タイミング問題を回避）
+    console.log(`DatasetProgressCard: Delayed auto-fetch for ${datasetKey} starting in 1 second...`);
     
-    // 初回ロードも無効化
-    // fetchProgress();
+    const timeoutId = setTimeout(() => {
+      setLoading(true);
+      fetchProgress();
+    }, 1000); // 1秒遅延
     
-    // 30秒ごとの自動更新も無効化
-    // const intervalId = setInterval(fetchProgress, 30000);
-    // return () => clearInterval(intervalId);
-    
-    // 手動でリフレッシュボタンを使用してください
+    // クリーンアップ: アンマウント時にタイムアウトをクリア
+    return () => {
+      clearTimeout(timeoutId);
+    };
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datasetKey]);
