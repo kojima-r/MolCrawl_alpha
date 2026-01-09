@@ -2,7 +2,18 @@ import React, { useState, useEffect } from 'react';
 import './ExperimentDashboard.css';
 import TrainingProcessStatus from './TrainingProcessStatus';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+// 環境変数からAPIエンドポイントを取得（REACT_APP_プレフィックスが必要）
+// 設定されていない場合はnull（Experiment Dashboardを無効化）
+const API_BASE_URL = process.env.REACT_APP_EXPERIMENT_API_URL || null;
+
+// APIが利用可能かどうかを判定
+const isApiAvailable = () => {
+  if (!API_BASE_URL) {
+    console.warn('⚠️ Experiment Dashboard: API_BASE_URL is not configured. Set REACT_APP_EXPERIMENT_API_URL environment variable.');
+    return false;
+  }
+  return true;
+};
 
 function ExperimentDashboard() {
   const [experiments, setExperiments] = useState([]);
@@ -14,37 +25,45 @@ function ExperimentDashboard() {
     model_type: '',
     dataset_type: ''
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(
+    isApiAvailable()
+      ? null
+      : 'Experiment Dashboard is disabled. Set REACT_APP_EXPERIMENT_API_URL environment variable to enable.'
+  );
 
   // 実験一覧を取得
   const fetchExperiments = async () => {
+    if (!isApiAvailable()) {
+      console.error('❌ Cannot fetch experiments: API is not configured');
+      setError('API endpoint not configured. Set REACT_APP_EXPERIMENT_API_URL environment variable.');
+      return;
+    }
+
+    console.log('⚠️ ExperimentDashboard: Attempting to fetch experiments from', API_BASE_URL);
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) {params.append(key, value);}
+        if (value) { params.append(key, value); }
       });
 
       const url = `${API_BASE_URL}/experiments?${params}`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {throw new Error('Failed to fetch experiments');}
-      
+      console.log('Fetching:', url);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch experiments`);
+      }
+
       const data = await response.json();
       setExperiments(data.experiments || []);
+      console.log('✅ Experiments loaded:', data.experiments?.length);
       setError(null);
     } catch (err) {
-      console.error('Error fetching experiments:', err);
-      if (err.name === 'AbortError') {
-        setError('実験データベースAPIに接続できません (タイムアウト)');
-      } else {
-        setError(err.message);
-      }
+      console.error('❌ Error fetching experiments:', err);
+      setError(`API Error: ${err.message}. Check if the API server is running at ${API_BASE_URL}`);
+      setExperiments([]); // エラー時は空配列を設定
     } finally {
       setLoading(false);
     }
@@ -52,56 +71,67 @@ function ExperimentDashboard() {
 
   // 統計情報を取得
   const fetchStatistics = async () => {
+    if (!isApiAvailable()) {
+      console.error('❌ Cannot fetch statistics: API is not configured');
+      return;
+    }
+
+    console.log('⚠️ ExperimentDashboard: Attempting to fetch statistics');
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const response = await fetch(`${API_BASE_URL}/statistics`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {throw new Error('Failed to fetch statistics');}
-      
+      const response = await fetch(`${API_BASE_URL}/statistics`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch statistics`);
+      }
+
       const data = await response.json();
       setStatistics(data);
+      console.log('✅ Statistics loaded');
     } catch (err) {
-      console.error('Failed to fetch statistics:', err);
-      // Silently fail for statistics
+      console.error('❌ Failed to fetch statistics:', err);
+      setStatistics(null); // エラー時はnullを設定
     }
   };
 
   // 実験詳細を取得
   const fetchExperimentDetail = async (experimentId) => {
+    if (!isApiAvailable()) {
+      console.error('❌ Cannot fetch experiment detail: API is not configured');
+      setError('API endpoint not configured');
+      return;
+    }
+
+    console.log('⚠️ ExperimentDashboard: Attempting to fetch experiment detail:', experimentId);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
-      const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {throw new Error('Failed to fetch experiment detail');}
-      
+      const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Failed to fetch experiment detail`);
+      }
+
       const data = await response.json();
       setSelectedExperiment(data);
+      console.log('✅ Experiment detail loaded:', experimentId);
     } catch (err) {
-      if (err.name === 'AbortError') {
-        setError('実験詳細の取得がタイムアウトしました');
-      } else {
-        setError(err.message);
-      }
+      console.error('❌ Error fetching experiment detail:', err);
+      setError(`Failed to load experiment details: ${err.message}`);
     }
   };
 
   useEffect(() => {
-    fetchExperiments();
-    fetchStatistics();
-    
-    // 10秒ごとに自動更新
-    const interval = setInterval(() => {
-      fetchExperiments();
-      fetchStatistics();
-    }, 10000);
-    
-    return () => clearInterval(interval);
+    // 自動更新を無効化（無限リロード対策）
+    // API (localhost:8000) が利用できない場合、無限にfetchを繰り返してしまう問題を回避
+    console.log('ExperimentDashboard: Auto-fetch disabled to prevent infinite reload loop');
+
+    // 初回ロードのみ実行（コメントアウト）
+    // fetchExperiments();
+    // fetchStatistics();
+
+    // 10秒ごとの自動更新を無効化
+    // const interval = setInterval(() => {
+    //   fetchExperiments();
+    //   fetchStatistics();
+    // }, 10000);
+
+    // return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
@@ -110,7 +140,7 @@ function ExperimentDashboard() {
   };
 
   const formatDuration = (seconds) => {
-    if (!seconds) {return 'N/A';}
+    if (!seconds) { return 'N/A'; }
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
@@ -118,7 +148,7 @@ function ExperimentDashboard() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) {return 'N/A';}
+    if (!dateString) { return 'N/A'; }
     return new Date(dateString).toLocaleString('ja-JP');
   };
 
@@ -170,8 +200,8 @@ function ExperimentDashboard() {
       <div className="filters-panel">
         <h3>フィルター</h3>
         <div className="filters">
-          <select 
-            value={filters.status} 
+          <select
+            value={filters.status}
             onChange={(e) => handleFilterChange('status', e.target.value)}
           >
             <option value="">全ステータス</option>
@@ -182,8 +212,8 @@ function ExperimentDashboard() {
             <option value="cancelled">キャンセル</option>
           </select>
 
-          <select 
-            value={filters.model_type} 
+          <select
+            value={filters.model_type}
             onChange={(e) => handleFilterChange('model_type', e.target.value)}
           >
             <option value="">全モデル</option>
@@ -192,8 +222,8 @@ function ExperimentDashboard() {
             <option value="gpn">GPN</option>
           </select>
 
-          <select 
-            value={filters.dataset_type} 
+          <select
+            value={filters.dataset_type}
             onChange={(e) => handleFilterChange('dataset_type', e.target.value)}
           >
             <option value="">全データセット</option>
@@ -207,8 +237,8 @@ function ExperimentDashboard() {
             <option value="omim">OMIM</option>
           </select>
 
-          <select 
-            value={filters.experiment_type} 
+          <select
+            value={filters.experiment_type}
             onChange={(e) => handleFilterChange('experiment_type', e.target.value)}
           >
             <option value="">全タイプ</option>
@@ -225,7 +255,7 @@ function ExperimentDashboard() {
         <div className="error-message">
           ⚠️ 実験データベース接続エラー: {error}
           <br />
-          <small style={{marginTop: '8px', display: 'block', color: '#666'}}>
+          <small style={{ marginTop: '8px', display: 'block', color: '#666' }}>
             実験管理システム (http://localhost:8000) が起動していない可能性があります。
             <br />
             学習プロセス監視機能は独立して動作しています。
@@ -241,8 +271,8 @@ function ExperimentDashboard() {
         ) : (
           <div className="experiments-list">
             {experiments.map((exp) => (
-              <div 
-                key={exp.experiment_id} 
+              <div
+                key={exp.experiment_id}
                 className="experiment-card"
                 onClick={() => fetchExperimentDetail(exp.experiment_id)}
               >
@@ -286,9 +316,9 @@ function ExperimentDashboard() {
             <button className="modal-close" onClick={() => setSelectedExperiment(null)}>
               ✕
             </button>
-            
+
             <h2>{selectedExperiment.experiment_name}</h2>
-            
+
             <div className="detail-section">
               <h3>基本情報</h3>
               <table className="detail-table">
