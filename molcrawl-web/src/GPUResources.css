@@ -1,0 +1,169 @@
+.gpu-resources {
+    padding: 20px;
+    max-width: 100%;
+}
+
+.gpu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #3498db;
+}
+
+.gpu-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.gpu-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.auto-refresh-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+}
+
+.auto-refresh-control input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.interval-select {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+}
+
+.interval-select:hover {
+    border-color: #3498db;
+}
+
+.refresh-button {
+    padding: 8px 16px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.refresh-button:hover:not(:disabled) {
+    background-color: #2980b9;
+}
+
+.refresh-button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+.gpu-loading,
+.gpu-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.gpu-loading {
+    color: #3498db;
+}
+
+.gpu-error {
+    color: #e74c3c;
+    background-color: #fadbd8;
+}
+
+.gpu-content {
+    background-color: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.gpu-timestamp {
+    padding: 10px 15px;
+    background-color: #ecf0f1;
+    color: #555;
+    font-size: 12px;
+    border-bottom: 1px solid #ddd;
+}
+
+.nvidia-smi-output {
+    padding: 0;
+    margin: 0;
+    overflow-x: auto;
+}
+
+.nvidia-smi-output pre {
+    margin: 0;
+    padding: 20px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #2c3e50;
+    background-color: #f8f9fa;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.gpu-updating {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: #3498db;
+    color: white;
+    border-radius: 4px;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: fadeInOut 1s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .gpu-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .gpu-controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .nvidia-smi-output pre {
+        font-size: 10px;
+    }
+}
