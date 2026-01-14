@@ -33,6 +33,9 @@ eval_interval = 1000
 eval_iters = 200
 log_interval = 10
 
+# init from checkpoint
+init_from = "resume"  # 'scratch' or 'resume' - デフォルトでチェックポイントから再開
+
 # checkpoint management - 定期保存で過学習前のモデルを確保
 always_save_checkpoint = False  # best modelのみ保存（過学習対策）
 save_checkpoint_steps = 5000  # 5000ステップごとに定期保存

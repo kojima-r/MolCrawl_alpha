@@ -32,6 +32,9 @@ eval_interval = 1000
 eval_iters = 200
 log_interval = 10
 
+# init from checkpoint
+init_from = "resume"  # 'scratch' or 'resume' - デフォルトでチェックポイントから再開
+
 # checkpoint management
 always_save_checkpoint = True  # 検証ロスに関係なく定期的に保存
 save_checkpoint_steps = 5000  # 5000ステップごとにチェックポイント保存（eval_intervalより優先）
