@@ -343,4 +343,5 @@ trainer = Trainer(
     eval_dataset=test_dataset,
 )
 
-trainer.train()
+# Resume from checkpoint by default if available
+trainer.train(resume_from_checkpoint=True)

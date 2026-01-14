@@ -40,6 +40,9 @@ log_interval = 100
 weight_decay = 1e-2
 dropout = 0.1  # Some dropout for generalization
 
+# init from checkpoint
+init_from = "resume"  # 'scratch' or 'resume' - デフォルトでチェックポイントから再開
+
 # EX-Large-Sized GPT2 Model
 n_layer = 48
 n_head = 25
