@@ -161,37 +161,28 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
             if len(var_tokens) > context_length:
                 var_tokens = var_tokens[:context_length]
 
-            # バッチ次元を追加してデバイスに転送
-            ref_tokens = ref_tokens.unsqueeze(0).to(self.device)
-            var_tokens = var_tokens.unsqueeze(0).to(self.device)
+            # リストをテンソルに変換してからバッチ次元を追加
+            ref_tokens = torch.tensor(ref_tokens, dtype=torch.long).unsqueeze(0).to(self.device)
+            var_tokens = torch.tensor(var_tokens, dtype=torch.long).unsqueeze(0).to(self.device)
 
             logger.debug(f"Model input shapes - ref: {ref_tokens.shape}, var: {var_tokens.shape}")
 
             # モデルの予測確率を取得（全系列の予測）
-            ref_logits, _ = self.model(ref_tokens)
-            var_logits, _ = self.model(var_tokens)
+            # targetsにダミー値を渡して、全系列のlogitsを取得（推論時の最適化を無効化）
+            ref_dummy_targets = torch.zeros_like(ref_tokens)
+            var_dummy_targets = torch.zeros_like(var_tokens)
+            ref_logits, _ = self.model(ref_tokens, targets=ref_dummy_targets)
+            var_logits, _ = self.model(var_tokens, targets=var_dummy_targets)
 
             logger.debug(f"Model output shapes - ref: {ref_logits.shape}, var: {var_logits.shape}")
 
-            # GPT-2は各位置で次のトークンを予測するため、系列長と一致するはず
-            if ref_logits.size(1) != ref_tokens.size(1):
-                logger.warning(f"Expected ref_logits length {ref_tokens.size(1)}, got {ref_logits.size(1)}")
-                # 最後の位置のlogitsのみ使用（生成モードの場合）
-                if ref_logits.size(1) == 1 and ref_tokens.size(1) > 1:
-                    # 各トークンを個別に処理
-                    ref_likelihood = self._calculate_likelihood_token_by_token(ref_tokens)
-                    var_likelihood = self._calculate_likelihood_token_by_token(var_tokens)
-                else:
-                    ref_likelihood = torch.tensor(0.0, device=self.device)
-                    var_likelihood = torch.tensor(0.0, device=self.device)
-            else:
-                # 対数尤度を計算
-                ref_log_prob = F.log_softmax(ref_logits, dim=-1)
-                var_log_prob = F.log_softmax(var_logits, dim=-1)
+            # 対数尤度を計算
+            ref_log_prob = F.log_softmax(ref_logits, dim=-1)
+            var_log_prob = F.log_softmax(var_logits, dim=-1)
 
-                # 各トークンの尤度を計算
-                ref_likelihood = self._calculate_sequence_likelihood(ref_tokens, ref_log_prob)
-                var_likelihood = self._calculate_sequence_likelihood(var_tokens, var_log_prob)
+            # 各トークンの尤度を計算
+            ref_likelihood = self._calculate_sequence_likelihood(ref_tokens, ref_log_prob)
+            var_likelihood = self._calculate_sequence_likelihood(var_tokens, var_log_prob)
 
             # 相対的な尤度の差を病原性スコアとして使用
             pathogenicity_score = ref_likelihood - var_likelihood

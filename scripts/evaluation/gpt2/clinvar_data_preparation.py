@@ -116,23 +116,39 @@ class ClinVarProcessor:
         df_snv = df[df["Type"].isin(snv_types)].copy()
         logger.info(f"After type filtering: {len(df_snv)} variants")
 
+        # カラム名を確認してデバッグ情報を出力
+        if len(df_snv) > 0:
+            logger.info(f"Available columns: {df_snv.columns.tolist()}")
+            
+            # ReferenceAlleleVCFとAlternateAlleleVCFフィールドを使用
+            if 'ReferenceAlleleVCF' in df_snv.columns and 'AlternateAlleleVCF' in df_snv.columns:
+                logger.info("Using VCF allele fields (ReferenceAlleleVCF, AlternateAlleleVCF)")
+                # VCFフィールドを標準フィールドにコピー
+                df_snv['ReferenceAllele'] = df_snv['ReferenceAlleleVCF']
+                df_snv['AlternateAllele'] = df_snv['AlternateAlleleVCF']
+            
+            logger.info(f"First few ReferenceAllele values: {df_snv['ReferenceAllele'].head(10).tolist()}")
+            logger.info(f"First few AlternateAllele values: {df_snv['AlternateAllele'].head(10).tolist()}")
+
         # "na"値を除外して有効なアリル情報のみをフィルタリング
         valid_alleles = (
             (df_snv["ReferenceAllele"].notna())
             & (df_snv["AlternateAllele"].notna())
-            & (df_snv["ReferenceAllele"] != "na")
-            & (df_snv["AlternateAllele"] != "na")
-            & (df_snv["ReferenceAllele"] != "")
-            & (df_snv["AlternateAllele"] != "")
-            & (df_snv["ReferenceAllele"] != "-")
-            & (df_snv["AlternateAllele"] != "-")
+            & (df_snv["ReferenceAllele"].astype(str).str.len() > 0)
+            & (df_snv["AlternateAllele"].astype(str).str.len() > 0)
+            & (df_snv["ReferenceAllele"].astype(str).str.lower() != "na")
+            & (df_snv["AlternateAllele"].astype(str).str.lower() != "na")
         )
 
         df_snv = df_snv[valid_alleles].copy()
-        logger.info(f"After removing 'na' and invalid alleles: {len(df_snv)} variants")
+        logger.info(f"After removing null/na alleles: {len(df_snv)} variants")
 
-        # 元のフィルタリング条件
+        # 単一塩基のみをフィルタリング
         if len(df_snv) > 0:
+            # 大文字に変換して処理
+            df_snv["ReferenceAllele"] = df_snv["ReferenceAllele"].astype(str).str.upper()
+            df_snv["AlternateAllele"] = df_snv["AlternateAllele"].astype(str).str.upper()
+            
             valid_ref_len = df_snv["ReferenceAllele"].str.len() == 1
             valid_alt_len = df_snv["AlternateAllele"].str.len() == 1
             valid_ref_base = df_snv["ReferenceAllele"].isin(["A", "T", "G", "C"])
@@ -147,8 +163,10 @@ class ClinVarProcessor:
             logger.info(f"After allele filtering: {len(df_snv)} variants")
 
             # フィルタリング後のサンプル値を確認
-            logger.info(f"Final ReferenceAllele values: {df_snv['ReferenceAllele'].value_counts()}")
-            logger.info(f"Final AlternateAllele values: {df_snv['AlternateAllele'].value_counts()}")
+            if len(df_snv) > 0:
+                logger.info(f"Final dataset: {len(df_snv)} variants")
+                logger.info(f"Final ReferenceAllele sample: {df_snv['ReferenceAllele'].value_counts().head()}")
+                logger.info(f"Final AlternateAllele sample: {df_snv['AlternateAllele'].value_counts().head()}")
 
         return df_snv
 
