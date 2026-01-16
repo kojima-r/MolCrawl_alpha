@@ -41,6 +41,12 @@ dataset_params = {}
 
 tensorboard = False  # log training metrics to tensorboard
 tensorboard_dir = "runs"
+# wandb settings
+use_wandb = False  # log training metrics to wandb
+wandb_project = "gpt2-training"  # wandb project name
+wandb_run_name = None  # wandb run name (None = auto-generate)
+wandb_entity = None  # wandb entity/team name (None = default)
+wandb_log_model = True  # log model checkpoints as wandb artifacts
 
 out_dir = "out-gpt2"
 eval_interval = 2000
@@ -137,6 +143,26 @@ print(f"tokens per iteration will be: {tokens_per_iter:,}")
 
 if master_process:
     os.makedirs(out_dir, exist_ok=True)
+
+# Initialize wandb if enabled
+wandb_run = None
+if use_wandb and master_process:
+    import wandb
+
+    # Generate run name if not provided
+    if wandb_run_name is None:
+        wandb_run_name = f"{dataset}-{timestamp}"
+
+    # Initialize wandb
+    wandb_run = wandb.init(
+        project=wandb_project,
+        entity=wandb_entity,
+        name=wandb_run_name,
+        config=config,
+        resume="allow",  # Allow resuming if run exists
+    )
+    print(f"Wandb initialized: {wandb_run.url}")
+
 torch.manual_seed(1337 + seed_offset)
 torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
 torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
@@ -239,6 +265,8 @@ model_args = dict(
     dropout=dropout,
 )  # start with model_args from command line
 
+checkpoint = None  # Initialize checkpoint variable
+
 if init_from == "scratch":
     # init a new model from scratch
     print("Initializing a new model from scratch")
@@ -301,7 +329,7 @@ scaler = torch.amp.GradScaler("cuda", enabled=(dtype == "float16"))
 
 # optimizer
 optimizer = model.configure_optimizers(weight_decay, learning_rate, (beta1, beta2), device_type)
-if init_from == "resume" and os.path.exists(os.path.join(out_dir, "ckpt.pt")):
+if init_from == "resume" and checkpoint is not None:
     optimizer.load_state_dict(checkpoint["optimizer"])
 checkpoint = None  # free up memory
 
@@ -433,6 +461,18 @@ while True:
             writer.add_scalar("Val Loss", losses["val"], iter_num)
             writer.flush()
 
+        # Log to wandb
+        if wandb_run is not None:
+            wandb_run.log(
+                {
+                    "eval/train_loss": losses["train"],
+                    "eval/val_loss": losses["val"],
+                    "eval/iter": iter_num,
+                    "eval/best_val_loss": best_val_loss,
+                },
+                step=iter_num,
+            )
+
         # Track best validation loss for early stopping
         is_best_model = False
         if losses["val"] < best_val_loss:
@@ -488,6 +528,24 @@ while True:
                     checkpoint_dir,
                     early_stopping_counter,
                 )
+                
+                # Log checkpoint to wandb as artifact BEFORE cleanup
+                if wandb_run is not None and wandb_log_model:
+                    artifact = wandb.Artifact(
+                        name=f"model-{wandb_run.id}",
+                        type="model",
+                        description=f"Model checkpoint at step {iter_num}",
+                        metadata={
+                            "iter": iter_num,
+                            "train_loss": float(losses["train"]),
+                            "val_loss": float(losses["val"]),
+                            "best_val_loss": float(best_val_loss),
+                        },
+                    )
+                    artifact.add_dir(checkpoint_dir)
+                    wandb_run.log_artifact(artifact)
+                
+                # Cleanup old checkpoints AFTER wandb upload
                 cleanup_old_checkpoints(out_dir, max_checkpoints)
 
             # Also save legacy ckpt.pt for backward compatibility (or best model)
@@ -539,12 +597,29 @@ while True:
             writer.add_scalar("Loss", lossf, iter_num)
             writer.add_scalar("Learning Rate", lr, iter_num)
             writer.flush()
+        
+        # Log training metrics to wandb
+        if wandb_run is not None:
+            wandb_run.log(
+                {
+                    "train/loss": lossf,
+                    "train/lr": lr,
+                    "train/mfu": running_mfu,
+                    "train/iter": iter_num,
+                    "train/dt_ms": dt * 1000,
+                },
+                step=iter_num,
+            )
     iter_num += 1
     local_iter_num += 1
 
     # termination conditions
     if iter_num > max_iters:
         break
+
+# Finish wandb run
+if wandb_run is not None:
+    wandb_run.finish()
 
 if ddp:
     destroy_process_group()
