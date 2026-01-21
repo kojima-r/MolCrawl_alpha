@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './InferenceModal.css';
 
 const InferenceModal = ({ isOpen, onClose, dataset, size, modelData }) => {
@@ -12,14 +12,7 @@ const InferenceModal = ({ isOpen, onClose, dataset, size, modelData }) => {
     const [error, setError] = useState(null);
     const [config, setConfig] = useState(null);
 
-    useEffect(() => {
-        if (isOpen && dataset) {
-            // Fetch dataset configuration
-            fetchConfig();
-        }
-    }, [isOpen, dataset]);
-
-    const fetchConfig = async () => {
+    const fetchConfig = useCallback(async () => {
         try {
             const response = await fetch(`/api/gpt2-inference/config/${dataset}`);
             const result = await response.json();
@@ -34,7 +27,14 @@ const InferenceModal = ({ isOpen, onClose, dataset, size, modelData }) => {
         } catch (err) {
             console.error('Failed to fetch config:', err);
         }
-    };
+    }, [dataset]);
+
+    useEffect(() => {
+        if (isOpen && dataset) {
+            // Fetch dataset configuration
+            fetchConfig();
+        }
+    }, [isOpen, dataset, fetchConfig]);
 
     const handleInference = async () => {
         setLoading(true);
@@ -61,7 +61,12 @@ const InferenceModal = ({ isOpen, onClose, dataset, size, modelData }) => {
             const result = await response.json();
 
             if (result.success) {
-                setResults(result.results);
+                // Add timestamp to each result for unique keys
+                const resultsWithTimestamp = result.results.map((text, idx) => ({
+                    text,
+                    timestamp: Date.now() + idx
+                }));
+                setResults(resultsWithTimestamp);
             } else {
                 setError(result.error || 'Inference failed');
             }
@@ -160,9 +165,9 @@ const InferenceModal = ({ isOpen, onClose, dataset, size, modelData }) => {
                                 <div className="example-prompts">
                                     <small>Examples:</small>
                                     <div className="example-buttons">
-                                        {config.example_prompts.map((example, idx) => (
+                                        {config.example_prompts.map((example) => (
                                             <button
-                                                key={idx}
+                                                key={example}
                                                 className="example-button"
                                                 onClick={() => handleExampleClick(example)}
                                                 disabled={loading}
@@ -267,20 +272,20 @@ const InferenceModal = ({ isOpen, onClose, dataset, size, modelData }) => {
                             <h4>📝 Generated Results ({results.length})</h4>
                             <div className="results-list">
                                 {results.map((result, idx) => (
-                                    <div key={idx} className="result-item">
+                                    <div key={result.timestamp || idx} className="result-item">
                                         <div className="result-header">
                                             <span className="result-number">#{idx + 1}</span>
                                             <button
                                                 className="copy-button"
                                                 onClick={() => {
-                                                    navigator.clipboard.writeText(result);
+                                                    navigator.clipboard.writeText(result.text);
                                                 }}
                                                 title="Copy to clipboard"
                                             >
                                                 📋 Copy
                                             </button>
                                         </div>
-                                        <pre className="result-text">{result}</pre>
+                                        <pre className="result-text">{result.text}</pre>
                                     </div>
                                 ))}
                             </div>
