@@ -239,16 +239,45 @@ else:
         tokenizer = SimpleCharTokenizer()
         print("Loaded RNA character tokenizer", file=sys.stderr)
     elif dataset_type == 'molecule_nl':
+        # Use MoleculeNatLangTokenizer (may fall back to MinimalTokenizer)
         from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
         tokenizer = MoleculeNatLangTokenizer()
-        print("Loaded molecule natural language tokenizer", file=sys.stderr)
+        print(f"Loaded MoleculeNatLangTokenizer (vocab_size: {tokenizer.vocab_size})", file=sys.stderr)
+        # Check if it's using MinimalTokenizer (fallback)
+        tokenizer_class_name = tokenizer.tokenizer.__class__.__name__
+        print(f"Internal tokenizer type: {tokenizer_class_name}", file=sys.stderr)
     
     if tokenizer is None:
         raise Exception(f"No tokenizer available for dataset: {dataset_type}")
 
 # Prepare input
 prompt = '''${prompt.replace(/'/g, "\\'")}'''
-input_ids = tokenizer.encode(prompt, return_tensors='pt').to(device)
+
+# Encode based on tokenizer type
+if dataset_type == 'genome_sequence':
+    # SentencePiece returns list of integers
+    input_ids_list = tokenizer.encode(prompt)
+    input_ids = torch.tensor([input_ids_list], dtype=torch.long).to(device)
+elif dataset_type == 'compounds':
+    # CompoundsTokenizer has tokenize_text method
+    input_ids_list = tokenizer.tokenize_text(prompt)
+    input_ids = torch.tensor([input_ids_list], dtype=torch.long).to(device)
+elif dataset_type == 'molecule_nl':
+    # MoleculeNatLangTokenizer uses internal _tokenize method
+    tokenized = tokenizer._tokenize(prompt, add_eos_token=True)
+    input_ids = torch.tensor([tokenized['input_ids']], dtype=torch.long).to(device)
+elif dataset_type == 'rna':
+    # SimpleCharTokenizer has encode method
+    input_ids = tokenizer.encode(prompt, return_tensors='pt').to(device)
+elif hasattr(tokenizer, 'encode'):
+    # Standard transformers tokenizer
+    result = tokenizer.encode(prompt, return_tensors='pt')
+    if isinstance(result, list):
+        input_ids = torch.tensor([result], dtype=torch.long).to(device)
+    else:
+        input_ids = result.to(device)
+else:
+    raise Exception(f"Tokenizer does not have encode method for dataset: {dataset_type}")
 
 # Generation parameters
 max_length = ${maxLength}
@@ -273,16 +302,54 @@ with torch.no_grad(), ctx:
                 pad_token_id=tokenizer.eos_token_id
             )
         else:
+            # Get eos_token_id and pad_token_id based on tokenizer type
+            if dataset_type == 'genome_sequence':
+                eos_id = tokenizer.eos_id()
+                pad_id = tokenizer.pad_id() if hasattr(tokenizer, 'pad_id') else eos_id
+            elif dataset_type == 'compounds':
+                eos_id = tokenizer.eos_token_id if hasattr(tokenizer, 'eos_token_id') else None
+                pad_id = tokenizer.pad_token_id if hasattr(tokenizer, 'pad_token_id') else eos_id
+            elif dataset_type == 'rna':
+                eos_id = tokenizer.eos_token_id
+                pad_id = tokenizer.pad_token_id
+            else:
+                eos_id = tokenizer.eos_token_id if hasattr(tokenizer, 'eos_token_id') else None
+                pad_id = tokenizer.pad_token_id if hasattr(tokenizer, 'pad_token_id') else eos_id
+            
             output = model.generate(
                 input_ids,
                 max_new_tokens=max_length - input_ids.shape[1],
                 temperature=temperature,
                 top_k=top_k,
-                eos_token_id=tokenizer.eos_token_id,
-                pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id
+                eos_token_id=eos_id,
+                pad_token_id=pad_id
             )
         
-        generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        # Decode based on tokenizer type
+        if dataset_type == 'genome_sequence':
+            # SentencePiece decode
+            generated_text = tokenizer.decode(output[0].tolist())
+        elif dataset_type == 'compounds':
+            # CompoundsTokenizer has decode method
+            generated_text = tokenizer.decode(output[0].tolist())
+        elif dataset_type == 'molecule_nl':
+            # MoleculeNatLangTokenizer uses internal tokenizer
+            # Check if MinimalTokenizer (which returns 'token_XXX' format)
+            decoded = tokenizer.tokenizer.decode(output[0].tolist())
+            # If it's MinimalTokenizer format, provide a warning
+            if 'token_' in decoded:
+                generated_text = "[Warning: Using fallback tokenizer - cannot decode to original text]\\n" + decoded[:500]
+            else:
+                generated_text = decoded
+        elif dataset_type == 'rna':
+            # SimpleCharTokenizer has decode method
+            generated_text = tokenizer.decode(output[0].tolist(), skip_special_tokens=True)
+        elif hasattr(tokenizer, 'decode'):
+            # Standard transformers tokenizer
+            generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        else:
+            generated_text = str(output[0].tolist())
+        
         results.append(generated_text)
 
 # Output results as JSON
