@@ -167,10 +167,6 @@ function ExperimentDashboard() {
 
   return (
     <div className="experiment-dashboard">
-      <header className="dashboard-header">
-        <h1>🧪 実験管理ダッシュボード</h1>
-        <p>MolCrawl Foundational Model - Experiment Tracking System</p>
-      </header>
 
       {/* 学習プロセス稼働状況 */}
       <TrainingProcessStatus />
