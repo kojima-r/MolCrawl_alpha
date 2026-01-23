@@ -13,18 +13,10 @@ import GPUResources from './GPUResources';
 // データセットタブの定義
 const DATASET_TABS = [
   {
-    id: 'experiments',
-    name: 'Experiments',
-    icon: '🧪',
-    description: '実験管理ダッシュボード',
-    path: null,
-    isSpecial: true
-  },
-  {
-    id: 'gpu_resources',
-    name: 'GPU Resources',
-    icon: '🖥️',
-    description: 'GPUリソース情報',
+    id: 'system_monitor',
+    name: 'System Monitor',
+    icon: '📊',
+    description: 'システムモニター（実験管理・GPUリソース）',
     path: null,
     isSpecial: true
   },
@@ -492,11 +484,12 @@ function App() {
 
           {/* タブコンテンツ */}
           <div className="tab-content">
-            {/* 実験管理ダッシュボード */}
-            {activeTab === 'experiments' ? (
-              <ExperimentDashboard />
-            ) : activeTab === 'gpu_resources' ? (
-              <GPUResources />
+            {/* システムモニター（実験管理・GPUリソース統合） */}
+            {activeTab === 'system_monitor' ? (
+              <div>
+                <ExperimentDashboard />
+                <GPUResources />
+              </div>
             ) : (
               <div className="tree-container">
                 {/* データセット準備進捗カード */}
