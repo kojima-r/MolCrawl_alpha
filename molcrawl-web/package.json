@@ -11,7 +11,7 @@
     "check-env": "node check-config.js",
     "preserver": "node check-config.js",
     "server": "node server.js",
-    "dev": "concurrently \"npm run server\" \"npm start\"",
+    "dev": "concurrently \"npm run server\" \"BROWSER=none npm start\"",
     "prod": "npm run build && npm run server",
     "lint": "npx eslint src --ext .js,.jsx",
     "lint:fix": "npx eslint src --ext .js,.jsx --fix",
@@ -34,6 +34,7 @@
   "devDependencies": {
     "concurrently": "^7.6.0",
     "eslint": "^8.57.0",
+    "http-proxy-middleware": "^3.0.5",
     "prettier": "^3.0.0"
   },
   "browserslist": {
@@ -48,7 +49,6 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:3001",
   "keywords": [
     "molcrawl",
     "dataset",

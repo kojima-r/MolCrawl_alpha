@@ -28,32 +28,37 @@ npm run check-env
 
 ### 3. サーバーを起動
 
-**推奨方法（両方同時起動）**:
+**推奨方法（簡単起動スクリプト）**:
 ```bash
-# 環境変数を設定して起動
-LEARNING_SOURCE_DIR="learning_source_202508" npm run dev
+# デフォルトポート（3000, 3001）で起動
+LEARNING_SOURCE_DIR="learning_source_20251210" ./start-dev.sh
+
+# カスタムポートで起動（フロントエンド=8090, API=8091）
+LEARNING_SOURCE_DIR="learning_source_20251210" ./start-dev.sh 8090 8091
 ```
 
-**または簡単起動スクリプト**:
+**または環境変数を直接指定**:
 ```bash
-# 環境変数をエクスポート
-export LEARNING_SOURCE_DIR="learning_source_202508"
-
-# 両方のサーバーを起動
-./start-both.sh
+# 環境変数を設定して起動
+LEARNING_SOURCE_DIR="learning_source_20251210" PORT=8090 API_PORT=8091 npm run dev
 ```
 
 **手動起動（別々のターミナルで）**:
 ```bash
-# ターミナル1: バックエンド
-LEARNING_SOURCE_DIR="learning_source_202508" npm run server
+# ターミナル1: バックエンドAPI
+LEARNING_SOURCE_DIR="learning_source_20251210" API_PORT=8091 npm run server
 
-# ターミナル2: フロントエンド
-npm start
+# ターミナル2: フロントエンド（REACT_APP_API_PORTでプロキシ先を指定）
+PORT=8090 REACT_APP_API_PORT=8091 npm start
 ```
 
-**重要**: `npm run dev`を使う場合、両方のサーバー（バックエンドとフロントエンド）が起動していることを確認してください。
-- バックエンド: ポート3001
+**重要**: 
+- バックエンドAPIサーバーには`API_PORT`を使用
+- フロントエンドには`PORT`と`REACT_APP_API_PORT`を使用
+- 両方のサーバーが異なるポートで起動していることを確認
+
+デフォルトポート：
+- バックエンドAPI: ポート3001
 - フロントエンド: ポート3000
 
 起動確認：
@@ -71,34 +76,33 @@ lsof -i :3000  # フロントエンド
 デフォルトではバックエンドポート3001、フロントエンドポート3000が使用されます。
 ポートが既に使用されている場合は、以下の方法でポート番号を変更できます。
 
-**方法1: 環境変数で指定**
+**方法1: 環境変数で指定（推奨）**
 
 ```bash
-# バックエンドのポートを変更
-PORT=8080 LEARNING_SOURCE_DIR="learning_source_202508" node server.js
+# 開発モード: フロントエンドを8090、バックエンドを8091で起動
+LEARNING_SOURCE_DIR="learning_source_202508" PORT=8090 API_PORT=8091 npm run dev
 
-# フロントエンドのポートを変更
-PORT=3002 npm start
+# またはターミナルを分けて実行
+# ターミナル1: バックエンドを8091で起動
+LEARNING_SOURCE_DIR="learning_source_202508" API_PORT=8091 npm run server
+
+# ターミナル2: フロントエンドを8090で起動（自動的に8091のAPIサーバーにプロキシ）
+PORT=8090 API_PORT=8091 npm start
 ```
 
 **方法2: コマンドライン引数で指定（バックエンドのみ）**
 
 ```bash
 # バックエンドのポート指定
-LEARNING_SOURCE_DIR="learning_source_202508" node server.js --port 8080
+LEARNING_SOURCE_DIR="learning_source_202508" node server.js --port 8091
 # または
-LEARNING_SOURCE_DIR="learning_source_202508" node server.js -p 8080
+LEARNING_SOURCE_DIR="learning_source_202508" node server.js -p 8091
 ```
 
-**両方のポートを変更する例**
-
-```bash
-# ターミナル1: バックエンドを8080で起動
-LEARNING_SOURCE_DIR="learning_source_202508" node server.js --port 8080
-
-# ターミナル2: フロントエンドを3002で起動
-PORT=3002 npm start
-```
+**重要**: 
+- `PORT`: React開発サーバー（フロントエンド）のポート番号
+- `API_PORT`: Express APIサーバー（バックエンド）のポート番号
+- 両方を同じポート番号に設定しないでください（競合します）
 
 **ヘルプを表示**
 
@@ -148,15 +152,26 @@ export LEARNING_SOURCE_DIR="learning_source_202508"
 - `learning_source_20251006_genome_all`
 - `learning_source_20251020-molecule-nl`
 
-### PORT（オプション）
+### API_PORT（オプション）
 
-バックエンドサーバーのポート番号を指定します（デフォルト: 3001）。
+**バックエンドAPIサーバーのポート番号を指定します（デフォルト: 3001）。**
 
 ```bash
-export PORT=8080
+export API_PORT=8091
 ```
 
-注: コマンドライン引数 `--port` で指定した値が優先されます。
+### PORT（オプション）
+
+**React開発サーバー（フロントエンド）のポート番号を指定します（デフォルト: 3000）。**
+
+```bash
+export PORT=8090
+```
+
+注: 
+- バックエンドサーバーは`API_PORT`を優先的に使用します
+- コマンドライン引数 `--port` で指定した値が最優先されます
+- フロントエンドとバックエンドで異なるポート番号を設定してください
 
 ### 永続的に設定する場合
 
@@ -164,7 +179,8 @@ export PORT=8080
 
 ```bash
 export LEARNING_SOURCE_DIR="learning_source_202508"
-export PORT=8080  # オプション
+export PORT=8090       # フロントエンド用
+export API_PORT=8091   # バックエンドAPI用
 ```
 
 設定を反映:
@@ -231,12 +247,18 @@ Error: listen EADDRINUSE: address already in use :::3001
 **解決方法**: 別のポート番号を指定してください
 
 ```bash
-# 方法1: 環境変数
-PORT=8080 LEARNING_SOURCE_DIR="learning_source_202508" node server.js
+# フロントエンドとバックエンドを異なるポートで起動
+LEARNING_SOURCE_DIR="learning_source_202508" PORT=8090 API_PORT=8091 npm run dev
 
-# 方法2: コマンドライン引数
-LEARNING_SOURCE_DIR="learning_source_202508" node server.js --port 8080
+# または個別に起動
+# バックエンドのみ変更
+API_PORT=8091 LEARNING_SOURCE_DIR="learning_source_202508" npm run server
+
+# フロントエンドのみ変更
+PORT=8090 npm start
 ```
+
+**重要**: `PORT`と`API_PORT`に同じ値を設定しないでください。React開発サーバーとAPIサーバーが競合します。
 
 #### 500エラーが発生する
 

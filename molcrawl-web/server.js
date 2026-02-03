@@ -24,13 +24,15 @@ function parseArgs() {
       console.log('  -h, --help           Show this help message');
       console.log('');
       console.log('Environment Variables:');
-      console.log('  PORT                     Port number (can be overridden by --port)');
+      console.log('  API_PORT                 API server port number (recommended, can be overridden by --port)');
+      console.log('  PORT                     Fallback port number if API_PORT is not set');
       console.log('  LEARNING_SOURCE_DIR      Required: Learning source directory name');
       console.log('');
       console.log('Examples:');
-      console.log('  PORT=3002 node server.js');
+      console.log('  API_PORT=3002 node server.js');
       console.log('  node server.js --port 3002');
-      console.log('  LEARNING_SOURCE_DIR="learning_source_202508" node server.js --port 8080');
+      console.log('  LEARNING_SOURCE_DIR="learning_source_202508" API_PORT=8091 npm run dev');
+      console.log('  LEARNING_SOURCE_DIR="learning_source_202508" PORT=8090 API_PORT=8091 npm run dev');
       console.log('');
       process.exit(0);
     }
@@ -97,8 +99,9 @@ const { getLogsList, getAllLogsOverview, getLogContent, getTailLog } = require('
 const { getGpuInfo, getGpuXmlInfo } = require('./api/gpu-resources');
 
 const app = express();
-// ポート番号の優先順位: コマンドライン引数 > PORT環境変数 > デフォルト(3001)
-const PORT = cmdArgs.port || process.env.PORT || 3001;
+// ポート番号の優先順位: コマンドライン引数 > API_PORT環境変数 > デフォルト(3001)
+// PORTはReact開発サーバー専用なので、APIサーバーでは使用しない
+const PORT = cmdArgs.port || process.env.API_PORT || 3001;
 
 // ポート番号のバリデーション
 if (isNaN(PORT) || PORT < 1 || PORT > 65535) {
