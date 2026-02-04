@@ -133,14 +133,27 @@ app.use(cors({
 // JSON解析
 app.use(express.json());
 
+// 静的ファイル配信オプション（開発環境用：キャッシュ無効化）
+const staticOptions = {
+  etag: false,
+  lastModified: false,
+  maxAge: 0,
+  setHeaders: (res, path) => {
+    // すべてのファイルでキャッシュを無効化
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+};
+
 // 静的ファイル配信（現在のディレクトリから）
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, staticOptions));
 
 // Production: buildディレクトリの静的ファイル配信
 const buildPath = path.join(__dirname, 'build');
 if (fs.existsSync(buildPath)) {
   console.log('📦 Serving static files from build directory');
-  app.use(express.static(buildPath));
+  app.use(express.static(buildPath, staticOptions));
 }
 
 // API Routes - ディレクトリに依存するエンドポイントにはバリデーションを適用

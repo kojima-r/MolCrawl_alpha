@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './BERTTrainingStatus.css';
+import BERTInferenceModal from './BERTInferenceModal';
 
 const BERTTrainingStatus = ({ dataset }) => {
     const [trainingData, setTrainingData] = useState(null);
@@ -7,6 +8,7 @@ const BERTTrainingStatus = ({ dataset }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [autoRefresh, setAutoRefresh] = useState(true);
+    const [inferenceModal, setInferenceModal] = useState({ isOpen: false, dataset: null, modelData: null });
 
     const fetchTrainingStatus = useCallback(async () => {
         try {
@@ -88,11 +90,21 @@ const BERTTrainingStatus = ({ dataset }) => {
         return <span className={`status-badge ${badge.class}`}>{badge.text}</span>;
     };
 
-    const renderModelCard = (modelData, size) => {
+    const handleModelClick = (modelData, datasetKey) => {
+        if (modelData && modelData.exists && modelData.checkpoint) {
+            setInferenceModal({
+                isOpen: true,
+                dataset: datasetKey,
+                modelData: modelData
+            });
+        }
+    };
+
+    const renderModelCard = (modelData, size, datasetKey) => {
         // Check if process is running for this dataset
         const runningProcess = processData?.processes?.find(
             p => p.processType === 'BERT' &&
-                p.datasetType === dataset &&
+                p.datasetType === datasetKey &&
                 p.usesCurrentLearningSource
         );
 
@@ -100,12 +112,12 @@ const BERTTrainingStatus = ({ dataset }) => {
             if (runningProcess) {
                 // Process is running but no checkpoint yet
                 return (
-                    <div key={size} className="bert-model-card bert-model-starting">
-                        <div className="bert-model-header">
+                    <div key={size} className="model-card model-starting">
+                        <div className="model-header">
                             <h4>BERT Model</h4>
                             <span className="status-badge status-starting">🚀 Starting</span>
                         </div>
-                        <p className="bert-model-message">Training process running (waiting for checkpoint...)</p>
+                        <p className="model-message">Training process running (waiting for checkpoint...)</p>
                         <div className="process-info">
                             <div className="stat-row">
                                 <span className="stat-label">PID:</span>
@@ -124,20 +136,20 @@ const BERTTrainingStatus = ({ dataset }) => {
                 );
             }
             return (
-                <div key={size} className="bert-model-card bert-model-not-started">
-                    <div className="bert-model-header">
+                <div key={size} className="model-card model-not-started">
+                    <div className="model-header">
                         <h4>BERT Model</h4>
                         {getStatusBadge('not_started')}
                     </div>
-                    <p className="bert-model-message">No checkpoint found</p>
+                    <p className="model-message">No checkpoint found</p>
                 </div>
             );
         }
 
         if (modelData.status === 'error') {
             return (
-                <div key={size} className="bert-model-card bert-model-error">
-                    <div className="bert-model-header">
+                <div key={size} className="model-card model-error">
+                    <div className="model-header">
                         <h4>BERT Model</h4>
                         {getStatusBadge('error')}
                     </div>
@@ -151,11 +163,17 @@ const BERTTrainingStatus = ({ dataset }) => {
         // Check if process is actually running
         const isActuallyTraining = runningProcess !== undefined;
         const displayStatus = isActuallyTraining ? 'training' : 'stopped';
-        const cardClass = isActuallyTraining ? 'bert-model-training' : 'bert-model-stopped';
+        const cardClass = isActuallyTraining ? 'model-training' : 'model-stopped';
+        const isClickable = modelData.exists && modelData.checkpoint;
         
         return (
-            <div key={size} className={`bert-model-card ${cardClass}`}>
-                <div className="bert-model-header">
+            <div 
+                key={size} 
+                className={`model-card ${cardClass} ${isClickable ? 'model-clickable' : ''}`}
+                onClick={() => isClickable && handleModelClick(modelData, datasetKey)}
+                title={isClickable ? 'Click to test masked language modeling' : ''}
+            >
+                <div className="model-header">
                     <h4>BERT Model</h4>
                     {getStatusBadge(displayStatus)}
                     {modelData.checkpoint_format && (
@@ -165,7 +183,7 @@ const BERTTrainingStatus = ({ dataset }) => {
                     )}
                 </div>
 
-                <div className="bert-model-stats">
+                <div className="model-stats">
                     <div className="stat-row">
                         <span className="stat-label">Global Step:</span>
                         <span className="stat-value">{formatNumber(checkpoint.global_step)}</span>
@@ -208,7 +226,7 @@ const BERTTrainingStatus = ({ dataset }) => {
                     )}
                 </div>
 
-                <div className="bert-model-architecture">
+                <div className="model-architecture">
                     <h5>Architecture</h5>
                     <div className="arch-grid">
                         <div className="arch-item">
@@ -239,7 +257,7 @@ const BERTTrainingStatus = ({ dataset }) => {
                 </div>
 
                 {checkpoint.best_model_checkpoint && (
-                    <div className="bert-best-checkpoint">
+                    <div className="best-checkpoint">
                         <small>🏆 Best: {checkpoint.best_model_checkpoint.split('/').pop()}</small>
                     </div>
                 )}
@@ -277,13 +295,13 @@ const BERTTrainingStatus = ({ dataset }) => {
             <div key={datasetKey} className="bert-dataset-section">
                 <h3 className="bert-dataset-title">{datasetData.name || datasetKey}</h3>
                 <div className="bert-single-model">
-                    {modelData ? renderModelCard(modelData, 'default') : (
-                        <div className="bert-model-card bert-model-not-started">
-                            <div className="bert-model-header">
+                    {modelData ? renderModelCard(modelData, 'default', datasetKey) : (
+                        <div className="model-card model-not-started">
+                            <div className="model-header">
                                 <h4>BERT Model</h4>
                                 <span className="status-badge status-not-started">Not Started</span>
                             </div>
-                            <p className="bert-model-message">No training data available</p>
+                            <p className="model-message">No training data available</p>
                         </div>
                     )}
                 </div>
@@ -316,7 +334,7 @@ const BERTTrainingStatus = ({ dataset }) => {
         <div className="bert-training-status">
             <div className="status-header">
                 <div className="header-left">
-                    <h2>🤖 BERT Training Status</h2>
+                    <h2>🤖 BERT Training Status (Development)</h2>
                     <p className="learning-source">
                         Learning Source: <code>{trainingData.learning_source_dir || 'N/A'}</code>
                     </p>
@@ -347,6 +365,14 @@ const BERTTrainingStatus = ({ dataset }) => {
                     )
                 )}
             </div>
+            
+            {/* BERT Inference Modal */}
+            <BERTInferenceModal
+                isOpen={inferenceModal.isOpen}
+                onClose={() => setInferenceModal({ isOpen: false, dataset: null, modelData: null })}
+                dataset={inferenceModal.dataset}
+                modelData={inferenceModal.modelData}
+            />
         </div>
     );
 };

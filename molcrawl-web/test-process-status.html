@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学習プロセス稼働状況テスト</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .summary {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .summary-item {
+            background: #e3f2fd;
+            padding: 16px;
+            border-radius: 6px;
+            flex: 1;
+        }
+        .summary-item h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .summary-item .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+        .current-source {
+            background: #e8f5e9;
+        }
+        .different-source {
+            background: #fff3e0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.bert {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .badge.gpt-2 {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        .badge.active {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+        .badge.inactive {
+            background: #ffccbc;
+            color: #d84315;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 学習プロセス稼働状況テスト</h1>
+    
+    <div class="container">
+        <button onclick="loadProcessStatus()">🔄 更新</button>
+        <div id="content">
+            <div class="loading">データを読み込んでいます...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadProcessStatus() {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = '<div class="loading">データを読み込んでいます...</div>';
+            
+            try {
+                const response = await fetch('/api/training-process-status');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Unknown error');
+                }
+                
+                let html = `
+                    <h2>現在のLEARNING_SOURCE_DIR: <code>${data.currentLearningSource}</code></h2>
+                    
+                    <div class="summary">
+                        <div class="summary-item">
+                            <h3>合計プロセス</h3>
+                            <div class="value">${data.summary.total}</div>
+                        </div>
+                        <div class="summary-item">
+                            <h3>現在のソース使用</h3>
+                            <div class="value">${data.summary.usingCurrentSource}</div>
+                        </div>
+                        <div class="summary-item">
+                            <h3>BERT</h3>
+                            <div class="value">${data.summary.bert}</div>
+                        </div>
+                        <div class="summary-item">
+                            <h3>GPT-2</h3>
+                            <div class="value">${data.summary.gpt2}</div>
+                        </div>
+                    </div>
+                `;
+                
+                if (data.processes.length === 0) {
+                    html += '<p>現在実行中の学習プロセスはありません</p>';
+                } else {
+                    html += `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>タイプ</th>
+                                    <th>データセット</th>
+                                    <th>PID</th>
+                                    <th>CPU %</th>
+                                    <th>メモリ %</th>
+                                    <th>開始時刻</th>
+                                    <th>実行時間</th>
+                                    <th>ソース一致</th>
+                                    <th>設定ファイル</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.processes.forEach(proc => {
+                        const rowClass = proc.usesCurrentLearningSource ? 'current-source' : 'different-source';
+                        const statusBadge = proc.usesCurrentLearningSource 
+                            ? '<span class="badge active">✓ 一致</span>'
+                            : '<span class="badge inactive">✗ 不一致</span>';
+                        
+                        html += `
+                            <tr class="${rowClass}">
+                                <td><span class="badge ${proc.processType.toLowerCase()}">${proc.processType}</span></td>
+                                <td><strong>${proc.datasetType}</strong></td>
+                                <td><code>${proc.pid}</code></td>
+                                <td>${proc.cpu.toFixed(1)}%</td>
+                                <td>${proc.mem.toFixed(1)}%</td>
+                                <td>${proc.started}</td>
+                                <td>${proc.time}</td>
+                                <td>${statusBadge}</td>
+                                <td><code>${proc.configFileName}</code></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+                contentDiv.innerHTML = html;
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        ❌ エラー: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 初回読み込み
+        loadProcessStatus();
+        
+        // 30秒ごとに自動更新
+        setInterval(loadProcessStatus, 30000);
+    </script>
+</body>
+</html>
