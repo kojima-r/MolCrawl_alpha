@@ -177,6 +177,94 @@
   border: 1px solid #90caf9;
 }
 
+.format-badge.hf-ready {
+  background: #c8e6c9;
+  color: #2e7d32;
+  border: 1px solid #81c784;
+}
+
+.format-badge.hf-incomplete {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+}
+
+/* HuggingFace互換性警告 */
+.hf-warning {
+  margin: 10px 0;
+  padding: 10px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.hf-warning-title {
+  font-weight: 700;
+  color: #856404;
+  margin-bottom: 5px;
+}
+
+.hf-warning-detail {
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.hf-warning-detail code {
+  background: #f8f9fa;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.hf-missing-files {
+  margin: 8px 0;
+  padding: 8px;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.hf-missing-files .missing-label {
+  display: block;
+  font-weight: 600;
+  color: #856404;
+  margin-bottom: 4px;
+}
+
+.hf-missing-files ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.hf-missing-files li {
+  color: #c62828;
+  margin: 2px 0;
+}
+
+.hf-missing-files li code {
+  background: #ffebee;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: #c62828;
+}
+
+.hf-warning-hint {
+  color: #666;
+  font-style: italic;
+  font-size: 10px;
+  margin-top: 5px;
+}
+
+.hf-warning.legacy-warning {
+  background: #f5f5f5;
+  border: 1px solid #9e9e9e;
+}
+
+.hf-warning.legacy-warning .hf-warning-title {
+  color: #616161;
+}
+
 .status-not-started {
   background: #ecf0f1;
   color: #7f8c8d;

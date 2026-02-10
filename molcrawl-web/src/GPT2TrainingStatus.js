@@ -212,11 +212,63 @@ const GPT2TrainingStatus = ({ dataset }) => {
                     <h4>{size.toUpperCase()}</h4>
                     {getStatusBadge(displayStatus)}
                     {modelData.checkpoint_format && (
-                        <span className="format-badge">
-                            {modelData.checkpoint_format === 'huggingface' ? '🤗 HF' : '📦 Legacy'}
+                        <span className={`format-badge ${modelData.hf_compatibility?.isFromPretrainedReady ? 'hf-ready' : 'hf-incomplete'}`}
+                              title={modelData.hf_compatibility?.isFromPretrainedReady 
+                                  ? 'Ready for transformers.from_pretrained()' 
+                                  : modelData.hf_compatibility?.missingFiles?.length > 0 
+                                      ? `Missing: ${modelData.hf_compatibility.missingFiles.join(', ')}`
+                                      : modelData.checkpoint_format === 'huggingface' ? 'HuggingFace format (incomplete)' : 'Legacy format'}>
+                            {modelData.checkpoint_format === 'huggingface' 
+                                ? (modelData.hf_compatibility?.isFromPretrainedReady ? '🤗 HF ✓' : '🤗 HF ⚠')
+                                : '📦 Legacy'}
                         </span>
                     )}
                 </div>
+
+                {/* HuggingFace互換性警告 */}
+                {modelData.checkpoint_format === 'huggingface' && 
+                 modelData.hf_compatibility && 
+                 !modelData.hf_compatibility.isFromPretrainedReady && (
+                    <div className="hf-warning">
+                        <div className="hf-warning-title">⚠ HuggingFace形式不完全</div>
+                        <div className="hf-warning-detail">
+                            <code>transformers.from_pretrained()</code> で読み込めません
+                        </div>
+                        {modelData.hf_compatibility.missingFiles?.length > 0 && (
+                            <div className="hf-missing-files">
+                                <span className="missing-label">不足ファイル:</span>
+                                <ul>
+                                    {modelData.hf_compatibility.missingFiles.map((file) => (
+                                        <li key={file}><code>{file}</code></li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        <div className="hf-warning-hint">
+                            新しい学習スクリプトで再学習が必要です
+                        </div>
+                    </div>
+                )}
+
+                {/* Legacy形式警告 */}
+                {modelData.checkpoint_format === 'legacy' && (
+                    <div className="hf-warning legacy-warning">
+                        <div className="hf-warning-title">📦 Legacy形式</div>
+                        <div className="hf-warning-detail">
+                            HuggingFace Transformersに非対応の旧形式です
+                        </div>
+                        <div className="hf-missing-files">
+                            <span className="missing-label">不足ファイル:</span>
+                            <ul>
+                                <li><code>config.json</code></li>
+                                <li><code>pytorch_model.bin</code> (HF互換形式)</li>
+                            </ul>
+                        </div>
+                        <div className="hf-warning-hint">
+                            新しい学習スクリプトで再学習が必要です
+                        </div>
+                    </div>
+                )}
 
                 <div className="model-stats">
                     <div className="stat-row">
