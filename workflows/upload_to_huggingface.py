@@ -13,7 +13,6 @@ Hugging Face Hub へモデルをアップロードするPythonスクリプト
 
 import argparse
 import json
-import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +20,6 @@ from typing import Optional
 
 try:
     from huggingface_hub import HfApi, create_repo, upload_folder, upload_file
-    from huggingface_hub.utils import RepositoryNotFoundError
 except ImportError:
     print("ERROR: huggingface_hub がインストールされていません")
     print("インストール: pip install huggingface_hub")
@@ -365,7 +363,7 @@ def upload_model(
         except Exception as e:
             print(f"[WARNING] モデルカードのアップロードに失敗: {e}")
 
-    print(f"\n[SUCCESS] アップロード完了！")
+    print("\n[SUCCESS] アップロード完了！")
     print(f"[INFO] URL: https://huggingface.co/{repo_id}")
 
     return True
