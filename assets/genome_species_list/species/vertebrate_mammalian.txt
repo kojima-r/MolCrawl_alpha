@@ -1,6 +1,6 @@
 Bubalus bubalis
 Camelus dromedarius
-Human
+Homo sapiens
 Macaca assamensis
 Macaca nigra
 Mus musculus
