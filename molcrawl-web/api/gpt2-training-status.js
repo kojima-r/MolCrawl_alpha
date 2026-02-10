@@ -144,6 +144,45 @@ function readHFCheckpointMetadata(checkpointPath) {
 }
 
 /**
+ * Check HuggingFace Transformers compatibility of a checkpoint
+ * Returns compatibility info for display
+ */
+function checkHFCompatibility(checkpointPath) {
+    const compatibility = {
+        hasConfigJson: false,
+        hasPytorchModel: false,
+        hasTrainingState: false,
+        hasTrainingArgs: false,
+        isFromPretrainedReady: false,
+        missingFiles: [],
+    };
+    
+    // Check for required files
+    const configPath = path.join(checkpointPath, 'config.json');
+    const pytorchModelPath = path.join(checkpointPath, 'pytorch_model.bin');
+    const trainingStatePath = path.join(checkpointPath, 'training_state.bin');
+    const trainingArgsPath = path.join(checkpointPath, 'training_args.json');
+    
+    compatibility.hasConfigJson = fs.existsSync(configPath);
+    compatibility.hasPytorchModel = fs.existsSync(pytorchModelPath);
+    compatibility.hasTrainingState = fs.existsSync(trainingStatePath);
+    compatibility.hasTrainingArgs = fs.existsSync(trainingArgsPath);
+    
+    // Determine if from_pretrained() would work
+    // Requires: config.json + pytorch_model.bin (with proper HF format)
+    compatibility.isFromPretrainedReady = compatibility.hasConfigJson && compatibility.hasPytorchModel;
+    
+    if (!compatibility.hasConfigJson) {
+        compatibility.missingFiles.push('config.json');
+    }
+    if (!compatibility.hasPytorchModel) {
+        compatibility.missingFiles.push('pytorch_model.bin');
+    }
+    
+    return compatibility;
+}
+
+/**
  * Read training state from trainer_state.json if available
  * Note: Current implementation uses training_args.json instead
  */
@@ -310,6 +349,7 @@ async function getModelStatus(dataset, size) {
         const latestCheckpoint = checkpoints[0];
         const checkpointData = readHFCheckpointMetadata(latestCheckpoint.path);
         const loggingData = readLoggingCSV(outputDir);
+        const hfCompatibility = checkHFCompatibility(latestCheckpoint.path);
         
         if (!checkpointData) {
             return {
@@ -347,6 +387,7 @@ async function getModelStatus(dataset, size) {
             exists: true,
             checkpoint_format: 'huggingface',
             checkpoint_count: checkpoints.length,
+            hf_compatibility: hfCompatibility,
             checkpoint: {
                 path: config.outputDirs[size],
                 checkpoint_name: latestCheckpoint.name,
