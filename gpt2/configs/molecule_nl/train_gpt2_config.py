@@ -14,7 +14,8 @@ tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = get_gpt2_output_path("molecule_nl", "small")
 out_dir = get_gpt2_output_path("molecule_nl", "small")
 
-dataset_dir = MOLECULE_NL_DATASET_DIR
+# GPT-2用データセットはBERTと分けて保存する
+dataset_dir = os.path.join(MOLECULE_NL_DATASET_DIR, "gpt2")
 
 tokenizer = Tokenizer()
 meta_vocab_size = tokenizer.vocab_size

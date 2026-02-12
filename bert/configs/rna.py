@@ -42,7 +42,8 @@ max_steps: int = 600000
 model_size: str = "small"  # Choose between small, medium or large
 model_path: str = get_bert_output_path("rna", model_size)
 max_length: int = 1024
-dataset_dir: str = CELLXGENE_DATASET_DIR
+# BERT用データセットはGPT-2と分けて保存する
+dataset_dir: str = os.path.join(CELLXGENE_DATASET_DIR, "training_ready_hf_dataset", "bert")
 learning_rate: float = 6e-6
 weight_decay: float = 1e-1
 log_interval: int = 100
