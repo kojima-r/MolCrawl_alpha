@@ -21,7 +21,8 @@ n_embd = 1024
 
 tokenizer_path = get_refseq_tokenizer_path()
 
-dataset_dir = REFSEQ_DATASET_DIR
+# GPT-2用データセットはBERTと分けて保存する
+dataset_dir = os.path.join(REFSEQ_DATASET_DIR, "gpt2")
 
 out_dir = "out-genome-sequence"  # output directory for model checkpoints
 

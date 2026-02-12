@@ -11,7 +11,10 @@ from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 from config.paths import LEARNING_SOURCE_DIR, get_gpt2_output_path
 
 # compounds データセットのパスを直接指定
-dataset_dir = os.path.join(LEARNING_SOURCE_DIR, "compounds", "organix13", "compounds", "training_ready_hf_dataset")
+# GPT-2用データセットはBERTと分けて保存する
+dataset_dir = os.path.join(
+    LEARNING_SOURCE_DIR, "compounds", "organix13", "compounds", "training_ready_hf_dataset", "gpt2"
+)
 
 tokenizer_path = "assets/molecules/vocab.txt"  # path to the tokenizer vocab file
 
