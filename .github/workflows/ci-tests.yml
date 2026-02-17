@@ -40,7 +40,6 @@ jobs:
       - name: Run unit tests
         run: |
           pytest tests/unit -v --cov=src --cov-report=xml --cov-report=term -n auto
-        continue-on-error: true
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -74,7 +73,6 @@ jobs:
       - name: Run integration tests
         run: |
           pytest tests/integration -v --tb=short
-        continue-on-error: true
 
   model-sanity-checks:
     name: Model Sanity Checks
@@ -102,7 +100,6 @@ jobs:
           from bert.test_checkpoint import load_model_for_testing
           print('✓ BERT model initialization check passed')
           "
-        continue-on-error: true
       
       - name: Test GPT2 initialization
         run: |
@@ -110,7 +107,6 @@ jobs:
           from gpt2.test_checkpoint import load_checkpoint_and_generate
           print('✓ GPT2 model initialization check passed')
           "
-        continue-on-error: true
 
   data-pipeline-validation:
     name: Data Pipeline Validation
@@ -136,7 +132,6 @@ jobs:
       - name: Validate data loading scripts
         run: |
           pytest tests/data -v --tb=short
-        continue-on-error: true
 
   type-checking:
     name: Type Checking (MyPy)
@@ -159,7 +154,6 @@ jobs:
       - name: Run MyPy
         run: |
           mypy src/ --ignore-missing-imports --no-strict-optional
-        continue-on-error: true
 
   security-scan:
     name: Security Scan
@@ -181,12 +175,10 @@ jobs:
       - name: Run Safety check
         run: |
           pip freeze | safety check --stdin
-        continue-on-error: true
       
       - name: Run Bandit security scan
         run: |
           bandit -r src/ -ll -f json -o bandit-report.json
-        continue-on-error: true
       
       - name: Upload Bandit report
         uses: actions/upload-artifact@v4

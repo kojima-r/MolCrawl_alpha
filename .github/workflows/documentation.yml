@@ -39,13 +39,11 @@ jobs:
         run: |
           cd docs
           make html
-        continue-on-error: true
       
       - name: Check documentation links
         run: |
           cd docs
           make linkcheck
-        continue-on-error: true
       
       - name: Upload documentation artifact
         uses: actions/upload-artifact@v4
@@ -72,7 +70,6 @@ jobs:
         with:
           config: '.markdownlint.json'
           args: 'README.md docs/*.md'
-        continue-on-error: true
       
       - name: Check for broken links in README
         uses: gaurav-nelson/github-action-markdown-link-check@v1
@@ -80,7 +77,6 @@ jobs:
           use-quiet-mode: 'yes'
           use-verbose-mode: 'yes'
           config-file: '.markdown-link-check.json'
-        continue-on-error: true
 
   generate-api-docs:
     name: Generate API Documentation
