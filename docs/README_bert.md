@@ -1,6 +1,6 @@
-Here is the explanation of the configuration parameters, formatted in **Markdown** to match the style of your previous `README` sections:
-
 # 🧪 Configuration Parameters — Molecule Natural Language Training
+
+This document explains the configuration parameters, formatted to match the style of the README sections.
 
 This configuration sets up training for a BERT-style model on a dataset of molecular natural language descriptions. Below is an explanation of each parameter used:
 

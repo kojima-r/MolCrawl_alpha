@@ -80,19 +80,19 @@ npm run prod
 
 ### ディレクトリ構造取得
 
-```
+```text
 GET /api/directory?path={directory_path}
 ```
 
 ### 子ディレクトリ展開
 
-```
+```text
 GET /api/directory/expand?path={directory_path}
 ```
 
 ### ヘルスチェック
 
-```
+```text
 GET /api/health
 ```
 

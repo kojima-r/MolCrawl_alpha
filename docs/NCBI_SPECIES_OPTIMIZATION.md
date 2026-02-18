@@ -74,7 +74,7 @@ GET /api/genome-species-category?category=plants&search=arabidopsis&limit=50
 
 ## ファイル構成
 
-```
+```text
 molcrawl-web/
 ├── api/
 │   └── genome-species.js           # 最適化されたAPI（キャッシュ・ページング）

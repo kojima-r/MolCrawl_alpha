@@ -16,7 +16,7 @@
 
 ## システム構成
 
-```
+```text
 実験管理システム
 ├── src/experiment_tracker/     # コアモジュール
 │   ├── models.py              # データモデル定義

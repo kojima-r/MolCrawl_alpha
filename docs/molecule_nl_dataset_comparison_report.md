@@ -34,7 +34,7 @@
 
 #### 旧データのカラム（18列）
 
-```
+```text
 attention_mask, input, input_core_tag_left, input_core_tag_right,
 input_ids, input_text, labels, output, output_core_tag_left,
 output_core_tag_right, output_ids, raw_input, raw_output,
@@ -43,7 +43,7 @@ real_input_text, sample_id, split, target, task
 
 #### 新データのカラム（10列）
 
-```
+```text
 __index_level_0__, attention_mask, input_ids, input_text,
 input_too_long, labels, output_ids, real_input_text,
 task_type, valid_sample
@@ -94,7 +94,7 @@ task_type, valid_sample
 
 **旧データ:**
 
-```
+```text
 <SMILES> C1CCOC1.CCN(CC)CC.CS(=O)(=O)Cl.CS(C)=O.N[C@@H]1CC2=CC=C(CN3C=C(CO)C(C(F
 ```
 
@@ -103,7 +103,7 @@ task_type, valid_sample
 
 **新データ:**
 
-```
+```text
 CCN(CC)CCCC(C)NC1=C2C=CC(Cl)=CC2=NC2=CC=C(OC)C=C12
 ```
 
@@ -293,7 +293,7 @@ class MoleculeNLDataset:
 
 ### 総合評価
 
-**新実装は品質・効率の面で優れているが、既存コードの修正が必要**
+新実装は品質・効率の面で優れているが、既存コードの修正が必要
 
 ---
 

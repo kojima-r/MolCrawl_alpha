@@ -5,41 +5,6 @@
 ## ファイル構成
 
 - `test_checkpoint.py` - メインのテストスクリプト
-- `generate### Molecule NL（分### Genome Sequence（ゲノム配列）モデルのテスト例
-
-```bash
-python bert/test_checkpoint.py \
-    --checkpoint_path "runs_train_bert_genome_sequence/checkpoint-1000/" \
-    --domain genome \
-    --vocab_path "learning_source_202508/refseq/spm_tokenizer.model" \
-    --test_texts "ATCGATCGATCGATCGATCGATCGATCGATCG" "GCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA"
-```
-
-### Protein Sequence（タンパク質配列）モデルのテスト例
-
-````bash
-python bert/test_checkpoint.py \
-    --checkpoint_path "runs_train_bert_protein_sequence/checkpoint-10000" \
-    --domain protein_sequence \
-    --test_texts "MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG" "LSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHF"
-```デルのテスト例
-
-```bash
-python bert/test_checkpoint.py \
-    --checkpoint_path "runs_train_bert_molecule_nl/checkpoint-10000" \
-    --domain molecule_nl \
-    --test_texts "この分子は水溶性です" "芳香族環を持つ化合物" "結合エネルギーが高い"
-````
-
-### Genome Sequence（ゲノム配列）モデルのテスト例
-
-````bash
-python bert/test_checkpoint.py \
-    --checkpoint_path "runs_train_bert_genome_sequence/checkpoint-1000/" \
-    --domain genome \
-    --vocab_path "learning_source_202508/refseq/spm_tokenizer.model" \
-    --test_texts "ATCGATCGATCGATCGATCGATCGATCGATCG" "GCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTA"
-```ples.py` - ドメイン特化テストサンプル生成
 - `test_bert_checkpoint.sh` - 自動テスト実行スクリプト
 - `sample.py` - 単純なBERT推論サンプル
 
@@ -50,7 +15,7 @@ python bert/test_checkpoint.py \
 ```bash
 # サンプル語彙ファイルを作成（実際のファイルがない場合）
 ./create_sample_vocab.sh
-````
+```
 
 ### 2. 基本的なテスト実行
 

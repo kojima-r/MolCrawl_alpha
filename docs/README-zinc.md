@@ -97,7 +97,7 @@ The ZINC20 dataset consists of approximately 300 files organized as:
 
 ### Command Line Options
 
-```
+```text
 --download          Start downloading ZINC files
 --convert PATH      Convert downloaded files to parquet format
 --status           Show current download status

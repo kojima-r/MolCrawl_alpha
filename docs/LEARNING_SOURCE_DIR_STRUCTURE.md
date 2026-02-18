@@ -2,7 +2,7 @@
 
 The `LEARNING_SOURCE_DIR` environment variable points to the main data directory containing training data, model outputs, and logs for different biological sequence types.
 
-```
+```text
 LEARNING_SOURCE_DIR/
 ├── compounds/                    # Chemical compound data
 │   ├── benchmark/               # Benchmark datasets

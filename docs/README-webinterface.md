@@ -39,7 +39,7 @@ chmod +x start-new.sh
 
 ## 📁 ディレクトリ構造
 
-```
+```text
 molcrawl-web/
 ├── api/                          # バックエンドAPI
 │   ├── server.js                 # メインサーバー

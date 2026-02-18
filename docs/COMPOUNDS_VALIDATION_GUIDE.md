@@ -92,7 +92,7 @@ pytest tests/unit/test_compounds.py::TestSmilesValidation::test_valid_smiles -v
 
 **期待される結果：**
 
-```
+```text
 ✓ 有効なSMILESはscaffoldを返す（空文字列ではない）
 ✓ 無効なSMILESは空文字列を返す
 ✓ 統計が正しく追跡される
@@ -181,7 +181,7 @@ pytest tests/integration/test_compounds_pipeline.py -v
 
 **例**:
 
-```
+```text
 Invalid SMILES: 2/10 (20.00%)
 ✓ Invalid SMILES rate is acceptable
 ```

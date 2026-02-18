@@ -28,7 +28,7 @@
 
 ## 📂 ディレクトリ構造
 
-```
+```text
 molcrawl-web/
 ├── server.js              # Express APIサーバー
 ├── api/

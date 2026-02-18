@@ -6,11 +6,11 @@
 
 ## 🎬 シナリオ1: SMILES validation を追加・変更した場合
 
-### 状況
+### 状況 (シナリオ1)
 
 `src/compounds/utils/preprocessing.py` のSMILES検証ロジックを改善したい。
 
-### 手順
+### 手順 (シナリオ1)
 
 #### 1. ローカルでテストを実行
 
@@ -58,7 +58,7 @@ git push origin feature/improve-smiles-validation
 
 #### 5. GitHub Actionsの結果を確認
 
-```
+```text
 GitHub → Actions タブ → "Compounds Validation" ワークフロー
 
 ✅ unit-tests: SUCCESS
@@ -69,11 +69,11 @@ GitHub → Actions タブ → "Compounds Validation" ワークフロー
 
 ## 🎬 シナリオ2: 新しいtokenizerロジックを追加
 
-### 状況
+### 状況 (シナリオ2)
 
 特殊な化学構造（立体化学など）に対応するため、tokenizerを拡張したい。
 
-### 手順
+### 手順 (シナリオ2)
 
 #### 1. テストファーストで開発
 
@@ -145,11 +145,11 @@ git push
 
 ## 🎬 シナリオ3: Phase 1 BERT モデル検証
 
-### 状況
+### 状況 (シナリオ3)
 
 Compounds用BERTモデルをトレーニングした。Phase 1検証を実行したい。
 
-### 手順
+### 手順 (シナリオ3)
 
 #### 1. モデルパスを設定
 
@@ -183,13 +183,13 @@ gh workflow run compounds-validation.yml
 
 または、GitHub Web UIから:
 
-```
+```text
 Actions → Compounds Validation → Run workflow
 ```
 
 #### 4. 結果を確認
 
-```
+```text
 Artifacts:
 - phase1-compounds-verification-report.md をダウンロード
 
@@ -207,11 +207,11 @@ Status: PASSED ✅
 
 ## 🎬 シナリオ4: GPT2でSMILES生成品質を検証
 
-### 状況
+### 状況 (シナリオ4)
 
 GPT2モデルで生成されるSMILESの品質を確認したい。
 
-### 手順
+### 手順 (シナリオ4)
 
 #### 1. 統合テストを実行
 
@@ -223,7 +223,7 @@ pytest tests/integration/test_compounds_pipeline.py::TestCompoundsGPT2Integratio
 
 #### 2. 結果を確認
 
-```
+```text
 ✓ SMILES Validity Check:
   Total generated: 15
   Valid SMILES: 12
@@ -256,11 +256,11 @@ pytest tests/integration/test_compounds_pipeline.py::TestCompoundsGPT2Integratio
 
 ## 🎬 シナリオ5: Pull Request での自動検証
 
-### 状況
+### 状況 (シナリオ5)
 
 チームメンバーがcompounds関連のコードを変更したPRを作成。
 
-### 手順
+### 手順 (シナリオ5)
 
 #### 1. PR作成
 
@@ -276,7 +276,7 @@ git push origin feature/add-new-smiles-feature
 
 #### 2. 自動チェックが開始
 
-```
+```text
 GitHub PR画面:
 ✅ Compounds Validation - unit-tests
 ✅ Compounds Validation - integration-tests
@@ -287,7 +287,7 @@ GitHub PR画面:
 
 #### 3. レビュアーが結果を確認
 
-```
+```text
 PR Check Details:
 
 ✅ All checks passed
@@ -304,13 +304,13 @@ Artifacts:
 
 #### 4. マージ
 
-```
+```text
 全チェックが✅ → "Merge pull request" ボタンが有効化
 ```
 
 ## 📊 実際の検証フロー図
 
-```
+```text
 開発者がコード変更
     ↓
 ローカルでpytest実行
@@ -388,7 +388,7 @@ Test Duration: ⚡ < 5 minutes (目標)
 
 ### 警告が出た場合
 
-```
+```text
 ⚠️ Invalid SMILES rate: 45%
 → まだ許容範囲内だが、原因を調査すべき
 

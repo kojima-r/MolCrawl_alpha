@@ -2,7 +2,7 @@
 
 ## システムアーキテクチャ
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                       Webブラウザ (UI)                           │
 │                    http://localhost:3000                         │
@@ -182,7 +182,7 @@ CREATE TABLE experiment_logs (
 
 ### 1. 実験の記録フロー
 
-```
+```text
 ┌──────────────┐
 │ User Script  │
 └──────┬───────┘
@@ -206,7 +206,7 @@ CREATE TABLE experiment_logs (
 
 ### 2. Web UIでの表示フロー
 
-```
+```text
 ┌──────────────────┐
 │ Browser          │
 │ (React)          │
@@ -292,7 +292,7 @@ CREATE TABLE experiment_logs (
 
 ### Python
 
-```
+```text
 fastapi>=0.104.0      # Web framework
 uvicorn>=0.24.0       # ASGI server
 python-multipart      # Form data handling
@@ -301,7 +301,7 @@ sqlite3               # Database (標準ライブラリ)
 
 ### JavaScript/Node.js
 
-```
+```text
 react>=19.1.1         # UI framework
 react-dom>=19.1.1     # React DOM bindings
 express>=4.21.2       # Backend server
@@ -310,7 +310,7 @@ cors>=2.8.5           # CORS middleware
 
 ## ディレクトリ構造
 
-```
+```text
 riken-dataset-fundational-model/
 ├── src/
 │   └── experiment_tracker/     # 実験管理システムコア
@@ -385,7 +385,7 @@ def on_experiment_complete(experiment_id):
 
 **統一出力ディレクトリ構造**:
 
-```
+```text
 ${LEARNING_SOURCE_DIR}/
 ├── genome_sequence/
 │   └── report/

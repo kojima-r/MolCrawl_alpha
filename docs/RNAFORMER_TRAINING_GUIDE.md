@@ -88,7 +88,7 @@ RNAformerは、Geneformerアーキテクチャに基づいています：
 
 ## Directory Structure
 
-```
+```text
 rnaformer/
 ├── main.py                      # メイン学習スクリプト
 ├── configurator.py              # 設定ファイルローダー
@@ -147,7 +147,7 @@ Masked Language Modeling (MLM) タスクで学習：
 
 ログファイルは以下の場所に保存されます：
 
-```
+```text
 learning_source_20250904-rna-refined/rna/logs/rnaformer-train-{size}-{timestamp}.log
 ```
 

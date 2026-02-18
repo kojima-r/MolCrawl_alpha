@@ -146,7 +146,7 @@ python scripts/proteingym_visualization.py \
 
 評価実行後、以下のファイルが出力ディレクトリに生成されます：
 
-```
+```text
 output_dir/
 ├── evaluation_results.json          # 詳細な評価結果（JSON形式）
 ├── evaluation_report.txt           # 人間が読みやすい評価レポート
@@ -173,7 +173,7 @@ ProteinGym評価のメインスクリプトです。
 
 **オプション:**
 
-```
+```text
 --model_path PATH           # 訓練済みモデルのパス（必須）
 --proteingym_data PATH      # ProteinGymデータファイル（必須）
 --output_dir PATH           # 出力ディレクトリ
@@ -196,7 +196,7 @@ ProteinGymデータのダウンロードと前処理を行います。
 
 **オプション:**
 
-```
+```text
 --data_dir PATH             # データ保存ディレクトリ
 --download STR              # ダウンロードタイプ（substitutions/indels/reference/all）
 --prepare_assay STR         # 準備するアッセイID
@@ -219,7 +219,7 @@ ProteinGymデータのダウンロードと前処理を行います。
 
 **オプション:**
 
-```
+```text
 --results_file PATH         # 評価結果JSONファイル（必須）
 --prediction_file PATH      # 予測データCSVファイル（オプション）
 --output_dir PATH           # 可視化出力ディレクトリ

@@ -1,4 +1,6 @@
-## 🚀 GPT学習スクリプトの全体概要
+# 🚀 GPT学習スクリプト
+
+## 全体概要
 
 ### **1. スクリプトの目的と特徴**
 
@@ -29,8 +31,6 @@ torchrun --nproc_per_node=8 --nnodes=2 --node_rank=0 \
 torchrun --nproc_per_node=8 --nnodes=2 --node_rank=1 \
     --master_addr=123.456.123.456 --master_port=1234 train.py
 ```
-
-## 📋 主要コンポーネント
 
 ### **3. 設定パラメータ（デフォルト値）**
 

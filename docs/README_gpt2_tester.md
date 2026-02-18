@@ -155,7 +155,7 @@ python gpt2/test_checkpoint.py \
 
 ### 一括テスト結果
 
-```
+```text
 gpt2_test_results_20250801_103045/
 ├── compounds_out-compounds/
 │   ├── gpt2_test_report.json
@@ -195,7 +195,7 @@ gpt2_test_results_20250801_103045/
 
 #### 1. チェックポイント読み込みエラー
 
-```
+```text
 Error: checkpoint loading failed
 ```
 
@@ -203,7 +203,7 @@ Error: checkpoint loading failed
 
 #### 2. トークナイザーエラー
 
-```
+```text
 Error: tokenizer initialization failed
 ```
 
@@ -215,7 +215,7 @@ Error: tokenizer initialization failed
 
 #### 3. メモリ不足エラー
 
-```
+```text
 CUDA out of memory
 ```
 
@@ -227,7 +227,7 @@ CUDA out of memory
 
 #### 4. データセット読み込みエラー
 
-```
+```text
 Dataset loading failed
 ```
 

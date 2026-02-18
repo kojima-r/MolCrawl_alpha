@@ -27,7 +27,7 @@ MolCrawlプロジェクトにおけるGPT-2モデルとBERTモデルの訓練・
 
 ### コアモジュール
 
-```
+```text
 src/experiment_tracker/
 ├── __init__.py              # パッケージ初期化
 ├── models.py                # データモデル（Experiment, Step, Log）
@@ -39,7 +39,7 @@ src/experiment_tracker/
 
 ### Webインターフェース
 
-```
+```text
 molcrawl-web/src/
 ├── ExperimentDashboard.js   # 実験ダッシュボードコンポーネント
 ├── ExperimentDashboard.css  # スタイルシート
@@ -48,7 +48,7 @@ molcrawl-web/src/
 
 ### スクリプト・ドキュメント
 
-```
+```text
 .
 ├── start_api_server.py              # APIサーバー起動
 ├── start_experiment_system.sh       # 一括起動スクリプト

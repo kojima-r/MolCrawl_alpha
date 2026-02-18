@@ -137,7 +137,7 @@ WANDB_PROJECT=rnaformer-transcriptome \
 
 ### Directory Structure
 
-```
+```text
 learning_source_20250904-rna-refined/
 └── rna/
     ├── gene_vocab.json              # ~60K gene IDs

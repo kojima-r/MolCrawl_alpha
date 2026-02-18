@@ -21,7 +21,7 @@ Compounds専用の包括的な検証ワークフローを作成：
 
 #### ユニットテスト（`tests/unit/test_compounds.py`）
 
-```
+```text
 TestSmilesTokenization     (3 tests)
 ├── test_smiles_tokenizer_import          ✅ PASSED
 ├── test_smiles_regex_pattern             ✅ PASSED
@@ -58,7 +58,7 @@ $ pytest tests/unit/test_compounds.py::TestSmilesValidation -v
 
 #### 統合テスト（`tests/integration/test_compounds_pipeline.py`）
 
-```
+```text
 TestCompoundsEndToEnd
 ├── test_smiles_to_scaffold_pipeline
 └── test_batch_smiles_processing
@@ -119,7 +119,7 @@ pytest tests/unit/test_compounds.py --cov=compounds --cov-report=html
 
 **実行例（成功）**:
 
-```
+```text
 $ pytest tests/unit/test_compounds.py::TestSmilesValidation -v
 
 tests/unit/test_compounds.py::TestSmilesValidation::test_valid_smiles PASSED
@@ -234,7 +234,7 @@ print(f'Invalid SMILES: {invalid_count}/{total_count} ({invalid_rate:.2f}%)')
 
 ### 開発フロー
 
-```
+```text
 1. コード変更
    ↓
 2. ローカルでpytest実行
