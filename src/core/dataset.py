@@ -1,12 +1,11 @@
 from pathlib import Path
 
-import torch
-from datasets import load_from_disk
-
 
 class PreparedDataset:
     def __init__(self, dataset_dir, split):
         super().__init__()
+        from datasets import load_from_disk
+
         dataset_path = Path(dataset_dir)
 
         # Try to load from arrow format (with .arrow suffix)
@@ -29,6 +28,8 @@ class PreparedDataset:
         return len(self.data)
 
     def __getitem__(self, idx):
+        import torch
+
         sample = self.data[idx]
 
         # For GPT-2: return combined input_ids and output_ids as single sequence

@@ -6,6 +6,8 @@ This module provides a common interface and shared functionality for all
 evaluation result visualization classes.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -13,9 +15,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
+try:
+    import matplotlib.pyplot as plt
+except ModuleNotFoundError:
+    plt = None
+
+try:
+    import pandas as pd
+except ModuleNotFoundError:
+    pd = None
+
+try:
+    import seaborn as sns
+except ModuleNotFoundError:
+    sns = None
 
 from utils.image_manager import get_image_output_dir
 
@@ -133,6 +146,9 @@ class BaseVisualizationGenerator(ABC):
 
     def _setup_plot_style(self):
         """プロットスタイルの統一設定"""
+        if plt is None or sns is None:
+            raise RuntimeError("matplotlib and seaborn are required for visualization")
+
         # 基本スタイル設定
         plt.style.use("default")
         sns.set_palette("husl")

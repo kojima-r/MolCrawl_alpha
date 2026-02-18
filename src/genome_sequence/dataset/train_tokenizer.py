@@ -7,12 +7,6 @@ from typing import List
 from pathlib import Path
 from argparse import ArgumentParser
 
-from tokenizers import Tokenizer
-from tokenizers.models import BPE
-from tokenizers.trainers import BpeTrainer
-from tokenizers.pre_tokenizers import Whitespace
-from tokenizers.processors import TemplateProcessing
-import numpy as np
 
 from genome_sequence.utils.config import GenomeSequenceConfig
 
@@ -25,6 +19,13 @@ def read_file(file_path: str) -> List[str]:
 
 
 def train_tokenizer(output_dir, vocab_size):
+    from tokenizers import Tokenizer
+    from tokenizers.models import BPE
+    from tokenizers.trainers import BpeTrainer
+    from tokenizers.pre_tokenizers import Whitespace
+    from tokenizers.processors import TemplateProcessing
+    import numpy as np
+
     path_dir = Path(output_dir) / "raw_files"
 
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import logging.config
@@ -8,9 +10,11 @@ from abc import ABC, abstractmethod
 from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pyarrow as pa
-import pyarrow.parquet as pq
+if TYPE_CHECKING:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
 from tqdm import tqdm
 
 
@@ -41,23 +45,27 @@ class UnTrainableTokenizer(ABC):
         pass
 
 
-def read_parquet(file_path: str) -> pq.ParquetFile:
+def read_parquet(file_path: str) -> "pq.ParquetFile":
     """
     Read parquet file and return as pandas DataFrame
     :param file_path: path to parquet file
     :return: pandas DataFrame
     """
 
+    import pyarrow.parquet as pq
+
     return pq.read_table(file_path)
 
 
-def save_parquet(table: pa.Table, file_path: str):
+def save_parquet(table: "pa.Table", file_path: str):
     """
     Save a parquet file
     :param table: pyarrow Table
     :param file_path: path to save parquet file
     :return: None
     """
+
+    import pyarrow.parquet as pq
 
     pq.write_table(table, file_path)
 
@@ -68,6 +76,8 @@ def split_table(table, chunk_size):
 
 
 def join_tables(chunks):
+    import pyarrow as pa
+
     return pa.concat_tables(chunks)
 
 
@@ -114,6 +124,8 @@ def multiprocess_tokenization(func, table, column_name, new_column_name=None, pr
 def apply_fn_to_parqueet(func):
     def inner(table, column_name, new_column_name=None):
         column_to_modify = table[column_name]
+
+        import pyarrow as pa
 
         modified_column = pa.array([func(x.as_py()) for x in column_to_modify])
 

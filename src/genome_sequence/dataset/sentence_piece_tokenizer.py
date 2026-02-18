@@ -1,14 +1,13 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-import numpy as np
-import sentencepiece as spm
-
-
 from genome_sequence.utils.config import GenomeSequenceConfig
 
 
 def train_tokenizer(output_dir, vocab_size, max_lines_per_file, input_sentence_size):
+    import numpy as np
+    import sentencepiece as spm
+
     """Train a tokenizer with sentence piece: https://github.com/google/sentencepiece"""
     path_dir = Path(output_dir) / "raw_files"
     files = list(path_dir.glob("*.raw"))
