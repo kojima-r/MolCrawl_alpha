@@ -61,6 +61,7 @@ max_length = 512  # 最大シーケンス長
 ### データフォーマット
 
 BERTは以下のフィールドを使用：
+
 - ✅ `input_ids`: トークン化された入力
 - ✅ `attention_mask`: パディング部分を示すマスク
 - ✅ `labels`: MLM（Masked Language Modeling）用のラベル
@@ -110,6 +111,7 @@ learning_rate = 3e-4
 ### データフォーマット
 
 GPT-2の`PreparedDataset`クラスは自動的に以下を処理：
+
 - ✅ `input_ids`と`output_ids`を結合して連続したシーケンスを作成
 - ✅ 可変長シーケンスを`block_size`に合わせてパディング/トランケーション
 
@@ -165,6 +167,7 @@ LEARNING_SOURCE_DIR="learning_20251121" bash workflows/01_molecule-nl_prepare.sh
 ### メモリ不足エラー
 
 **BERT:**
+
 ```python
 # batch_sizeを減らす
 batch_size = 8  # デフォルトは16
@@ -172,6 +175,7 @@ gradient_accumulation_steps = 8  # 実効バッチサイズを維持
 ```
 
 **GPT-2:**
+
 ```python
 # batch_sizeまたはblock_sizeを減らす
 batch_size = 8
@@ -207,14 +211,14 @@ gradient_accumulation_steps = 16  # より大きな実効バッチサイズ
 
 ### タスク分布
 
-| タスク | サンプル数 |
-|--------|------------|
-| forward_synthesis | 977,920 |
-| retrosynthesis | 947,983 |
-| name_conversion-* | ~1.2M (4種類) |
-| molecule_captioning | 60,305 |
-| molecule_generation | 60,260 |
-| property_prediction-* | ~51K (7種類) |
+| タスク                 | サンプル数    |
+| ---------------------- | ------------- |
+| forward_synthesis      | 977,920       |
+| retrosynthesis         | 947,983       |
+| name_conversion-\*     | ~1.2M (4種類) |
+| molecule_captioning    | 60,305        |
+| molecule_generation    | 60,260        |
+| property_prediction-\* | ~51K (7種類)  |
 
 ---
 

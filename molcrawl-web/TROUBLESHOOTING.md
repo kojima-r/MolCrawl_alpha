@@ -51,11 +51,13 @@ source ~/.bashrc  # または source ~/.zshrc
 NFSマウントされたディレクトリ（例: `/wren`）上でプロジェクトを実行する場合、webpack-dev-serverが正常に動作しないことがあります。
 
 **症状:**
+
 - `npm run dev` を実行すると "Compiled successfully!" と表示されるが、ポートがリッスンされない
 - `ss -tlnp | grep 9090` でポートが表示されない
 - `curl http://localhost:9090` で "接続を拒否されました" エラー
 
 **原因:**
+
 - NFSファイルシステムでは `inotify`（ファイル変更監視機能）が正しく機能しない
 - webpack-dev-serverは内部でinotifyを使用してファイル変更を監視している
 - inotifyが機能しないと、HTTPサーバーが正しく起動しない場合がある
@@ -148,6 +150,7 @@ df -T .
 環境変数が設定されていません。
 
 **解決方法**:
+
 ```bash
 # 使用可能なディレクトリを確認
 npm run check-env
@@ -161,6 +164,7 @@ LEARNING_SOURCE_DIR="learning_source_202508" npm run dev
 指定したディレクトリが存在しません。
 
 **解決方法**:
+
 ```bash
 # 正しいディレクトリ名を確認
 ls -d ../learning_source*
@@ -174,6 +178,7 @@ LEARNING_SOURCE_DIR="正しいディレクトリ名" npm run dev
 バックエンドサーバーが起動していません。
 
 **解決方法**:
+
 - `npm start`ではなく`npm run dev`を使用してください
 - または別ターミナルで`npm run server`を実行してください
 

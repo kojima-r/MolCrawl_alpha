@@ -66,17 +66,21 @@ run_bert_proteingym_evaluation.sh   # 実行スクリプト
 ## 必要な前提条件
 
 ### モデル
+
 - 訓練済みBERTモデル: `runs_train_bert_protein_sequence/checkpoint-*`
 - Safetensors形式またはPyTorch形式
 
 ### データ形式
+
 ProteinGymデータは以下のカラムを含む必要があります：
+
 - `mutated_sequence`: 変異後のタンパク質配列
 - `DMS_score`: 実験的フィットネススコア
 - `target_seq`: 野生型配列（オプション）
 - `mutant`: 変異情報（オプション）
 
 ### 環境
+
 - CUDA対応GPU（推奨）
 - Conda環境: `conda activate conda`
 - 必要パッケージ: torch, transformers, pandas, numpy, scipy, safetensors
@@ -127,12 +131,14 @@ conda activate conda
 ## パフォーマンス解釈
 
 ### 相関係数の目安
+
 - **> 0.7**: 優秀な性能
-- **0.5-0.7**: 良好な性能  
+- **0.5-0.7**: 良好な性能
 - **0.3-0.5**: 中程度の性能
 - **< 0.3**: 限定的な性能
 
 ### BERTモデルの特徴
+
 - **双方向注意**: 前後の文脈を同時に考慮
 - **MLMアプローチ**: 直接的な配列確率評価
 - **表現学習**: 深層学習による配列表現獲得
@@ -143,12 +149,14 @@ conda activate conda
 ### よくある問題
 
 1. **モデルが見つからない**
+
    ```bash
    # checkpoint-2000が存在することを確認
    ls runs_train_bert_protein_sequence/
    ```
 
 2. **CUDA out of memory**
+
    ```bash
    # バッチサイズを減らす
    ./run_bert_proteingym_evaluation.sh --dataset data.csv --batch_size 4
@@ -163,11 +171,13 @@ conda activate conda
 ## 開発者向け情報
 
 ### カスタマイズ
+
 - `bert/proteingym_evaluation.py`: 評価ロジックのカスタマイズ
 - `bert/configs/bert_proteingym_config.py`: デフォルト設定の変更
 - `run_bert_proteingym_evaluation.sh`: 実行オプションの追加
 
 ### 拡張機能
+
 - 可視化機能の追加
 - 複数モデルの比較評価
 - カスタム評価指標の実装
@@ -175,6 +185,7 @@ conda activate conda
 ## 参考
 
 このシステムは以下の実装を参考にしています：
+
 - ClinVar評価システム（BERT版genome_sequence）
 - GPT2版ProteinGym評価（scripts/proteingym_evaluation.py）
 

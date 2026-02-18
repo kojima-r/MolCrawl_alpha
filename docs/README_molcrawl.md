@@ -17,11 +17,13 @@
 ## 技術スタック
 
 ### フロントエンド
+
 - **React.js** 19.1.1 - モダンなユーザーインターフェース
 - **CSS3** - カスタムスタイリング
 - **Fetch API** - バックエンドとの通信
 
 ### バックエンド
+
 - **Node.js + Express** - RESTful API サーバー
 - **CORS** - クロスオリジンリクエスト対応
 - **File System API** - ディレクトリスキャン
@@ -77,16 +79,19 @@ npm run prod
 ## API エンドポイント
 
 ### ディレクトリ構造取得
+
 ```
 GET /api/directory?path={directory_path}
 ```
 
 ### 子ディレクトリ展開
+
 ```
 GET /api/directory/expand?path={directory_path}
 ```
 
 ### ヘルスチェック
+
 ```
 GET /api/health
 ```
@@ -96,6 +101,7 @@ GET /api/health
 `/data2/user/MolCrawl/riken-dataset-fundational-model/learning_source_202508/`
 
 ### 含まれるデータセット
+
 - **cellxgene/**: 単細胞RNAシーケンスデータ
 - **refseq/**: ゲノム配列データ（RefSeq）
 - **uniprot/**: タンパク質配列データ（UniProt）

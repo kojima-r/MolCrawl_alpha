@@ -17,7 +17,7 @@ python bert/test_checkpoint.py \
 
 ### Protein Sequence（タンパク質配列）モデルのテスト例
 
-```bash
+````bash
 python bert/test_checkpoint.py \
     --checkpoint_path "runs_train_bert_protein_sequence/checkpoint-10000" \
     --domain protein_sequence \
@@ -29,11 +29,11 @@ python bert/test_checkpoint.py \
     --checkpoint_path "runs_train_bert_molecule_nl/checkpoint-10000" \
     --domain molecule_nl \
     --test_texts "この分子は水溶性です" "芳香族環を持つ化合物" "結合エネルギーが高い"
-```
+````
 
 ### Genome Sequence（ゲノム配列）モデルのテスト例
 
-```bash
+````bash
 python bert/test_checkpoint.py \
     --checkpoint_path "runs_train_bert_genome_sequence/checkpoint-1000/" \
     --domain genome \
@@ -50,7 +50,7 @@ python bert/test_checkpoint.py \
 ```bash
 # サンプル語彙ファイルを作成（実際のファイルがない場合）
 ./create_sample_vocab.sh
-```
+````
 
 ### 2. 基本的なテスト実行
 
@@ -104,21 +104,26 @@ python bert/test_checkpoint.py \
 ## テスト内容
 
 ### 1. 基本機能テスト
+
 - モデルとトークナイザーの読み込み確認
 - 基本的な推論実行テスト
 
 ### 2. マスク言語モデリング（MLM）テスト
+
 - マスクされたトークンの予測
 - トップ5予測の表示
 
 ### 3. エンベディング生成テスト
+
 - テキストのベクトル表現生成
 - エンベディング間の類似度計算
 
 ### 4. バッチ処理テスト
+
 - 異なるバッチサイズでの処理性能測定
 
 ### 5. パフォーマンステスト
+
 - モデルサイズ、パラメータ数の確認
 - GPU/CPUメモリ使用量の確認
 - データセットでの損失・パープレキシティ計算
@@ -136,6 +141,7 @@ python bert/test_checkpoint.py \
 ### トークナイザーが読み込めない場合
 
 1. **語彙ファイルが見つからない場合**:
+
    ```bash
    ./create_sample_vocab.sh
    ```
