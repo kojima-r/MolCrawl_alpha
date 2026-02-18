@@ -139,10 +139,12 @@ class TranscriptomeTokenizer:
         tokenized_dataset.save_to_disk(output_path)
 
     def tokenize_files(self, data_directory, file_format: Literal["loom", "h5ad"] = "loom"):
-        tokenized_cells = []
+        tokenized_cells: list[list[int]] = []
         if self.custom_attr_name_dict is not None:
             cell_attr = [attr_key for attr_key in self.custom_attr_name_dict.keys()]
-            cell_metadata = {attr_key: [] for attr_key in self.custom_attr_name_dict.values()}
+            cell_metadata: dict[str, list[str]] = {
+                attr_key: [] for attr_key in self.custom_attr_name_dict.values()
+            }
 
         # loops through directories to tokenize .loom files
         file_found = 0

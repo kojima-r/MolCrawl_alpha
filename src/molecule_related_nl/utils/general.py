@@ -2,13 +2,14 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Union
 
 from datasets import Dataset, DatasetDict, Features, Value
 
 logger = logging.getLogger(__name__)
 
 
-def load_jsonl_dataset(dataset_path: str):
+def load_jsonl_dataset(dataset_path: Union[str, Path]):
     """
     Load SMolInstruct dataset from JSONL files in raw/ directory
 
@@ -18,8 +19,8 @@ def load_jsonl_dataset(dataset_path: str):
     Returns:
         DatasetDict with train/dev/test splits
     """
-    dataset_path = Path(dataset_path)
-    raw_dir = dataset_path / "raw"
+    dataset_path_obj = Path(dataset_path)
+    raw_dir = dataset_path_obj / "raw"
 
     if not raw_dir.exists():
         raise FileNotFoundError(f"Raw directory not found: {raw_dir}")
@@ -63,7 +64,7 @@ def load_jsonl_dataset(dataset_path: str):
     return DatasetDict(splits)
 
 
-def read_dataset(dataset_path: str):
+def read_dataset(dataset_path: Union[str, Path]):
     """
     Read dataset from disk, supporting JSONL, split directories, and DatasetDict format
 
@@ -73,17 +74,17 @@ def read_dataset(dataset_path: str):
     Returns:
         dict or DatasetDict: Dictionary of splits with Dataset objects
     """
-    dataset_path = Path(dataset_path)
+    dataset_path_obj = Path(dataset_path)
 
-    if not dataset_path.exists():
-        raise FileNotFoundError(f"Dataset path does not exist: {dataset_path}")
+    if not dataset_path_obj.exists():
+        raise FileNotFoundError(f"Dataset path does not exist: {dataset_path_obj}")
 
     ## TODO: duplication check.
     # Check if this is a parquet file
-    if dataset_path.is_file() and dataset_path.suffix == '.parquet':
-        logger.info(f"Loading parquet file: {dataset_path}")
+    if dataset_path_obj.is_file() and dataset_path_obj.suffix == ".parquet":
+        logger.info(f"Loading parquet file: {dataset_path_obj}")
         from datasets import Dataset
-        dataset = Dataset.from_parquet(str(dataset_path))
+        dataset = Dataset.from_parquet(str(dataset_path_obj))
         
         # If the dataset has a 'split' column, split it accordingly
         if 'split' in dataset.column_names:
@@ -102,15 +103,15 @@ def read_dataset(dataset_path: str):
             return DatasetDict({"train": dataset})
 
     # Check if this is a SMolInstruct-style directory with raw/ subdirectory
-    raw_dir = dataset_path / "raw"
+    raw_dir = dataset_path_obj / "raw"
     if raw_dir.exists() and raw_dir.is_dir():
-        logger.info(f"Detected JSONL format dataset at {dataset_path}")
-        return load_jsonl_dataset(dataset_path)
+        logger.info(f"Detected JSONL format dataset at {dataset_path_obj}")
+        return load_jsonl_dataset(dataset_path_obj)
 
     # Try to load as DatasetDict first (if it was saved with save_to_disk)
     try:
-        logger.info(f"Attempting to load dataset as DatasetDict from {dataset_path}")
-        dataset_dict = DatasetDict.load_from_disk(str(dataset_path))
+        logger.info(f"Attempting to load dataset as DatasetDict from {dataset_path_obj}")
+        dataset_dict = DatasetDict.load_from_disk(str(dataset_path_obj))
         logger.info(f"Successfully loaded DatasetDict with splits: {list(dataset_dict.keys())}")
         return dataset_dict
     except Exception as e:
@@ -119,8 +120,8 @@ def read_dataset(dataset_path: str):
     # Fall back to loading individual split directories
     splits = {}
     try:
-        for folder in os.listdir(dataset_path):
-            folder_path = dataset_path / folder
+        for folder in os.listdir(dataset_path_obj):
+            folder_path = dataset_path_obj / folder
             if folder_path.is_dir():
                 # Skip cache and metadata directories
                 if folder.startswith(".") or folder == "hf_cache":
@@ -133,15 +134,15 @@ def read_dataset(dataset_path: str):
                     logger.warning(f"Failed to load split {folder}: {split_error}")
 
         if not splits:
-            raise ValueError(f"No valid dataset splits found in {dataset_path}")
+            raise ValueError(f"No valid dataset splits found in {dataset_path_obj}")
 
         return splits
     except Exception as e:
-        logger.error(f"Failed to read dataset from {dataset_path}: {e}")
+        logger.error(f"Failed to read dataset from {dataset_path_obj}: {e}")
         raise
 
 
-def save_dataset(dataset, dataset_path: str):
+def save_dataset(dataset, dataset_path: Union[str, Path]):
     """
     Save dataset to disk or as parquet file
 
@@ -149,12 +150,12 @@ def save_dataset(dataset, dataset_path: str):
         dataset: Dictionary of Dataset objects or DatasetDict
         dataset_path: Path to save the dataset (directory or .parquet file)
     """
-    dataset_path = Path(dataset_path)
+    dataset_path_obj = Path(dataset_path)
 
     # Check if saving as parquet file
-    if dataset_path.suffix == ".parquet":
-        logger.info(f"Saving dataset as parquet to {dataset_path}")
-        os.makedirs(dataset_path.parent, exist_ok=True)
+    if dataset_path_obj.suffix == ".parquet":
+        logger.info(f"Saving dataset as parquet to {dataset_path_obj}")
+        os.makedirs(dataset_path_obj.parent, exist_ok=True)
 
         # Convert to DatasetDict if it's a dict
         if not isinstance(dataset, DatasetDict):
@@ -176,23 +177,23 @@ def save_dataset(dataset, dataset_path: str):
 
         combined_df = pd.concat(all_data, ignore_index=True)
         table = pa.Table.from_pandas(combined_df)
-        pq.write_table(table, dataset_path)
+        pq.write_table(table, dataset_path_obj)
         logger.info(f"Saved {len(combined_df)} samples to parquet file")
         return
 
     # Otherwise save as directory structure
-    os.makedirs(dataset_path, exist_ok=True)
-    logger.info(f"Saving dataset to {dataset_path}")
+    os.makedirs(dataset_path_obj, exist_ok=True)
+    logger.info(f"Saving dataset to {dataset_path_obj}")
 
     # If it's a DatasetDict, we can save it directly
     if isinstance(dataset, DatasetDict):
-        dataset.save_to_disk(str(dataset_path))
+        dataset.save_to_disk(str(dataset_path_obj))
         logger.info(f"Saved DatasetDict with {len(dataset)} splits")
         return
 
     # Otherwise, save each split separately
     for split in dataset.keys():
-        split_path = dataset_path / split
+        split_path = dataset_path_obj / split
         logger.info(f"Saving {split} split to {split_path}")
         dataset[split].save_to_disk(str(split_path))
         logger.info(f"Saved {split} with {len(dataset[split])} samples")

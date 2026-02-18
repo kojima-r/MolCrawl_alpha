@@ -13,7 +13,7 @@ from genome_sequence.utils.config import GenomeSequenceConfig
 
 
 def get_sequence_from_fasta(fasta_filepath: Path, max_lines_per_file: int, num_worker: int, sequence_list: ListProxy) -> None:
-    sequence_chunk = []
+    sequence_chunk: List[str] = []
     for sequence in read_fasta_sequences(fasta_filepath):
         sequence_chunk.append(sequence)
         if len(sequence_chunk) == max_lines_per_file:
@@ -36,7 +36,7 @@ def read_fasta_sequences(fasta_filepath: Path) -> Iterator[str]:
     Yields:
     - A sequence string (without the header).
     """
-    current_sequence = []
+    current_sequence: List[str] = []
 
     with open(fasta_filepath, "r") as fasta_file:
         for line in fasta_file:
@@ -76,7 +76,7 @@ def iterate_over_chunk_raw_files(fasta_filepaths: List[Path], num_worker: int, m
             unfinished_jobs -= 1
             progress.advance(task)
 
-        sequence_chunk = []
+        sequence_chunk: List[str] = []
         with concurrent.futures.ThreadPoolExecutor(num_worker) as executor, Manager() as manager:
             sequence_list = manager.list()
             jobs = [

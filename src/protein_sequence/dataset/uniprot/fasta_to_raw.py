@@ -18,7 +18,7 @@ def read_fasta_sequences(fasta_filepaths: List[Path]) -> Iterator[str]:
     Yields:
     - A sequence string (without the header).
     """
-    current_sequence = []
+    current_sequence: List[str] = []
     for fasta_filepath in fasta_filepaths:
         with open(fasta_filepath, "r") as fasta_file:
             for line in fasta_file:
@@ -35,7 +35,7 @@ def read_fasta_sequences(fasta_filepaths: List[Path]) -> Iterator[str]:
 
 def iterate_over_chunk_raw_files(fasta_filepaths: List[Path], max_lines_per_file: int) -> Iterator[list[str]]:
     sequence_iterator = read_fasta_sequences(fasta_filepaths)
-    sequence_chunk = []
+    sequence_chunk: List[str] = []
     for sequence in sequence_iterator:
         sequence_chunk.append(sequence)
         if len(sequence_chunk) == max_lines_per_file:
