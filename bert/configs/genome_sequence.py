@@ -63,7 +63,7 @@ def preprocess_function(examples):
             pad_token_id = tokenizer.pad_token_id if hasattr(tokenizer, 'pad_token_id') and tokenizer.pad_token_id is not None else 0
             attention_mask = [1 if token_id != pad_token_id else 0 for token_id in input_ids]
             attention_masks.append(attention_mask)
-        
+
         examples["attention_mask"] = attention_masks
-    
+
     return examples

@@ -296,7 +296,7 @@ class MoleculeNatLangTokenizer(TrainableTokenizer):
                         else:
                             # If not already has special tokens, return all 0s
                             return [0] * len(token_ids)
-                    
+
                     def convert_tokens_to_ids(self, tokens):
                         """
                         Convert tokens to token IDs.

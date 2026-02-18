@@ -84,26 +84,26 @@ def join_tables(chunks):
 def multiprocess_tokenization(func, table, column_name, new_column_name=None, processes=8):
     """
     Apply tokenization function to table using multiprocessing
-    
+
     Args:
         func: Tokenization function to apply
         table: PyArrow table to process
         column_name: Name of column to tokenize
         new_column_name: Name for new tokenized column
         processes: Number of processes to use (default: 8)
-    
+
     Returns:
         PyArrow table with tokenized column
     """
     split_tables = split_table(table, 10000)
-    
+
     # Adjust processes if we have fewer chunks
     actual_processes = min(processes, len(split_tables))
-    
+
     # Calculate chunksize for better load balancing
     # Using smaller chunksize for better responsiveness
     chunksize = max(1, len(split_tables) // (actual_processes * 4))
-    
+
     logger = logging.getLogger(__name__)
     logger.info(f"Processing {len(split_tables)} chunks with {actual_processes} processes (chunksize={chunksize})")
 

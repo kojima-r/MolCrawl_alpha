@@ -27,7 +27,7 @@ def generate_zinc_file_list():
     Reads from filelist.txt to maintain directory structure and ensure compatibility.
     """
     files = []
-    
+
     # Read file list from filelist.txt
     filelist_path = "src/compounds/dataset/organix13/zinc/zinc_complete/filelist.txt"
     if os.path.exists(filelist_path):
@@ -56,7 +56,7 @@ def generate_zinc_file_list():
                         })
     else:
         logger.warning(f"File list {filelist_path} not found. Cannot generate download list.")
-    
+
     logger.info(f"Generated {len(files)} ZINC files for download from filelist.txt")
     return files
 
@@ -64,7 +64,7 @@ def generate_zinc_file_list():
 def download_single_file(file_info, base_directory, retries=5, timeout=60):
     """
     Download a single ZINC file with retry logic.
-    
+
     Args:
         file_info: Dict with 'filename', 'directory', 'url'
         base_directory: Base directory to save files
@@ -74,46 +74,46 @@ def download_single_file(file_info, base_directory, retries=5, timeout=60):
     url = file_info["url"]
     dir_name = file_info["directory"]
     filename = file_info["filename"]
-    
+
     # Create directory structure
     target_dir = osp.join(base_directory, dir_name)
     os.makedirs(target_dir, exist_ok=True)
-    
+
     target_path = osp.join(target_dir, filename)
-    
+
     # Skip if file already exists and is non-empty
     if os.path.exists(target_path) and os.path.getsize(target_path) > 0:
         logger.debug(f"File {target_path} already exists, skipping")
         return True
-    
+
     for attempt in range(retries):
         try:
             logger.info(f"Downloading {url} (attempt {attempt + 1}/{retries})")
-            
+
             # Use session for better connection handling
             session = requests.Session()
             session.headers.update({
                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             })
-            
+
             response = session.get(url, timeout=timeout, stream=True)
             response.raise_for_status()
-            
+
             # Write file in chunks
             with open(target_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:  # Filter out keep-alive chunks
                         f.write(chunk)
-            
+
             session.close()
-            
+
             # Verify file was downloaded successfully
             if os.path.exists(target_path) and os.path.getsize(target_path) > 0:
                 logger.info(f"Successfully downloaded {filename}")
                 return True
             else:
                 logger.warning(f"Downloaded file {filename} is empty")
-                
+
         except requests.exceptions.RequestException as e:
             logger.warning(f"Attempt {attempt + 1} failed for {filename}: {e}")
             if attempt < retries - 1:
@@ -130,26 +130,26 @@ def download_single_file(file_info, base_directory, retries=5, timeout=60):
         except Exception as e:
             logger.error(f"Unexpected error downloading {filename}: {e}")
             return False
-    
+
     return False
 
 
 def download_zinc_files(delay_between_downloads: float = 1.0):
     """
     Download ZINC20 files using Python requests with sequential processing.
-    
+
     Args:
         delay_between_downloads: Delay in seconds between downloads to avoid 503 errors
     """
     directory = osp.join(COMPOUNDS_DIR, "data", "zinc20")
     os.makedirs(directory, exist_ok=True)
-    
+
     # Generate file list
     files_to_download = generate_zinc_file_list()
-    
+
     logger.info(f"Starting sequential download of {len(files_to_download)} ZINC files to {directory}")
     logger.info(f"Using delay of {delay_between_downloads} seconds between downloads")
-    
+
     import csv
     import hashlib
 
@@ -221,7 +221,7 @@ def download_zinc_files(delay_between_downloads: float = 1.0):
 def convert_zinc_to_parquet(save_path: str):
     """
     Convert downloaded ZINC files to parquet format.
-    
+
     Args:
         save_path: Directory to save the final parquet file
     """
@@ -231,13 +231,13 @@ def convert_zinc_to_parquet(save_path: str):
     except ImportError:
         logger.error("dask is required for parquet conversion. Install with: pip install dask[dataframe]")
         return None
-    
+
     base_directory = osp.join(COMPOUNDS_DIR, "data", "zinc20")
-    
+
     if not os.path.exists(base_directory):
         logger.error(f"ZINC directory {base_directory} does not exist. Run download_zinc_files first.")
         return
-    
+
     # Find all directories containing .txt files
     all_dirs = [
         osp.join(base_directory, f)
@@ -246,21 +246,21 @@ def convert_zinc_to_parquet(save_path: str):
     ]
 
     logger.info(f"Found {len(all_dirs)} directories in {base_directory}")
-    
+
     all_dfs = []
     processed_files = 0
     failed_files = 0
-    
+
     for dir_path in all_dirs:
         logger.info(f"Processing directory: {dir_path}")
-        
+
         # Get all .txt files in this directory
         txt_files = [f for f in os.listdir(dir_path) if f.endswith('.txt')]
-        
+
         if not txt_files:
             logger.warning(f"No .txt files found in {dir_path}")
             continue
-            
+
         try:
             # Read all .txt files in this directory
             df = dd.read_csv(
@@ -271,7 +271,7 @@ def convert_zinc_to_parquet(save_path: str):
             all_dfs.append(df)
             processed_files += len(txt_files)
             logger.info(f"Successfully processed {len(txt_files)} files from {dir_path}")
-            
+
         except Exception as e:
             logger.error(f"Error reading files from {dir_path}: {e}")
             failed_files += len(txt_files)
@@ -286,41 +286,41 @@ def convert_zinc_to_parquet(save_path: str):
 
     # Create output directory
     os.makedirs(save_path, exist_ok=True)
-    
+
     logger.info("Writing parquet file...")
     concatenated_df = concatenated_df.repartition(npartitions=1)
     concatenated_df = concatenated_df.reset_index(drop=True)
-    
+
     # Create temporary directory for parquet output
     temp_parquet_dir = osp.join(base_directory, "zinc_processed")
     concatenated_df.to_parquet(temp_parquet_dir)
-    
+
     # Copy the single parquet file to final destination
     final_parquet_path = osp.join(save_path, "zinc_processed.parquet")
     shutil.copy(
         osp.join(temp_parquet_dir, "part.0.parquet"),
         final_parquet_path
     )
-    
+
     # Clean up temporary directory
     if os.path.exists(temp_parquet_dir):
         shutil.rmtree(temp_parquet_dir)
-    
+
     logger.info(f"Successfully created parquet file: {final_parquet_path}")
     logger.info(f"Processed {processed_files} files, {failed_files} files failed")
-    
+
     return final_parquet_path
 
 
 def check_download_status():
     """
     Check the status of ZINC downloads and provide a summary.
-    
+
     Returns:
         Dict with download statistics
     """
     base_directory = osp.join(COMPOUNDS_DIR, "data", "zinc20")
-    
+
     if not os.path.exists(base_directory):
         return {
             "status": "not_started",
@@ -329,15 +329,15 @@ def check_download_status():
             "missing": 300,
             "empty_files": 0
         }
-    
+
     files_to_check = generate_zinc_file_list()
     downloaded = 0
     missing = 0
     empty_files = 0
-    
+
     for file_info in files_to_check:
         file_path = osp.join(base_directory, file_info["directory"], file_info["filename"])
-        
+
         if os.path.exists(file_path):
             if os.path.getsize(file_path) > 0:
                 downloaded += 1
@@ -345,12 +345,12 @@ def check_download_status():
                 empty_files += 1
         else:
             missing += 1
-    
+
     total_expected = len(files_to_check)
     completion_rate = (downloaded / total_expected) * 100 if total_expected > 0 else 0
-    
+
     status = "complete" if downloaded == total_expected else "partial" if downloaded > 0 else "not_started"
-    
+
     return {
         "status": status,
         "total_expected": total_expected,
@@ -367,15 +367,15 @@ def main():
     Main function to demonstrate usage.
     """
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Download and process ZINC20 data")
     parser.add_argument("--download", action="store_true", help="Download ZINC files")
     parser.add_argument("--convert", type=str, help="Convert to parquet and save to specified directory")
     parser.add_argument("--status", action="store_true", help="Check download status")
     parser.add_argument("--delay", type=float, default=1.0, help="Delay in seconds between downloads (default: 1.0)")
-    
+
     args = parser.parse_args()
-    
+
     if args.status:
         status = check_download_status()
         print(f"Download Status: {status['status']}")
@@ -383,12 +383,12 @@ def main():
         print(f"Missing: {status['missing']}")
         print(f"Empty files: {status['empty_files']}")
         print(f"Base directory: {status['base_directory']}")
-    
+
     if args.download:
         print(f"Starting sequential download with {args.delay} second delay between downloads...")
         successful, failed = download_zinc_files(delay_between_downloads=args.delay)
         print(f"Download completed: {successful} successful, {failed} failed")
-    
+
     if args.convert:
         print("Converting ZINC data to parquet format...")
         result = convert_zinc_to_parquet(args.convert)

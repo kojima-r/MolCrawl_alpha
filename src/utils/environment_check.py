@@ -35,7 +35,7 @@ def check_learning_source_dir():
             dirs = [d for d in os.listdir(project_root) if d.startswith("learning_")]
             for d in sorted(dirs):
                 print(f"  - {d}", file=sys.stderr)
-        except:
+        except Exception:
             print("  (unable to list directories)", file=sys.stderr)
         sys.exit(1)
 

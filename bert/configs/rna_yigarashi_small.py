@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from importlib import import_module
 
 import torch
 
@@ -10,7 +11,7 @@ src_path = os.path.join(current_dir, "..", "..", "src")
 sys.path.append(src_path)
 
 # 共通環境チェックモジュールを追加
-from utils.environment_check import check_learning_source_dir
+check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
 try:
     from config.paths import get_gpt2_output_path

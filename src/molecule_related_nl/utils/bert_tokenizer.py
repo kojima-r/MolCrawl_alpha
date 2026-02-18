@@ -66,9 +66,6 @@ class BertMoleculeNlTokenizer:
         """
         Encode text to token IDs
         """
-        if return_tensors == "pt":
-            import torch
-
         return self.tokenizer.tokenizer.encode(
             text,
             add_special_tokens=add_special_tokens,

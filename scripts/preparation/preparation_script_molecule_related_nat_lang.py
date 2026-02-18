@@ -27,8 +27,6 @@ def run_statistics(series, column_name):
     plt.title("Distribution of tokenized {} lengths".format(column_name))
 
     # 統一画像ディレクトリに保存
-    import sys, os
-
     sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
     from utils.image_manager import get_image_path
 

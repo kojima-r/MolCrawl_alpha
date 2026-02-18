@@ -137,10 +137,10 @@ logger.info(f"   - Attention heads: {model_config.num_attention_heads}")
 if use_wandb:
     # Determine dataset name from config
     dataset_name = config.get('dataset_name', 'rna')
-    
+
     # Add metadata tags for experiment management
     tags = ['rnaformer', 'training', model_size, dataset_name]
-    
+
     # Add experiment metadata to config
     experiment_config = {
         **config,
@@ -149,7 +149,7 @@ if use_wandb:
         'dataset_type': dataset_name,
         'model_size': model_size,
     }
-    
+
     wandb.init(
         project=wandb_project,
         entity=wandb_entity,
@@ -163,29 +163,29 @@ if use_wandb:
 class RNADatasetLoader:
     """
     RNA Transcriptome Dataset Loader
-    
+
     遺伝子発現データを読み込み、RNAformer学習用に前処理します。
     """
-    
+
     def __init__(self, dataset_dir, tokenizer, max_length=1024):
         self.dataset_dir = dataset_dir
         self.tokenizer = tokenizer
         self.max_length = max_length
-        
+
     def load_datasets(self):
         """Load train and test datasets"""
         logger.info("📂 Loading datasets...")
-        
+
         train_path = os.path.join(self.dataset_dir, "train")
         test_path = os.path.join(self.dataset_dir, "test")
-        
+
         # Load datasets
         if os.path.exists(train_path):
             logger.info("📂 Using standard HuggingFace dataset loading")
             train_dataset = load_from_disk(train_path)
         else:
             raise FileNotFoundError(f"Training dataset not found at {train_path}")
-        
+
         if os.path.exists(test_path):
             test_dataset = load_from_disk(test_path)
         else:
@@ -194,7 +194,7 @@ class RNADatasetLoader:
             test_size = min(5000, len(train_dataset) // 10)
             test_dataset = train_dataset.select(range(test_size))
             logger.info(f"📊 Limited test dataset to {test_size} samples for faster evaluation")
-        
+
         return train_dataset, test_dataset
 
 
@@ -228,11 +228,11 @@ if preprocess_function is not None:
         batched=True,
         desc="Preprocessing test dataset",
     )
-    
+
     logger.info("✅ Preprocessing completed")
     logger.info(f"   Train dataset columns: {train_dataset.column_names}")
     logger.info(f"   Test dataset columns: {test_dataset.column_names}")
-    
+
     # Verify the preprocessing worked
     sample = train_dataset[0]
     logger.info(f"   Sample keys: {list(sample.keys())}")
@@ -298,20 +298,20 @@ logger.info("🚀 Starting RNAformer training...")
 try:
     trainer.train(resume_from_checkpoint=resume_checkpoint)
     logger.info("✅ Training completed successfully!")
-    
+
     # Save final model
     logger.info(f"💾 Saving final model to {model_path}")
     trainer.save_model(model_path)
     tokenizer.save_pretrained(model_path)
     logger.info("✅ Model saved successfully!")
-    
+
 except KeyboardInterrupt:
     logger.info("⚠️  Training interrupted by user")
     logger.info(f"💾 Saving checkpoint to {model_path}")
     trainer.save_model(model_path)
     tokenizer.save_pretrained(model_path)
     logger.info("✅ Checkpoint saved")
-    
+
 except Exception as e:
     logger.error(f"❌ Training failed with error: {e}")
     raise

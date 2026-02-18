@@ -73,7 +73,7 @@ class TestCompoundsEndToEnd:
         # 統計を確認
         invalid_count, total_count, invalid_rate, examples = get_invalid_smiles_stats()
 
-        print(f"\nBatch Processing Results:")
+        print("\nBatch Processing Results:")
         print(f"  Processed: {len(test_smiles)} SMILES")
         print(f"  Valid scaffolds: {len([s for s in scaffolds if s != ''])}")
         print(f"  Invalid rate: {invalid_rate:.2f}%")
@@ -122,7 +122,7 @@ class TestCompoundsBERTIntegration:
         try:
             tokenizer = SmilesTokenizer(vocab_path)
             assert tokenizer is not None
-            print(f"✓ Tokenizer loaded successfully")
+            print("✓ Tokenizer loaded successfully")
             print(f"  Vocab size: {tokenizer.vocab_size}")
         except Exception as e:
             pytest.fail(f"Failed to load tokenizer: {e}")
@@ -157,7 +157,7 @@ class TestCompoundsBERTIntegration:
 
             assert outputs is not None
             assert outputs.logits is not None
-            print(f"✓ BERT inference successful")
+            print("✓ BERT inference successful")
             print(f"  Input SMILES: {test_smiles}")
             print(f"  Output shape: {outputs.logits.shape}")
 
@@ -221,7 +221,7 @@ class TestCompoundsGPT2Integration:
             # デコード
             generated_smiles = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
 
-            print(f"✓ GPT2 generation successful")
+            print("✓ GPT2 generation successful")
             print(f"  Prompt: {prompt}")
             print(f"  Generated {len(generated_smiles)} SMILES:")
             for i, smiles in enumerate(generated_smiles, 1):
@@ -272,7 +272,7 @@ class TestCompoundsGPT2Integration:
 
             validity_rate = (valid_count / len(all_generated)) * 100
 
-            print(f"\n✓ SMILES Validity Check:")
+            print("\n✓ SMILES Validity Check:")
             print(f"  Total generated: {len(all_generated)}")
             print(f"  Valid SMILES: {valid_count}")
             print(f"  Validity rate: {validity_rate:.1f}%")
@@ -314,7 +314,7 @@ class TestCompoundsDatasetIntegration:
         valid_scaffolds = df[df["scaffold"] != ""]
         invalid_scaffolds = df[df["scaffold"] == ""]
 
-        print(f"\n✓ Dataset Preprocessing:")
+        print("\n✓ Dataset Preprocessing:")
         print(f"  Total: {len(df)}")
         print(f"  Valid: {len(valid_scaffolds)}")
         print(f"  Invalid: {len(invalid_scaffolds)}")

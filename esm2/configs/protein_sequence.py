@@ -83,8 +83,8 @@ def preprocess_function(examples):
             for seq in input_ids:
                 # Get pad token ID
                 pad_token_id = (
-                    tokenizer.pad_token_id 
-                    if hasattr(tokenizer, "pad_token_id") and tokenizer.pad_token_id is not None 
+                    tokenizer.pad_token_id
+                    if hasattr(tokenizer, "pad_token_id") and tokenizer.pad_token_id is not None
                     else 0
                 )
                 attention_mask = [1 if token != pad_token_id else 0 for token in seq]
@@ -92,12 +92,12 @@ def preprocess_function(examples):
             examples["attention_mask"] = attention_masks
         else:  # Single sequence
             pad_token_id = (
-                tokenizer.pad_token_id 
-                if hasattr(tokenizer, "pad_token_id") and tokenizer.pad_token_id is not None 
+                tokenizer.pad_token_id
+                if hasattr(tokenizer, "pad_token_id") and tokenizer.pad_token_id is not None
                 else 0
             )
             examples["attention_mask"] = [1 if token != pad_token_id else 0 for token in input_ids]
-    
+
     # Handle sequence_tokens field (if exists, rename to input_ids)
     elif "sequence_tokens" in examples:
         examples["input_ids"] = examples["sequence_tokens"]
@@ -128,8 +128,8 @@ class ProteinSequenceDataCollator(DataCollatorForLanguageModeling):
 
 # Use custom data collator with MLM probability 0.15 (ESM-2 standard)
 data_collator = ProteinSequenceDataCollator(
-    tokenizer=tokenizer, 
-    mlm=True, 
+    tokenizer=tokenizer,
+    mlm=True,
     mlm_probability=0.15
 )
 

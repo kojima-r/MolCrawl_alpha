@@ -240,7 +240,9 @@ for pretrained in [True, False]:
             tokenizer = Tokenizer("assets/molecules/vocab.txt", 512)
 
             # 最大長の自動見積り（安全に 512 にクリップ）
-            all_df["token_length"] = all_df["text"].apply(lambda x: len(tokenizer.encode(x)))
+            all_df["token_length"] = all_df["text"].apply(
+                lambda x, tokenizer=tokenizer: len(tokenizer.encode(x))
+            )
             max_length = int(min(all_df["token_length"].max(), 512))
 
             # 語彙サイズ（8の倍数へ丸め）
@@ -293,7 +295,13 @@ for pretrained in [True, False]:
                 }
             )
 
-            def preprocess_function(examples):
+            def preprocess_function(
+                examples,
+                tokenizer=tokenizer,
+                max_length=max_length,
+                task_type=task_type,
+                tasks=tasks,
+            ):
                 enc = tokenizer(
                     examples["text"],
                     truncation=True,

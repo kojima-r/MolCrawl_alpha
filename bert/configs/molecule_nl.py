@@ -9,16 +9,19 @@
 
 import os
 import sys
+from importlib import import_module
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+
+config_paths = import_module("config.paths")
+get_bert_output_path = config_paths.get_bert_output_path
+tokenizer_module = import_module("molecule_related_nl.utils.tokenizer")
+Tokenizer = tokenizer_module.MoleculeNatLangTokenizer
 
 # Get LEARNING_SOURCE_DIR from environment variable directly
 LEARNING_SOURCE_DIR = os.environ.get("LEARNING_SOURCE_DIR", "./learning_source_20260105-molecule-nl")
 MOLECULE_NL_DIR = LEARNING_SOURCE_DIR + "/molecule_nl"
 MOLECULE_NL_DATASET_DIR = MOLECULE_NL_DIR + "/training_ready_hf_dataset"
-
-from config.paths import get_bert_output_path
-from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer as Tokenizer
 
 tokenizer = Tokenizer()
 
