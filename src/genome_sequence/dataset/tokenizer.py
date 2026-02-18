@@ -1,10 +1,8 @@
+from __future__ import annotations
+
 from argparse import ArgumentParser
 from pathlib import Path
 from functools import partial
-
-# from transformers import AutoTokenizer
-import sentencepiece as spm
-from datasets import load_dataset
 
 from genome_sequence.utils.config import GenomeSequenceConfig
 
@@ -35,6 +33,9 @@ def tokenize_function(examples, tokenizer):
 #    tokenized_datasets.to_parquet(str(Path(output_dir) / "parquet_files"))
 
 def raw_to_parquet(output_dir,num_proc=None,batch_size=None):
+    from datasets import load_dataset
+    import sentencepiece as spm
+
     data=load_dataset(
         "text",
         data_dir=str(Path(output_dir)/"raw_files"),
