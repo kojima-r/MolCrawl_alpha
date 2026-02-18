@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from functools import partial
 from argparse import ArgumentParser
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, TYPE_CHECKING
 
 # プロジェクトルートをパスに追加（utils等を解決するため）
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -22,6 +24,8 @@ else:
 
 from protein_sequence.utils.configs import ProteinSequenceConfig
 
+if TYPE_CHECKING:
+    from protein_sequence.dataset.tokenizer import EsmSequenceTokenizer
 
 def tokenize_function(examples: Dict[str, List[str]], tokenizer: EsmSequenceTokenizer) -> Dict[str, List[List[int]]]:
     return {
