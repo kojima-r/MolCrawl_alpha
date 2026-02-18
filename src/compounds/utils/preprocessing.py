@@ -1,4 +1,5 @@
 import logging
+from typing import List, Tuple
 from rdkit import Chem, RDLogger
 from rdkit.Chem.Scaffolds.MurckoScaffold import GetScaffoldForMol
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 # 無効なSMILESの統計を保持
 _invalid_smiles_count = 0
 _total_smiles_count = 0
-_invalid_smiles_examples = []  # 無効なSMILESの例を保存（最大10件）
+_invalid_smiles_examples: List[Tuple[str, str]] = []  # 無効なSMILESの例を保存（最大10件）
 
 
 def get_invalid_smiles_stats():

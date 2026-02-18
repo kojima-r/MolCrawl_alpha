@@ -1,9 +1,8 @@
 from dataclasses import dataclass, field
+from typing import Any, Dict, Union, Optional
 
 from config.paths import GENOME_SEQUENCE_DIR
 from core.config import Config
-
-from typing import Optional
 
 @dataclass
 class RefSeqPreparationConfig:
@@ -33,7 +32,8 @@ class RefSeqPreparationConfig:
 
 @dataclass
 class GenomeSequenceConfig(Config):
-    data_preparation: RefSeqPreparationConfig = field(default_factory=dict)
+    data_preparation: Union[RefSeqPreparationConfig, Dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.data_preparation = RefSeqPreparationConfig(**self.data_preparation)
+        if isinstance(self.data_preparation, dict):
+            self.data_preparation = RefSeqPreparationConfig(**self.data_preparation)

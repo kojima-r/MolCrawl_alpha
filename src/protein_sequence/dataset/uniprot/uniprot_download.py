@@ -1,5 +1,5 @@
 # See https://www.uniprot.org/help/downloads
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, List
 import os
 import logging
 import logging.config
@@ -104,7 +104,7 @@ def unzip_file(archive_path: str, output_path: Path):
     return output_path
 
 
-def download_full_http_dir(url: str, download_dir: Union[str, os.PathLike[str]], num_worker: int):
+def download_full_http_dir(url: str, download_dir: Union[str, os.PathLike[str]], num_worker: int) -> List[str]:
     file_md5_dict = get_url_md5_mapping(url)
     urls = [os.path.join(url, file) for file in file_md5_dict.keys()]
     paths = [os.path.join(download_dir, file) for file in file_md5_dict.keys()]
@@ -119,7 +119,7 @@ def download_full_http_dir(url: str, download_dir: Union[str, os.PathLike[str]],
     return archive_paths
 
 
-def get_url_md5_mapping(url: str) -> Dict:
+def get_url_md5_mapping(url: str) -> Dict[str, str]:
     file_path, _ = urlretrieve(os.path.join(url, "RELEASE.metalink"))
 
     # Parse the XML file
@@ -129,14 +129,13 @@ def get_url_md5_mapping(url: str) -> Dict:
     # Define the namespace (from the XML structure)
     namespace = {"ns": "http://www.metalinker.org/"}
 
-    file_md5_dict = {}
+    file_md5_dict: Dict[str, str] = {}
 
     # Iterate through the XML structure to find file names and md5 hashes
     for file in root.findall(".//ns:file", namespace):
         file_name = file.attrib.get("name")
-        md5_hash = file.find('.//ns:hash[@type="md5"]', namespace)
-        if md5_hash is not None:
-            md5_hash = md5_hash.text
+        md5_hash_elem = file.find('.//ns:hash[@type="md5"]', namespace)
+        md5_hash: Optional[str] = md5_hash_elem.text if md5_hash_elem is not None else None
         if file_name and md5_hash:
             file_md5_dict[file_name] = md5_hash
 
@@ -166,11 +165,11 @@ def process_dataset(dataset: str, output_dir: Union[str, os.PathLike[str]], num_
     else:
         output_dir.mkdir(parents=True, exist_ok=True)
         download_path = Path(output_dir) / Path(pubmed_fasta_url[dataset]).name
-        download_path = download(
+        downloaded_path = download(
             pubmed_fasta_url[dataset], str(download_path), use_md5=use_md5, md5=uniproto_fasta_md5[dataset]
         )
         logging.info("Decompressing the archive...")
-        unzip_file(download_path, Path(output_dir) / Path(download_path).with_suffix("").name)
+        unzip_file(downloaded_path, Path(output_dir) / Path(downloaded_path).with_suffix("").name)
 
 
 if __name__ == "__main__":

@@ -77,7 +77,7 @@ class BaseVisualizationGenerator(ABC):
         self._setup_plot_style()
 
         # 生成されたファイルリスト
-        self.generated_files = []
+        self.generated_files: List[Path] = []
 
         self.logger.info(f"Visualization generator initialized. Output directory: {self.output_dir}")
 

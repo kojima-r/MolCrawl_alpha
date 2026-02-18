@@ -470,7 +470,7 @@ class MoleculeNatLangTokenizer(TrainableTokenizer):
 
         return result
 
-    def tokenize_dict(self, text: str, canonicalize_smiles: bool = True, max_input_tokens: bool = None):
+    def tokenize_dict(self, text: dict[str, str], canonicalize_smiles: bool = True, max_input_tokens: bool = None):
         tokenized_output = self.tokenizer(
             text["output"],
             truncation=False,
@@ -497,13 +497,13 @@ class MoleculeNatLangTokenizer(TrainableTokenizer):
 
         return sample
 
-    def tokenize_text(self, text, canonicalize_smiles: bool = True, max_input_tokens: bool = None):
+    def tokenize_text(self, text: str, canonicalize_smiles: bool = True, max_input_tokens: bool = None):
         if canonicalize_smiles:
             real_text = self.canonicalize_smiles_in_text(text)
         else:
             real_text = text
 
-        sample = {"input_text": text}
+        sample: dict[str, object] = {"input_text": text}
         chat = generate_chat(real_text, output_text=None)
         full_prompt = self.prompter.generate_prompt(chat)
         sample["real_input_text"] = full_prompt

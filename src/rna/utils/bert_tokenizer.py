@@ -3,7 +3,7 @@ RNA用のBERT互換トークナイザーラッパー
 TranscriptomeTokenizerをBERT学習と互換性のある形式でラップ
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import torch
 
@@ -78,8 +78,8 @@ class BertRnaTokenizer:
         text: Union[str, List[str]],
         add_special_tokens: bool = True,
         max_length: Optional[int] = None,
-        padding: bool = False,
-        truncation: bool = False,
+        padding: Union[bool, str] = False,
+        truncation: Union[bool, str] = False,
         return_tensors: Optional[str] = None,
     ) -> Union[List[int], torch.Tensor]:
         """
@@ -103,8 +103,11 @@ class BertRnaTokenizer:
         if add_special_tokens:
             token_ids.append(self.sep_token_id)
 
+        padding_enabled = self._normalize_bool(padding)
+        truncation_enabled = self._normalize_bool(truncation)
+
         # Apply truncation
-        if max_length and truncation:
+        if max_length and truncation_enabled:
             if len(token_ids) > max_length:
                 if add_special_tokens:
                     # Keep CLS token and ensure SEP token at the end
@@ -113,7 +116,7 @@ class BertRnaTokenizer:
                     token_ids = token_ids[:max_length]
 
         # Apply padding
-        if max_length and padding:
+        if max_length and padding_enabled:
             while len(token_ids) < max_length:
                 token_ids.append(self.pad_token_id)
 
@@ -135,10 +138,11 @@ class BertRnaTokenizer:
         """
         Tokenize and encode text
         """
+        result: Dict[str, Any]
         if isinstance(text, list):
             # Batch processing
-            input_ids = []
-            attention_masks = []
+            input_ids: List[List[int]] = []
+            attention_masks: List[List[int]] = []
 
             for single_text in text:
                 encoded = self.encode(
@@ -149,10 +153,11 @@ class BertRnaTokenizer:
                     truncation=truncation,
                     return_tensors=None,
                 )
-                input_ids.append(encoded)
+                encoded_list = cast(List[int], encoded)
+                input_ids.append(encoded_list)
 
                 # Create attention mask
-                attention_mask = [1 if token_id != self.pad_token_id else 0 for token_id in encoded]
+                attention_mask = [1 if token_id != self.pad_token_id else 0 for token_id in encoded_list]
                 attention_masks.append(attention_mask)
 
             result = {"input_ids": input_ids, "attention_mask": attention_masks}
@@ -163,7 +168,7 @@ class BertRnaTokenizer:
 
         else:
             # Single text processing
-            input_ids = self.encode(
+            single_input_ids = self.encode(
                 text,
                 add_special_tokens=add_special_tokens,
                 max_length=max_length,
@@ -171,11 +176,12 @@ class BertRnaTokenizer:
                 truncation=truncation,
                 return_tensors=None,
             )
+            single_input_ids = cast(List[int], single_input_ids)
 
             # Create attention mask
-            attention_mask = [1 if token_id != self.pad_token_id else 0 for token_id in input_ids]
+            single_attention_mask = [1 if token_id != self.pad_token_id else 0 for token_id in single_input_ids]
 
-            result = {"input_ids": input_ids, "attention_mask": attention_mask}
+            result = {"input_ids": single_input_ids, "attention_mask": single_attention_mask}
 
             if return_tensors == "pt":
                 result["input_ids"] = torch.tensor([result["input_ids"]])
@@ -191,14 +197,14 @@ class BertRnaTokenizer:
         """
         Decode token IDs back to text
         """
-        if torch.is_tensor(token_ids):
+        if isinstance(token_ids, torch.Tensor):
             token_ids = token_ids.tolist()
 
         # Create reverse mapping
         id_to_token = {v: k for k, v in self.vocab.items()}
 
         tokens = []
-        for token_id in token_ids:
+        for token_id in cast(List[int], token_ids):
             token = id_to_token.get(token_id, self.unk_token)
 
             if skip_special_tokens and token in [
@@ -217,6 +223,11 @@ class BertRnaTokenizer:
         Pad encoded inputs (for compatibility)
         """
         return encoded_inputs
+
+    def _normalize_bool(self, value: Union[bool, str]) -> bool:
+        if isinstance(value, bool):
+            return value
+        return value.lower() not in {"false", "0", "no", "none", ""}
 
 
 def create_bert_rna_tokenizer(**kwargs) -> BertRnaTokenizer:

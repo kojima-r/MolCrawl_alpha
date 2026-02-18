@@ -1,6 +1,7 @@
 import os
 import sys
 from dataclasses import dataclass, field
+from typing import Any, Dict, Union
 
 from core.config import Config
 
@@ -28,7 +29,8 @@ class Organix13PreparationConfig:
 
 @dataclass
 class CompoundConfig(Config):
-    data_preparation: Organix13PreparationConfig = field(default_factory=dict)
+    data_preparation: Union[Organix13PreparationConfig, Dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.data_preparation = Organix13PreparationConfig(**self.data_preparation)
+        if isinstance(self.data_preparation, dict):
+            self.data_preparation = Organix13PreparationConfig(**self.data_preparation)

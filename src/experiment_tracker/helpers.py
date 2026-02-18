@@ -115,8 +115,8 @@ def experiment_context(
         def __init__(self, experiment_id: str, tracker: ExperimentTracker):
             self.experiment_id = experiment_id
             self.tracker = tracker
-            self.results = {}
-            self.metrics = {}
+            self.results: dict[str, Any] = {}
+            self.metrics: dict[str, float] = {}
 
         def log(self, level: str, message: str, source: Optional[str] = None):
             """ログを追加"""

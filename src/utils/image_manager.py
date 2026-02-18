@@ -6,6 +6,7 @@
 """
 
 import os
+from typing import TypedDict
 
 from utils.environment_check import check_learning_source_dir
 
@@ -41,7 +42,14 @@ def get_image_path(model_type: str, filename: str) -> str:
     return os.path.join(image_dir, filename)
 
 
-def list_images_in_model_dir(model_type: str) -> list:
+class ImageInfo(TypedDict):
+    filename: str
+    path: str
+    size: int
+    modified: float
+
+
+def list_images_in_model_dir(model_type: str) -> list[ImageInfo]:
     """
     指定されたモデルタイプディレクトリ内の画像ファイル一覧を取得
 
@@ -56,7 +64,7 @@ def list_images_in_model_dir(model_type: str) -> list:
     if not os.path.exists(image_dir):
         return []
 
-    images = []
+    images: list[ImageInfo] = []
     image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg"}
 
     for filename in os.listdir(image_dir):
@@ -69,7 +77,7 @@ def list_images_in_model_dir(model_type: str) -> list:
                 continue
 
     # 更新日時でソート（新しい順）
-    images.sort(key=lambda x: x["modified"], reverse=True)
+    images.sort(key=lambda x: float(x["modified"]), reverse=True)
     return images
 
 

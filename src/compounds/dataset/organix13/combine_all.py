@@ -84,10 +84,10 @@ def calculateValues(smi: pd.Series):
     logging.info("Calculating properties")
     with multiprocessing.Pool(16) as pool:
         logging.info("Starting logps")
-        logps = pool.map(calcLogPIfMol, smi)
+        logps_list = pool.map(calcLogPIfMol, smi)
 
-        valid_mols = ~pd.isna(logps)
-        logps = pd.Series(logps)[valid_mols]
+        valid_mols = ~pd.isna(logps_list)
+        logps = pd.Series(logps_list)[valid_mols]
         smi = pd.Series(smi)[valid_mols]
         logps.reset_index(drop=True, inplace=True)
         smi.reset_index(drop=True, inplace=True)
