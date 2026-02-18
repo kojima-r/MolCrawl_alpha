@@ -3,12 +3,16 @@ from __future__ import annotations
 import numpy as np
 import os
 import multiprocessing
+from typing import TYPE_CHECKING
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 np.random.seed(42)
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def _get_rdkit_helpers():
@@ -131,6 +135,8 @@ def combine_all(raw_data_path: str, save_path: str):
         raw_data_path: COMPOUNDS_DIR (例: learning_20251104/compounds)
         save_path: 出力先ディレクトリ (例: learning_20251104/compounds/organix13)
     """
+    import pandas as pd
+
     # データディレクトリのパス
     data_dir = os.path.join(raw_data_path, "data")
     llamol_dir = os.path.join(data_dir, "Fraunhofer-SCAI-llamol")
