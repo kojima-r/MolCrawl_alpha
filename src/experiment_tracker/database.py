@@ -309,7 +309,7 @@ class ExperimentDatabase:
             cursor = conn.cursor()
 
             query = "SELECT experiment_id FROM experiments WHERE 1=1"
-            params = []
+            params: list[object] = []
 
             if status:
                 query += " AND status = ?"

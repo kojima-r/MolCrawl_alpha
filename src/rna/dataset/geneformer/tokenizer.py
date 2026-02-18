@@ -15,7 +15,7 @@ Usage:
 """
 
 from __future__ import annotations
-from typing import Literal
+from typing import Callable, Literal, Optional, cast
 import pickle
 from pathlib import Path
 import logging
@@ -149,7 +149,10 @@ class TranscriptomeTokenizer:
         # loops through directories to tokenize .loom files
         file_found = 0
         # loops through directories to tokenize .loom or .h5ad files
-        tokenize_file_fn = self.tokenize_loom if file_format == "loom" else self.tokenize_anndata
+        tokenize_file_fn = cast(
+            Callable[[Path], tuple[list[list[int]], Optional[dict[str, list[str]]]]],
+            self.tokenize_loom if file_format == "loom" else self.tokenize_anndata,
+        )
         for file_path in data_directory.glob("*.{}".format(file_format)):
             file_found = 1
             print(f"Tokenizing {file_path}")

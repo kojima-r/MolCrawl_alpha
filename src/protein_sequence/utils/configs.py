@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Any, Dict, Union
 
 from config.paths import PROTEIN_SEQUENCE_DIR
 from core.config import Config
@@ -26,7 +27,8 @@ class UniProtPreparationConfig:
 
 @dataclass
 class ProteinSequenceConfig(Config):
-    data_preparation: UniProtPreparationConfig = field(default_factory=dict)
+    data_preparation: Union[UniProtPreparationConfig, Dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.data_preparation = UniProtPreparationConfig(**self.data_preparation)
+        if isinstance(self.data_preparation, dict):
+            self.data_preparation = UniProtPreparationConfig(**self.data_preparation)

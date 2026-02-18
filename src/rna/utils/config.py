@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Any, Dict, Union
 
 from config.paths import RNA_DATASET_DIR
 from core.config import Config
@@ -24,7 +25,8 @@ class CellxGenePreparationConfig:
 
 @dataclass
 class RnaConfig(Config):
-    data_preparation: CellxGenePreparationConfig = field(default_factory=dict)
+    data_preparation: Union[CellxGenePreparationConfig, Dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.data_preparation = CellxGenePreparationConfig(**self.data_preparation)
+        if isinstance(self.data_preparation, dict):
+            self.data_preparation = CellxGenePreparationConfig(**self.data_preparation)

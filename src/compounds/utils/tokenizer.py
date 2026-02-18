@@ -315,5 +315,5 @@ class CompoundsTokenizer(UnTrainableTokenizer, SmilesTokenizer):
 
 
 class ScaffoldsTokenizer(CompoundsTokenizer):
-    def tokenize_text(self, text: str):
-        return super().tokenize_text(prepare_scaffolds(text))
+    def tokenize_text(self, text: str, verbose: bool = False):
+        return super().tokenize_text(prepare_scaffolds(text), verbose=verbose)
