@@ -92,7 +92,7 @@ class RNADataset:
                 print(f"✅ Loaded HuggingFace dataset from {data_dir}")
             except Exception as e2:
                 print(f"❌ All loading methods failed: {e2}")
-                raise FileNotFoundError(f"Could not load data from {data_dir}")
+                raise FileNotFoundError(f"Could not load data from {data_dir}") from e2
 
         # Split into train/valid if needed
         if hasattr(self.dataset, "keys") and isinstance(self.dataset, dict) and "train" in self.dataset:

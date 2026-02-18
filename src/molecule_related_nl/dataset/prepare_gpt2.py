@@ -54,7 +54,7 @@ def tokenize_batch_dataset(parquet_path, context_length, number_sample):
     from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
 
     tokenize_dataset = DatasetDict(read_dataset(parquet_path))
-    
+
     # Handle validation/valid split naming
     if "validation" in tokenize_dataset and "valid" not in tokenize_dataset:
         tokenize_dataset["valid"] = tokenize_dataset["validation"]
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument("config")
     args = parser.parse_args()
     cfg = MoleculeNLConfig.from_file(args.config).data_preparation
-    
+
     # 相対パスを絶対パスに変換
     from config.paths import PROJECT_ROOT, LEARNING_SOURCE_DIR
     save_path = os.path.join(PROJECT_ROOT, LEARNING_SOURCE_DIR, cfg.save_path)

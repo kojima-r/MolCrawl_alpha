@@ -24,6 +24,7 @@ import os
 import random
 import sys
 from datetime import datetime
+from importlib import import_module
 from typing import Dict, Optional
 
 import numpy as np
@@ -58,7 +59,7 @@ except ImportError as e:
 
 # 共通環境チェックモジュールを追加
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-from utils.environment_check import check_learning_source_dir
+check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
 
 def setup_logging(output_dir: str) -> logging.Logger:

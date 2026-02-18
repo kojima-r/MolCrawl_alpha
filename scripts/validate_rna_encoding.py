@@ -316,7 +316,7 @@ def main():
 
     # データセットディレクトリを構築
     dataset_dir = os.path.join(learning_source_dir, args.dataset_subdir)
-    
+
     # ディレクトリの存在確認
     if not os.path.exists(dataset_dir):
         print(f"❌ ERROR: Dataset directory does not exist: {dataset_dir}")

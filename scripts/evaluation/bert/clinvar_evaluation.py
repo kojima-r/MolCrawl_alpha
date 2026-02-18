@@ -18,6 +18,7 @@ import logging
 import os
 import sys
 from datetime import datetime
+from importlib import import_module
 from pathlib import Path
 
 import numpy as np
@@ -46,7 +47,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
 # 共通環境チェックモジュールを追加
-from utils.environment_check import check_learning_source_dir
+check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
 # ログ設定は後でsetup_evaluation_loggingで行う
 logger = logging.getLogger(__name__)

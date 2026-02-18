@@ -126,7 +126,7 @@ def find_latest_checkpoint_dir(model_path: Path) -> Optional[Path]:
     """
     if not model_path.is_dir():
         return None
-    
+
     checkpoint_dirs = []
     for entry in model_path.iterdir():
         if entry.is_dir() and entry.name.startswith("checkpoint-"):
@@ -139,10 +139,10 @@ def find_latest_checkpoint_dir(model_path: Path) -> Optional[Path]:
                     checkpoint_dirs.append((step, entry))
             except (ValueError, IndexError):
                 continue
-    
+
     if not checkpoint_dirs:
         return None
-    
+
     # Sort by step number and return the latest
     checkpoint_dirs.sort(reverse=True)
     return checkpoint_dirs[0][1]
@@ -312,7 +312,7 @@ def upload_model(
     if latest_checkpoint_dir:
         print(f"[INFO] HuggingFace互換チェックポイントを検出: {latest_checkpoint_dir.name}")
         upload_path = latest_checkpoint_dir
-    
+
     # アップロードするファイルを検索
     checkpoint_files = find_checkpoint_files(upload_path)
     tokenizer_files = find_tokenizer_files(upload_path, tokenizer_path)

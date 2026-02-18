@@ -92,7 +92,7 @@ def tokenize_compound_data(cfg, organix13_dataset_path, tokenized_marker, proces
 
     # 元データの読み込み
     organix13_dataset = read_parquet(file_path=os.path.join(organix13_dataset_path, "OrganiX13.parquet"))
-    
+
     # プロセス数を環境変数から取得（デフォルト: 2）
     num_processes = int(os.environ.get('TOKENIZATION_PROCESSES', '2'))
     logger.info(f"Using {num_processes} processes for tokenization")
@@ -120,7 +120,7 @@ def tokenize_compound_data(cfg, organix13_dataset_path, tokenized_marker, proces
     )
 
     logger.info("Tokenizing done.")
-    
+
     # 無効なSMILESの統計を出力
     from compounds.utils.preprocessing import get_invalid_smiles_stats
     invalid_count, total_count, invalid_rate, examples = get_invalid_smiles_stats()
@@ -128,13 +128,13 @@ def tokenize_compound_data(cfg, organix13_dataset_path, tokenized_marker, proces
         logger.info(
             f"SMILES validation summary: {invalid_count}/{total_count} invalid SMILES ({invalid_rate:.2f}%)"
         )
-        
+
         # 無効なSMILESの例を表示
         if examples:
             logger.info("Examples of invalid SMILES:")
             for i, (reason, smiles) in enumerate(examples, 1):
                 logger.info(f"  {i}. [{reason}] {smiles}")
-        
+
         # 無効率に基づく評価
         if invalid_rate > 10.0:
             logger.error(
@@ -156,7 +156,7 @@ def tokenize_compound_data(cfg, organix13_dataset_path, tokenized_marker, proces
                 f"Low rate of invalid SMILES ({invalid_rate:.2f}%). "
                 "Data quality is good."
             )
-        
+
         # ZINC20特有の問題の説明
         logger.info(
             "Note: ZINC20 may contain some invalid SMILES due to:\n"
@@ -165,7 +165,7 @@ def tokenize_compound_data(cfg, organix13_dataset_path, tokenized_marker, proces
             "  - Complex stereochemistry or unusual bonding patterns\n"
             "  - These are typically <5% of the dataset and are expected in large databases"
         )
-    
+
     save_parquet(table=processed_organix13, file_path=processed_parquet)
     tokenized_marker.touch()
 

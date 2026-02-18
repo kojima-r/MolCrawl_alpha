@@ -92,7 +92,7 @@ print(f"📊 Meta vocab size (padded): {meta_vocab_size}")
 def preprocess_function(examples):
     """
     Add attention_mask to the dataset
-    
+
     DNABERT-2はattention_maskを明示的に必要とします。
     既存のinput_idsからattention_maskを生成します。
     """
@@ -101,13 +101,13 @@ def preprocess_function(examples):
         for input_ids in examples["input_ids"]:
             # Get pad token ID
             pad_token_id = tokenizer.pad_token_id if hasattr(tokenizer, 'pad_token_id') and tokenizer.pad_token_id is not None else 0
-            
+
             # Create attention mask: 1 for real tokens, 0 for padding
             attention_mask = [1 if token_id != pad_token_id else 0 for token_id in input_ids]
             attention_masks.append(attention_mask)
-        
+
         examples["attention_mask"] = attention_masks
-    
+
     return examples
 
 

@@ -2,7 +2,7 @@
 Legacy code use for scgpt, in the end geneformer is used to compute the tokenization
 """
 
-from typing import Any, TYPE_CHECKING, Union
+from typing import Any, Union
 import gc
 from pathlib import Path
 import traceback
@@ -14,11 +14,6 @@ import logging
 from functools import partial
 from argparse import ArgumentParser
 
-
-if TYPE_CHECKING:
-    import scanpy as sc
-    import scgpt as scg
-    from scgpt import scbank
 
 from rna.utils.config import RnaConfig
 
@@ -90,7 +85,7 @@ def process_h5ad_to_parquet(
             gc.collect()
         except Exception as e:
             traceback.print_exc()
-            warnings.warn(f"failed to process {h5ad_path}: {e}")
+            warnings.warn(f"failed to process {h5ad_path}: {e}", stacklevel=2)
             if parquet_path.exists():
                 os.remove(parquet_path)
     else:

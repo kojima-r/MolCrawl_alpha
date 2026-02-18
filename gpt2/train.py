@@ -155,7 +155,7 @@ if use_wandb and master_process:
 
     # Add metadata tags for experiment management
     tags = ['gpt2', 'training', dataset]
-    
+
     # Add experiment metadata to config
     experiment_config = {
         **config,
@@ -294,7 +294,7 @@ elif init_from == "resume":
     # Try new HuggingFace format first (checkpoint-{step}/training_state.bin)
     # Fall back to legacy format (ckpt.pt)
     checkpoint_loaded = False
-    
+
     # Find the latest checkpoint directory
     checkpoint_dirs = glob.glob(os.path.join(out_dir, "checkpoint-*"))
     if checkpoint_dirs:
@@ -308,14 +308,14 @@ elif init_from == "resume":
                     checkpoint_steps.append((step, training_state_path))
             except (ValueError, IndexError):
                 continue
-        
+
         if checkpoint_steps:
             checkpoint_steps.sort(reverse=True)
             latest_step, latest_ckpt_path = checkpoint_steps[0]
             print(f"Found HuggingFace format checkpoint at step {latest_step}")
             checkpoint = torch.load(latest_ckpt_path, map_location=device)
             checkpoint_loaded = True
-    
+
     # Fall back to legacy ckpt.pt
     if not checkpoint_loaded:
         ckpt_path = os.path.join(out_dir, "ckpt.pt")
@@ -323,7 +323,7 @@ elif init_from == "resume":
             print(f"Loading legacy checkpoint from {ckpt_path}")
             checkpoint = torch.load(ckpt_path, map_location=device)
             checkpoint_loaded = True
-    
+
     if not checkpoint_loaded:
         print(f"No checkpoint found in {out_dir}")
         print("Starting training from scratch instead")
@@ -423,12 +423,12 @@ def get_lr(it):
 def convert_nanogpt_to_hf_state_dict(model_state, model_args):
     """
     Convert nanoGPT state_dict to HuggingFace GPT2LMHeadModel compatible format.
-    
+
     nanoGPT uses nn.Linear for attention, while HuggingFace uses Conv1D.
     Conv1D weights are transposed compared to Linear weights.
     """
     hf_state_dict = {}
-    
+
     # Keys that need to be transposed (Conv1D in HF vs Linear in nanoGPT)
     transposed_keys = [
         "attn.c_attn.weight",
@@ -436,20 +436,20 @@ def convert_nanogpt_to_hf_state_dict(model_state, model_args):
         "mlp.c_fc.weight",
         "mlp.c_proj.weight",
     ]
-    
+
     for key, value in model_state.items():
         # Skip attention mask buffers
         if key.endswith(".attn.bias"):
             continue
-        
+
         # Check if this key needs transposition
         needs_transpose = any(key.endswith(t) for t in transposed_keys)
-        
+
         if needs_transpose:
             hf_state_dict[key] = value.t().contiguous()
         else:
             hf_state_dict[key] = value
-    
+
     return hf_state_dict
 
 
@@ -458,7 +458,7 @@ def save_checkpoint_hf(
 ):
     """
     Save checkpoint in HuggingFace Transformers compatible format.
-    
+
     This creates:
     - config.json: Model configuration (GPT2Config compatible)
     - pytorch_model.bin: Model weights (HuggingFace compatible state_dict)
@@ -647,7 +647,7 @@ while True:
                     checkpoint_dir,
                     early_stopping_counter,
                 )
-                
+
                 # Log checkpoint to wandb as artifact BEFORE cleanup
                 if wandb_run is not None and wandb_log_model:
                     artifact = wandb.Artifact(
@@ -663,7 +663,7 @@ while True:
                     )
                     artifact.add_dir(checkpoint_dir)
                     wandb_run.log_artifact(artifact)
-                
+
                 # Cleanup old checkpoints AFTER wandb upload
                 cleanup_old_checkpoints(out_dir, max_checkpoints)
 
@@ -716,7 +716,7 @@ while True:
             writer.add_scalar("Loss", lossf, iter_num)
             writer.add_scalar("Learning Rate", lr, iter_num)
             writer.flush()
-        
+
         # Log training metrics to wandb
         if wandb_run is not None:
             wandb_run.log(

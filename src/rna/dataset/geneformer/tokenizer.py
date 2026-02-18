@@ -15,17 +15,13 @@ Usage:
 """
 
 from __future__ import annotations
-from typing import Callable, Literal, Optional, TYPE_CHECKING, cast
+from typing import Callable, Literal, Optional, cast
 import pickle
 from pathlib import Path
 import logging
 import warnings
 
 import numpy as np
-
-if TYPE_CHECKING:
-    import anndata as ad
-    import loompy as lp
 
 warnings.filterwarnings("ignore", message=".*The 'nopython' keyword.*")
 

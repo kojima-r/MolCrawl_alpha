@@ -28,7 +28,7 @@ from transformers import (
 class DNADatasetLoader:
     """
     DNA配列データセット用のローダー
-    
+
     既存のgenome_sequenceデータセットを読み込み、
     DNABERT-2用に前処理を行います。
     """
@@ -62,7 +62,7 @@ class DNADatasetLoader:
                     combined_table = pa.concat_tables(all_batches)
                     print(f"📊 Combined {len(all_batches)} tables: {len(combined_table)} total rows")
                     df = combined_table.to_pandas()
-                    
+
                     # Convert numpy arrays to lists for HuggingFace compatibility
                     if "token" in df.columns:
                         df["token"] = df["token"].apply(lambda x: x.tolist() if hasattr(x, "tolist") else x)
@@ -224,10 +224,10 @@ if use_wandb:
 
     # Determine dataset name from config
     dataset_name = config.get('dataset_name', 'genome_sequence')
-    
+
     # Add metadata tags for experiment management
     tags = ['dnabert2', 'training', model_size, dataset_name]
-    
+
     # Add experiment metadata to config
     experiment_config = {
         **config,
@@ -253,7 +253,7 @@ if "data_collator" in globals():
 else:
     print("Using default DataCollatorForLanguageModeling")
     tokenizer_obj = globals().get("tokenizer", None)
-    
+
     if tokenizer_obj is not None and hasattr(tokenizer_obj, "tokenizer"):
         actual_tokenizer = tokenizer_obj.tokenizer
     else:
@@ -264,8 +264,8 @@ else:
 
     # DNABERT-2: MLM probability 0.15 (BERT standard)
     data_collator = DataCollatorForLanguageModeling(
-        tokenizer=actual_tokenizer, 
-        mlm=True, 
+        tokenizer=actual_tokenizer,
+        mlm=True,
         mlm_probability=0.15
     )
 
@@ -303,12 +303,12 @@ if "use_custom_dataset_loader" in globals() and globals()["use_custom_dataset_lo
 else:
     print("📂 Using standard HuggingFace dataset loading")
     dataset_path = Path(dataset_dir)
-    
+
     # Try to load from arrow format
     train_arrow = dataset_path / "train.arrow"
     test_arrow = dataset_path / "test.arrow"
     valid_arrow = dataset_path / "valid.arrow"
-    
+
     if train_arrow.exists():
         print(f"Loading from arrow format: {train_arrow}")
         train_dataset = load_from_disk(str(train_arrow))
@@ -338,7 +338,7 @@ if "preprocess_function" in globals() and callable(globals()["preprocess_functio
     print("✅ Preprocessing completed")
     print(f"   Train dataset columns: {train_dataset.column_names}")
     print(f"   Test dataset columns: {test_dataset.column_names}")
-    
+
     # Verify
     sample = train_dataset[0]
     print(f"   Sample keys: {list(sample.keys())}")

@@ -10,6 +10,7 @@ import argparse
 import logging
 import os
 import sys
+from importlib import import_module
 
 import numpy as np
 import pandas as pd
@@ -19,7 +20,7 @@ import pandas as pd
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
-from utils.environment_check import check_learning_source_dir
+check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
 # ロギング設定
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")

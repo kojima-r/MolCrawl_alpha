@@ -119,14 +119,14 @@ class ClinVarProcessor:
         # カラム名を確認してデバッグ情報を出力
         if len(df_snv) > 0:
             logger.info(f"Available columns: {df_snv.columns.tolist()}")
-            
+
             # ReferenceAlleleVCFとAlternateAlleleVCFフィールドを使用
             if 'ReferenceAlleleVCF' in df_snv.columns and 'AlternateAlleleVCF' in df_snv.columns:
                 logger.info("Using VCF allele fields (ReferenceAlleleVCF, AlternateAlleleVCF)")
                 # VCFフィールドを標準フィールドにコピー
                 df_snv['ReferenceAllele'] = df_snv['ReferenceAlleleVCF']
                 df_snv['AlternateAllele'] = df_snv['AlternateAlleleVCF']
-            
+
             logger.info(f"First few ReferenceAllele values: {df_snv['ReferenceAllele'].head(10).tolist()}")
             logger.info(f"First few AlternateAllele values: {df_snv['AlternateAllele'].head(10).tolist()}")
 
@@ -148,7 +148,7 @@ class ClinVarProcessor:
             # 大文字に変換して処理
             df_snv["ReferenceAllele"] = df_snv["ReferenceAllele"].astype(str).str.upper()
             df_snv["AlternateAllele"] = df_snv["AlternateAllele"].astype(str).str.upper()
-            
+
             valid_ref_len = df_snv["ReferenceAllele"].str.len() == 1
             valid_alt_len = df_snv["AlternateAllele"].str.len() == 1
             valid_ref_base = df_snv["ReferenceAllele"].isin(["A", "T", "G", "C"])

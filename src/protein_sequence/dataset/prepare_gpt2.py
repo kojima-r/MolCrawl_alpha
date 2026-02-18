@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import partial
 from argparse import ArgumentParser
 import sys
+from importlib import import_module
 from pathlib import Path
 from typing import Dict, List, TYPE_CHECKING
 
@@ -22,7 +23,7 @@ else:
     # cache_configが無い環境でも動作は可能
     print("WARNING: utils.cache_config not found. Continuing without cache setup.")
 
-from protein_sequence.utils.configs import ProteinSequenceConfig
+ProteinSequenceConfig = import_module("protein_sequence.utils.configs").ProteinSequenceConfig
 
 if TYPE_CHECKING:
     from protein_sequence.dataset.tokenizer import EsmSequenceTokenizer

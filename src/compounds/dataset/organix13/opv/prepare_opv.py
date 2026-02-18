@@ -236,7 +236,7 @@ class OPV:
             fields = next(reader)
             smiles = []
             targets = defaultdict(list)
-            for i, values in enumerate(reader):
+            for values in reader:
                 if not any(values):
                     continue
                 if smiles_field is None:
