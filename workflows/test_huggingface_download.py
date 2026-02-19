@@ -27,8 +27,6 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 PROJECT_ROOT = SCRIPT_DIR.parent
 
-sys.path.insert(0, str(PROJECT_ROOT / "gpt2"))
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 try:
     import torch
@@ -186,7 +184,7 @@ def load_model(checkpoint: dict, device: str):
 
     try:
         # GPTモデルをインポート
-        from model import GPT, GPTConfig
+        from gpt2.model import GPT, GPTConfig
 
         model_args = checkpoint.get("model_args", {})
         if not model_args:

@@ -10,14 +10,12 @@ import argparse
 import gzip
 import logging
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 import requests
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 # ログ設定
 logging.basicConfig(

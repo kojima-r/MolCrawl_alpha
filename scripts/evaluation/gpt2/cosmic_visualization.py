@@ -8,8 +8,6 @@ COSMIC評価の結果を様々なグラフとチャートで可視化し、
 
 import argparse
 import logging
-import os
-import sys
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -18,7 +16,6 @@ import pandas as pd
 import seaborn as sns
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from utils.base_visualization import BaseVisualizationGenerator
 

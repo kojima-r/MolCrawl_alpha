@@ -1,10 +1,8 @@
 from argparse import ArgumentParser
 import os
-import sys
 from pathlib import Path
 
 # プロジェクトルートのsrcディレクトリをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from compounds.utils.config import CompoundConfig
 from compounds.utils.tokenizer import CompoundsTokenizer

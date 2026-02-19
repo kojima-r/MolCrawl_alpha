@@ -8,7 +8,6 @@ ProteinGym評価結果の可視化スクリプト
 import argparse
 import logging
 import os
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +15,6 @@ import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from utils.base_visualization import BaseVisualizationGenerator
 

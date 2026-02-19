@@ -30,13 +30,8 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-# プロジェクトルートを追加
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-
-# scriptsディレクトリをパスに追加
+# scriptsディレクトリ
 scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if scripts_dir not in sys.path:
-    sys.path.insert(0, scripts_dir)
 
 # 実データプロセッサをインポート
 process_omim_real_data = None
@@ -58,7 +53,6 @@ except ImportError as e:
     print("=" * 80, file=sys.stderr)
 
 # 共通環境チェックモジュールを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
 

@@ -1,10 +1,8 @@
 from argparse import ArgumentParser
 import os
-import sys
 from pathlib import Path
 
 # プロジェクトルートのsrcディレクトリをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 # データセットキャッシュ設定を読み込み（configs/cache.yamlから）
 try:

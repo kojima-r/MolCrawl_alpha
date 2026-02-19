@@ -17,7 +17,6 @@ python scripts/preparation_script_protein_sequence.py assets/configs/protein_seq
 
 import logging
 import os
-import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -26,7 +25,6 @@ import numpy as np
 from datasets import load_dataset
 
 # プロジェクトルートのsrcディレクトリをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from config.paths import PROTEIN_SEQUENCE_DIR
 from core.base import setup_logging

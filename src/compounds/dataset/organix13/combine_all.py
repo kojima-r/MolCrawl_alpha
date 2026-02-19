@@ -17,11 +17,9 @@ if TYPE_CHECKING:
 
 def _get_rdkit_helpers():
     from rdkit import Chem
-    from rdkit.Chem import Descriptors, RDConfig
+    from rdkit.Chem import Descriptors
 
-    import sys
 
-    sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
     import sascorer
 
     return Chem, Descriptors, sascorer

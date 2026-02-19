@@ -18,7 +18,6 @@ import pandas as pd
 # プロジェクトルートを設定して共通モジュールをインポート
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
 check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 

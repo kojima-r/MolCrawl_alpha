@@ -7,7 +7,6 @@ BERTモデル用にProteinGymデータセットを前処理し、
 """
 
 import os
-import sys
 import argparse
 import requests
 import pandas as pd
@@ -22,7 +21,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 # 共通モジュールを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 from utils.environment_check import check_learning_source_dir
 
 

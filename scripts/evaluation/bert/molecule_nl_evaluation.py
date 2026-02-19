@@ -17,7 +17,6 @@ import json
 import logging
 import math
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -31,7 +30,6 @@ from utils.environment_check import check_learning_source_dir
 
 # プロジェクトルートを追加
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
 
 from utils.evaluation_output import (  # noqa: E402
@@ -40,7 +38,6 @@ from utils.evaluation_output import (  # noqa: E402
 from utils.model_evaluator import ModelEvaluator  # noqa: E402
 
 # Molecule NL tokenizer
-sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer  # noqa: E402
 
 # ログ設定は後でsetup_evaluation_loggingで行う
@@ -543,7 +540,6 @@ class BERTMoleculeNLEvaluator(ModelEvaluator):
             csv_file = os.path.join(output_dir, "molecule_nl_detailed_results.csv")
 
             # 可視化クラスをインポート（GPT-2版と同じクラスを使用）
-            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "gpt2"))
             from molecule_nl_visualization import MoleculeNLVisualizationGenerator
 
             # 可視化器を初期化
@@ -725,7 +721,6 @@ def main():
 
         # 可視化のみを生成
         try:
-            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "gpt2"))
             from molecule_nl_visualization import MoleculeNLVisualizationGenerator
 
             visualizer = MoleculeNLVisualizationGenerator(results_file=csv_file, output_dir=args.result_dir)

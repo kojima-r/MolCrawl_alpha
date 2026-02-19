@@ -9,8 +9,6 @@ genome sequenceモデルの変異病原性予測性能を評価します。
 import argparse
 import json
 import logging
-import os
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -30,10 +28,8 @@ from sklearn.metrics import (
 )
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
-from model import GPT, GPTConfig
+from gpt2.model import GPT, GPTConfig
 
 from config.paths import get_genome_tokenizer_path
 from utils.evaluation_output import (

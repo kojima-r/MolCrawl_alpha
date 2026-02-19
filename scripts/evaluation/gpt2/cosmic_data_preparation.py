@@ -12,7 +12,6 @@ import argparse
 import gzip
 import logging
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -20,7 +19,6 @@ import numpy as np
 import pandas as pd
 import requests
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from utils.environment_check import check_learning_source_dir
 

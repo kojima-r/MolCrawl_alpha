@@ -10,7 +10,6 @@ import argparse
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -29,8 +28,6 @@ from sklearn.metrics import (
 )
 
 # Add src and gpt2 to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
 from protein_sequence.utils.bert_tokenizer import EsmSequenceTokenizer
 from utils.evaluation_output import (
@@ -90,7 +87,7 @@ class ProteinClassificationEvaluator(ModelEvaluator):
                 config = None
 
             # Import GPT2 model architecture
-            from model import GPT, GPTConfig
+            from gpt2.model import GPT, GPTConfig
 
             # Create model with appropriate config
             if config:

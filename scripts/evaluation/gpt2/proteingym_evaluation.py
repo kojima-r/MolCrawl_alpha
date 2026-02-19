@@ -10,7 +10,6 @@ import argparse
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -19,10 +18,8 @@ import torch
 import torch.nn.functional as F
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
-from model import GPT, GPTConfig
+from gpt2.model import GPT, GPTConfig
 
 from utils.evaluation_output import (
     get_evaluation_output_dir,
@@ -56,10 +53,6 @@ class ProteinGymEvaluator(ModelEvaluator):
         """protein_sequence用のトークナイザーを初期化（抽象メソッドの実装）"""
         try:
             # protein_sequence用のEsmSequenceTokenizerを使用
-            import os
-            import sys
-
-            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
             from protein_sequence.dataset.tokenizer import EsmSequenceTokenizer
 
             logger.info("Initializing EsmSequenceTokenizer for protein_sequence")

@@ -35,7 +35,6 @@ from utils.base_visualization import BaseVisualizationGenerator
 warnings.filterwarnings("ignore")
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 # 日本語フォント設定
 plt.rcParams["font.family"] = [

@@ -1,11 +1,8 @@
-import os
-import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, Union
 
 from core.config import Config
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from config.paths import COMPOUNDS_DIR, get_dataset_path
 
 

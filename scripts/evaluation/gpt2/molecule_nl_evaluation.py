@@ -22,12 +22,10 @@ import torch.nn.functional as F
 from datasets import load_from_disk
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
 from utils.environment_check import check_learning_source_dir
 
-from model import GPT, GPTConfig
+from gpt2.model import GPT, GPTConfig
 
 from molecule_related_nl.utils.tokenizer import MoleculeNatLangTokenizer
 from utils.evaluation_output import (
@@ -750,8 +748,6 @@ def main():
                 }
 
             # 可視化生成クラスを使用
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            sys.path.insert(0, script_dir)
             from molecule_nl_visualization import MoleculeNLVisualizationGenerator
 
             visualizer = MoleculeNLVisualizationGenerator(results_file=csv_file, output_dir=args.result_dir)

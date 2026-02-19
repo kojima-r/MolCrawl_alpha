@@ -14,8 +14,6 @@ You can call this script with the following command:
 import datetime
 import json
 import logging
-import os
-import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
@@ -24,7 +22,6 @@ from datasets import load_dataset
 from datasets.utils.logging import enable_progress_bar
 
 # プロジェクトルートのsrcディレクトリをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from config.paths import RNA_DATASET_DIR
 from core.base import setup_logging

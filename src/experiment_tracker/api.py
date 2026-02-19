@@ -3,7 +3,6 @@ FastAPI ベースの実験管理API
 molcrawl-webのバックエンドとして動作
 """
 
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -26,7 +25,6 @@ from src.experiment_tracker import (
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 # グローバルトラッカーインスタンス
 tracker = ExperimentTracker()

@@ -6,8 +6,6 @@ BERT ClinVar評価の結果を可視化し、詳細な分析を行います。
 """
 
 import logging
-import os
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +14,6 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, roc_auc_score
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from utils.base_visualization import BaseVisualizationGenerator
 

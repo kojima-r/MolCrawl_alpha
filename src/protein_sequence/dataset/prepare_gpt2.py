@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from functools import partial
 from argparse import ArgumentParser
-import sys
 from importlib import import_module
 from pathlib import Path
 from typing import Dict, List, TYPE_CHECKING
 
 # プロジェクトルートをパスに追加（utils等を解決するため）
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT))
 
 # データセットキャッシュ設定を読み込み（configs/cache.yamlから）
 try:
