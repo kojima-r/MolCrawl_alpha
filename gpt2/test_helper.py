@@ -43,7 +43,6 @@ def get_domain_info():
     import os
     import sys
 
-    sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
     from config.paths import COMPOUNDS_DATASET_DIR, MOLECULE_NL_DATASET_DIR
 
     return {

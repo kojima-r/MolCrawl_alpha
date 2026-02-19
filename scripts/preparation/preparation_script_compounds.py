@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # プロジェクトルートのsrcディレクトリをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from compounds.utils.config import CompoundConfig
 from utils.image_manager import get_image_path

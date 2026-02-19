@@ -17,7 +17,6 @@ import pandas as pd
 import seaborn as sns
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from utils.base_visualization import BaseVisualizationGenerator
 

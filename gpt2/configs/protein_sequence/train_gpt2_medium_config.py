@@ -5,7 +5,6 @@
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from config.paths import UNIPROT_DATASET_DIR, get_gpt2_output_path
 from protein_sequence.dataset.tokenizer import EsmSequenceTokenizer as Tokenizer

@@ -15,7 +15,6 @@ from pathlib import Path
 from utils.environment_check import check_learning_source_dir
 
 # プロジェクトルートをパスに追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 try:
     import numpy as np

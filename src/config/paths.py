@@ -7,7 +7,6 @@ import os
 import sys
 
 # 共通モジュールをインポート
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from utils.environment_check import check_learning_source_dir
 
 # データセット保存先ディレクトリの定数定義

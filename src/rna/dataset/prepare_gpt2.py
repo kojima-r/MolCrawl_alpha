@@ -5,7 +5,6 @@ from pathlib import Path
 from functools import partial
 
 # プロジェクトルートのsrcディレクトリをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 # データセットキャッシュ設定を読み込み（configs/cache.yamlから）
 try:

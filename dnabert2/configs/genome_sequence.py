@@ -19,7 +19,6 @@ DNABERT-2の特徴:
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import sentencepiece as spm
 from tokenizers import Tokenizer

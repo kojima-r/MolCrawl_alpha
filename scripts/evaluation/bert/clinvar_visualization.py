@@ -16,7 +16,6 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, roc_auc_score
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from utils.base_visualization import BaseVisualizationGenerator
 

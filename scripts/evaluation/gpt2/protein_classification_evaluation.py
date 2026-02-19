@@ -29,8 +29,6 @@ from sklearn.metrics import (
 )
 
 # Add src and gpt2 to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
 from protein_sequence.utils.bert_tokenizer import EsmSequenceTokenizer
 from utils.evaluation_output import (

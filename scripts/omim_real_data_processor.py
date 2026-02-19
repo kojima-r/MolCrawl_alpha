@@ -18,7 +18,6 @@ import requests
 import yaml
 
 # プロジェクトルートを追加
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 class OMIMRealDataProcessor:

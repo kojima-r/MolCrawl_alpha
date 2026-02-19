@@ -27,8 +27,6 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 PROJECT_ROOT = SCRIPT_DIR.parent
 
-sys.path.insert(0, str(PROJECT_ROOT / "gpt2"))
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 try:
     import torch

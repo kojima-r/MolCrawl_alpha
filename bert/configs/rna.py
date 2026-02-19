@@ -6,7 +6,6 @@ import os
 import sys
 from typing import Dict, List
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 # config for training GPT-2 (124M) down to very nice loss of ~2.85 on 1 node of 8X A100 40GB
 # launch as the following (e.g. in a screen session) and wait ~5 days:

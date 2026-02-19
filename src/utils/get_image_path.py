@@ -11,7 +11,6 @@ import os
 # プロジェクトルートのsrcディレクトリをパスに追加
 script_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(script_dir)
-sys.path.insert(0, src_dir)
 
 try:
     from utils.image_manager import get_image_path

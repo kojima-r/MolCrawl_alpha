@@ -16,7 +16,6 @@ import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from utils.base_visualization import BaseVisualizationGenerator
 

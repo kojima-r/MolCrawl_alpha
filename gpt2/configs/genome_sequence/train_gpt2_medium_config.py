@@ -13,7 +13,6 @@ from config.paths import (
     get_refseq_tokenizer_path,
 )
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 n_layer = 24
 n_head = 16

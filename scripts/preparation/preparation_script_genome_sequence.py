@@ -9,7 +9,6 @@ import numpy as np
 from datasets import load_dataset
 
 # プロジェクトルートのsrcディレクトリをパスに追加
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from config.paths import GENOME_SEQUENCE_DIR
 from core.base import setup_logging

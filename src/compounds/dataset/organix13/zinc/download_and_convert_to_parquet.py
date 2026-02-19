@@ -13,8 +13,6 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.join(current_dir, "..", "..", "..", "..", "..")
     project_root = os.path.abspath(project_root)
-    sys.path.insert(0, project_root)
-    sys.path.insert(0, os.path.join(project_root, "src"))
 
 from config.paths import COMPOUNDS_DIR
 

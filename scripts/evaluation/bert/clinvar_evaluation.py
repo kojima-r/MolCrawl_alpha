@@ -44,7 +44,6 @@ from utils.model_evaluator import ModelEvaluator
 
 # プロジェクトルートを追加
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.join(PROJECT_ROOT, "src"))
 
 # 共通環境チェックモジュールを追加
 check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir

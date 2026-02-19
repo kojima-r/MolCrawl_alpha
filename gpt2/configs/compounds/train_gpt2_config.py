@@ -5,7 +5,6 @@
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 from config.paths import LEARNING_SOURCE_DIR, get_gpt2_output_path

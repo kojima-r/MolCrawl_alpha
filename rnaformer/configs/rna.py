@@ -21,7 +21,6 @@ import os
 import sys
 import json
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel

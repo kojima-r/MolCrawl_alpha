@@ -48,7 +48,6 @@ from sklearn.metrics import (
 warnings.filterwarnings("ignore")
 
 # プロジェクトルートを追加
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
 try:
     from gpt2.model import GPT, GPTConfig

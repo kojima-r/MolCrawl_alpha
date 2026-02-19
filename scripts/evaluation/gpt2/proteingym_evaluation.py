@@ -19,8 +19,6 @@ import torch
 import torch.nn.functional as F
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
 from model import GPT, GPTConfig
 
@@ -59,7 +57,6 @@ class ProteinGymEvaluator(ModelEvaluator):
             import os
             import sys
 
-            sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
             from protein_sequence.dataset.tokenizer import EsmSequenceTokenizer
 
             logger.info("Initializing EsmSequenceTokenizer for protein_sequence")

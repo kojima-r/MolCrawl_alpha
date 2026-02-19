@@ -2,7 +2,6 @@
 
 import sys
 
-sys.path.append("src")
 
 # 設定ファイルから定数をインポート
 from config.paths import UNIPROT_DATASET_DIR

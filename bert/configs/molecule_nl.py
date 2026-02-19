@@ -11,7 +11,6 @@ import os
 import sys
 from importlib import import_module
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 config_paths = import_module("config.paths")
 get_bert_output_path = config_paths.get_bert_output_path

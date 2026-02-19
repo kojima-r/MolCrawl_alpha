@@ -30,8 +30,6 @@ from sklearn.metrics import (
 )
 
 # プロジェクトルートを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "gpt2"))
 
 from model import GPT, GPTConfig
 

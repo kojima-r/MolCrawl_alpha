@@ -12,7 +12,6 @@ import sys
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(script_dir)
 src_path = os.path.join(project_root, "src")
-sys.path.insert(0, src_path)
 
 try:
     from config.paths import (

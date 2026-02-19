@@ -9,7 +9,6 @@ from transformers import AutoTokenizer, PreTrainedTokenizerFast
 from config.paths import REFSEQ_DATASET_DIR
 
 # 共通環境チェックモジュールを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from utils.environment_check import check_learning_source_dir
 
 # ClinVar評価用BERT設定

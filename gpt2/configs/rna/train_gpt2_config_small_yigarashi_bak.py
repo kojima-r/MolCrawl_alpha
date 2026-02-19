@@ -1,7 +1,6 @@
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "src"))
 
 from config.paths import get_gpt2_output_path
 from rna.dataset.geneformer.tokenizer import TranscriptomeTokenizer

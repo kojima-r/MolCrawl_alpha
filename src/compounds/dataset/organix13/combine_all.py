@@ -21,7 +21,6 @@ def _get_rdkit_helpers():
 
     import sys
 
-    sys.path.append(os.path.join(RDConfig.RDContribDir, "SA_Score"))
     import sascorer
 
     return Chem, Descriptors, sascorer

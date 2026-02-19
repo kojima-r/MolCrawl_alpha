@@ -3,7 +3,6 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, Union
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from core.config import Config
 
 @dataclass

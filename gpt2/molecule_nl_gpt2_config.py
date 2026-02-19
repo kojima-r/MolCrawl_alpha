@@ -11,10 +11,8 @@ from transformers import AutoTokenizer
 from utils.environment_check import check_learning_source_dir
 
 # Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # 共通環境チェックモジュールを追加
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # I/O
 out_dir = "runs_train_gpt2_molecule_nl"
