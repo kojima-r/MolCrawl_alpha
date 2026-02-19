@@ -24,37 +24,39 @@ parser.add_argument("--gradient_accumulation_steps", type=int, help="Gradient ac
 
 args, unknown = parser.parse_known_args()
 
-# Load config file (skip if file not found, e.g. when imported by documentation tools)
-if os.path.exists(args.config):
+# Load config file only when executed via exec() from main.py (__name__ == "__main__"),
+# not when pdoc or other tools import this module directly as src.chemberta2.configurator.
+if os.path.exists(args.config) and __name__ == "__main__":
     print(f"📝 Loading config from: {args.config}")
     with open(args.config, "r") as f:
         exec(f.read())
 
-# Override with command-line arguments
-if args.model_size is not None:
-    model_size = args.model_size
-    print(f"   ⚙️  Overriding model_size: {model_size}")
+if __name__ == "__main__":
+    # Override with command-line arguments
+    if args.model_size is not None:
+        model_size = args.model_size
+        print(f"   ⚙️  Overriding model_size: {model_size}")
 
-if args.use_wandb is not None:
-    use_wandb = args.use_wandb == "True"
-    print(f"   ⚙️  Overriding use_wandb: {use_wandb}")
+    if args.use_wandb is not None:
+        use_wandb = args.use_wandb == "True"
+        print(f"   ⚙️  Overriding use_wandb: {use_wandb}")
 
-if args.wandb_project is not None:
-    wandb_project = args.wandb_project
-    print(f"   ⚙️  Overriding wandb_project: {wandb_project}")
+    if args.wandb_project is not None:
+        wandb_project = args.wandb_project
+        print(f"   ⚙️  Overriding wandb_project: {wandb_project}")
 
-if args.max_steps is not None:
-    max_steps = args.max_steps
-    print(f"   ⚙️  Overriding max_steps: {max_steps}")
+    if args.max_steps is not None:
+        max_steps = args.max_steps
+        print(f"   ⚙️  Overriding max_steps: {max_steps}")
 
-if args.learning_rate is not None:
-    learning_rate = args.learning_rate
-    print(f"   ⚙️  Overriding learning_rate: {learning_rate}")
+    if args.learning_rate is not None:
+        learning_rate = args.learning_rate
+        print(f"   ⚙️  Overriding learning_rate: {learning_rate}")
 
-if args.batch_size is not None:
-    batch_size = args.batch_size
-    print(f"   ⚙️  Overriding batch_size: {batch_size}")
+    if args.batch_size is not None:
+        batch_size = args.batch_size
+        print(f"   ⚙️  Overriding batch_size: {batch_size}")
 
-if args.gradient_accumulation_steps is not None:
-    gradient_accumulation_steps = args.gradient_accumulation_steps
-    print(f"   ⚙️  Overriding gradient_accumulation_steps: {gradient_accumulation_steps}")
+    if args.gradient_accumulation_steps is not None:
+        gradient_accumulation_steps = args.gradient_accumulation_steps
+        print(f"   ⚙️  Overriding gradient_accumulation_steps: {gradient_accumulation_steps}")
