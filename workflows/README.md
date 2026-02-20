@@ -818,7 +818,7 @@ source src/config/env.sh
 
    ```bash
    # 設定ファイルに認証URLが正しく設定されているか確認
-   cat configs/omim_real_data.yaml
+   cat assets/configs/omim_real_data.yaml
 
    # サンプルデータで動作確認
    ./workflows/run_gpt2_omim_evaluation_dummy.sh

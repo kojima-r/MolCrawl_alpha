@@ -9,7 +9,7 @@ from typing import Dict, List, TYPE_CHECKING
 # プロジェクトルートをパスに追加（utils等を解決するため）
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
-# データセットキャッシュ設定を読み込み（configs/cache.yamlから）
+# データセットキャッシュ設定を読み込み（assets/configs/cache.yamlから）
 try:
     from utils.cache_config import setup_cache_env
 except ModuleNotFoundError:

@@ -70,7 +70,7 @@ TOKENIZER_PATH=""  # 空の場合は自動検出
 # デフォルト出力先（-o/--output-dirで上書き可能）
 OUTPUT_DIR="$EVALUATION_OUTPUT_DIR/genome_sequence/report/omim_real_evaluation"
 DATA_DIR="$EVALUATION_OUTPUT_DIR/genome_sequence/data/omim_real"  # データ準備時の出力先
-DEFAULT_CONFIG="$PROJECT_ROOT/configs/omim_real_data.yaml"
+DEFAULT_CONFIG="$PROJECT_ROOT/assets/configs/omim_real_data.yaml"
 EXISTING_OMIM_DIR=""  # 既存のOMIMデータディレクトリ
 FORCE_DOWNLOAD=false
 SKIP_DATA_PREP=false
@@ -89,7 +89,7 @@ GPT-2 OMIM実データ評価パイプライン
     --tokenizer PATH            トークナイザーパス（指定しない場合は自動検出）
     --batch_size SIZE           バッチサイズ (デフォルト: 16)
     -o, --output_dir DIR        出力ディレクトリ (デフォルト: \$LEARNING_SOURCE_DIR/genome_sequence/report/omim_real_evaluation)
-    --config FILE               実データ設定ファイル (デフォルト: configs/omim_real_data.yaml)
+    --config FILE               実データ設定ファイル (デフォルト: assets/configs/omim_real_data.yaml)
     --existing_omim_dir DIR     既存のOMIMデータディレクトリを指定（ダウンロード済みファイルの再利用）
     --force_download            データを強制再ダウンロード
     --skip_data_prep            データ準備をスキップ
