@@ -5,7 +5,7 @@ from pathlib import Path
 
 # プロジェクトルートのsrcディレクトリをパスに追加
 
-# データセットキャッシュ設定を読み込み（configs/cache.yamlから）
+# データセットキャッシュ設定を読み込み（assets/configs/cache.yamlから）
 try:
     # 任意のキャッシュ設定。存在しない環境でも学習は継続できる。
     from utils.cache_config import setup_cache_env

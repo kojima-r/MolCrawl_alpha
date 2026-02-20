@@ -28,13 +28,13 @@ echo 'export LEARNING_SOURCE_DIR="learning_source_20250818"' >> ~/.zshrc
 1. Copy the template configuration file:
 
    ```bash
-   cp configs/cache.template.yaml configs/cache.yaml
+   cp assets/configs/cache.template.yaml assets/configs/cache.yaml
    ```
 
-2. Edit `configs/cache.yaml` to set appropriate cache directories:
+2. Edit `assets/configs/cache.yaml` to set appropriate cache directories:
 
    ```bash
-   vi configs/cache.yaml
+   vi assets/configs/cache.yaml
    ```
 
 3. Update the paths to point to a directory with sufficient storage space:
@@ -49,7 +49,7 @@ echo 'export LEARNING_SOURCE_DIR="learning_source_20250818"' >> ~/.zshrc
 
 - The default cache location (`~/.cache/huggingface`) may fill up the root partition during dataset generation
 - Choose a directory with at least **100GB of free space**
-- The `configs/cache.yaml` file is git-ignored and user-specific
+- The `assets/configs/cache.yaml` file is git-ignored and user-specific
 - Dataset preparation scripts will fail if this configuration is not set up properly
 
 ## Installation
