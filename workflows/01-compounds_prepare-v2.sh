@@ -17,7 +17,7 @@ mkdir -p ${LEARNING_SOURCE_DIR}/compounds/logs/
 echo "🚀 Starting compounds dataset preparation (v2)..."
 echo "📁 Learning source: ${LEARNING_SOURCE_DIR}"
 
-python scripts/preparation/preparation_script_compounds_v2.py \
+python src/preparation/preparation_script_compounds_v2.py \
     assets/configs/compounds.yaml \
     > ${LEARNING_SOURCE_DIR}/compounds/logs/compounds-preparation-v2-$(date +%Y-%m-%d_%H-%M-%S).log 2>&1
 
