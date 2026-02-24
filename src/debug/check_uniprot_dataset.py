@@ -2,7 +2,7 @@
 
 
 # 設定ファイルから定数をインポート
-from src.config.paths import UNIPROT_DATASET_DIR
+from config.paths import UNIPROT_DATASET_DIR
 
 try:
     from datasets import load_from_disk

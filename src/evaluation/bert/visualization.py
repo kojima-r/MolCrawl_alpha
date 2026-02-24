@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 
 # プロジェクトルートを追加
 
-from src.utils.base_visualization import BaseVisualizationGenerator  # noqa: E402
+from utils.base_visualization import BaseVisualizationGenerator  # noqa: E402
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")

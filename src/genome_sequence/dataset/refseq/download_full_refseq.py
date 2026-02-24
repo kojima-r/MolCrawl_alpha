@@ -46,7 +46,7 @@ def download(url: str, path: str, try_count: int = 0, max_try: int = 3) -> str:
         except Exception as e:
             os.remove(path)
             msg = str(e) + "\n" + "".join(traceback.format_exception(None, e, e.__traceback__))
-            logger.error(f"[Try: {try_count+1}] Error while downloading {path}: \n{msg}")
+            logger.error(f"[Try: {try_count + 1}] Error while downloading {path}: \n{msg}")
             if try_count < max_try:
                 return download(url, path, try_count + 1)
     else:
@@ -76,7 +76,7 @@ def extract_file(
         except Exception as e:
             os.remove(sdf_file_path)
             msg = str(e) + "\n" + "".join(traceback.format_exception(None, e, e.__traceback__))
-            logging.error(f"[Try: {try_count+1}]  File {archive_path} created an error : \n{msg}")
+            logging.error(f"[Try: {try_count + 1}]  File {archive_path} created an error : \n{msg}")
             if try_count < max_try:
                 return extract_file(archive_path, output_dir, try_count + 1)
     else:

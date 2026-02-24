@@ -102,7 +102,7 @@ def write_chunk_file(path_file, chunk_sequence: List[str]):
 
 def process_chunk(id_and_chunk: Tuple[int, List[str]], raw_dir, max_lines_per_file):
     i, chunk = id_and_chunk
-    path_chunk = Path(raw_dir) / f"chunk_{max_lines_per_file * i}_{max_lines_per_file * (i+ 1)}.raw"
+    path_chunk = Path(raw_dir) / f"chunk_{max_lines_per_file * i}_{max_lines_per_file * (i + 1)}.raw"
     write_chunk_file(path_chunk, chunk)
 
 

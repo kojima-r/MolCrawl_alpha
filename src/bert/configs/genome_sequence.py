@@ -3,7 +3,7 @@ from tokenizers import Tokenizer
 from tokenizers.models import BPE
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
-from src.config.paths import REFSEQ_DATASET_DIR, get_refseq_tokenizer_path, get_bert_output_path
+from config.paths import REFSEQ_DATASET_DIR, get_refseq_tokenizer_path, get_bert_output_path
 
 model_size = "small"  # Choose between small, medium or large
 model_path = get_bert_output_path("genome_sequence", model_size)

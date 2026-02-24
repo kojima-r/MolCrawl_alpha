@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from src.utils.environment_check import check_learning_source_dir
+from utils.environment_check import check_learning_source_dir
 
 logger = logging.getLogger(__name__)
 

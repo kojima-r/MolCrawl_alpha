@@ -83,7 +83,7 @@ def extract_file(
         except Exception as e:
             os.remove(sdf_file_path)
             msg = str(e) + "\n" + "".join(traceback.format_exception(None, e, e.__traceback__))
-            logging.error(f"[Try: {try_count+1}]  File {archive_path} created an error : \n{msg}")
+            logging.error(f"[Try: {try_count + 1}]  File {archive_path} created an error : \n{msg}")
             if try_count < max_try:
                 return extract_file(archive_path, try_count + 1)
     else:

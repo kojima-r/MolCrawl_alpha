@@ -1,6 +1,7 @@
 #!/bin/bash
 # Common functions for bootstrap scripts
 
+
 # Check if LEARNING_SOURCE_DIR environment variable is set
 # Usage: check_learning_source_dir
 check_learning_source_dir() {

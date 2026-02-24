@@ -365,12 +365,12 @@ def run_tests(
     }
 
     device = get_device(device)
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Hugging Face Hub モデルテスト")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"リポジトリID: {repo_id}")
     print(f"デバイス: {device}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # 1. リポジトリ内容を確認
     files = list_repo_contents(repo_id, revision)
@@ -447,20 +447,20 @@ test_generate_func = test_generate
 
 def print_summary(results: dict):
     """テスト結果のサマリーを表示"""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("テスト結果サマリー")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     for test_name, passed in results["tests"].items():
         status = "✓ PASS" if passed else "✗ FAIL"
         print(f"  {test_name}: {status}")
 
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     if results["success"]:
         print("[SUCCESS] すべてのテストに合格しました！")
     else:
         print("[FAILED] 一部のテストに失敗しました")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 def main():

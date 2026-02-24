@@ -10,7 +10,7 @@ import numpy as np
 # プロジェクトルートのsrcディレクトリをパスに追加
 
 from compounds.utils.config import CompoundConfig
-from src.utils.image_manager import get_image_path
+from utils.image_manager import get_image_path
 from compounds.utils.general import (
     combine_datasets,
     download_datasets,
@@ -19,7 +19,7 @@ from compounds.utils.general import (
     download_zinc20,
 )
 from compounds.utils.tokenizer import CompoundsTokenizer, ScaffoldsTokenizer
-from src.config.paths import COMPOUNDS_DIR
+from config.paths import COMPOUNDS_DIR
 from core.base import (
     multiprocess_tokenization,
     read_parquet,
@@ -140,7 +140,7 @@ def tokenize_compound_data(cfg, organix13_dataset_path, tokenized_marker, proces
             )
         elif invalid_rate > 5.0:
             logger.warning(
-                f"High rate of invalid SMILES detected ({invalid_rate:.2f}%). " "This may indicate data quality issues."
+                f"High rate of invalid SMILES detected ({invalid_rate:.2f}%). This may indicate data quality issues."
             )
         elif invalid_rate > 1.0:
             logger.info(
@@ -148,7 +148,7 @@ def tokenize_compound_data(cfg, organix13_dataset_path, tokenized_marker, proces
                 "This is within acceptable range for large chemical databases."
             )
         else:
-            logger.info(f"Low rate of invalid SMILES ({invalid_rate:.2f}%). " "Data quality is good.")
+            logger.info(f"Low rate of invalid SMILES ({invalid_rate:.2f}%). Data quality is good.")
 
         # ZINC20特有の問題の説明
         logger.info(

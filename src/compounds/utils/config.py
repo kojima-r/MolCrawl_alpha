@@ -3,7 +3,7 @@ from typing import Any, Dict, Union
 
 from core.config import Config
 
-from src.config.paths import COMPOUNDS_DIR, get_dataset_path
+from config.paths import COMPOUNDS_DIR, get_dataset_path
 
 
 @dataclass

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Union
 
-from src.config.paths import RNA_DATASET_DIR
+from config.paths import RNA_DATASET_DIR
 from core.config import Config
 
 

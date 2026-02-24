@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 # 共通モジュールを追加
-from src.utils.environment_check import check_learning_source_dir
+from utils.environment_check import check_learning_source_dir
 
 
 def get_log_dir() -> Path:

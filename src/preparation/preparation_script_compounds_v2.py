@@ -36,7 +36,7 @@ from compounds.utils.general import (
     download_opv,
     download_llamol_datasets,
 )
-from src.config.paths import COMPOUNDS_DIR
+from config.paths import COMPOUNDS_DIR
 from core.base import setup_logging
 
 logger = logging.getLogger(__name__)
