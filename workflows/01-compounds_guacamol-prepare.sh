@@ -19,7 +19,7 @@ fi
 echo "Using LEARNING_SOURCE_DIR: $LEARNING_SOURCE_DIR"
 
 # Run the download script
-python scripts/preparation/download_guacamol.py
+python src/preparation/download_guacamol.py
 
 echo ""
 echo "GuacaMol download complete!"

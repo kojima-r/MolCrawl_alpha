@@ -13,7 +13,7 @@ if __name__ == "__main__":
     project_root = os.path.join(current_dir, "..", "..", "..", "..", "..")
     project_root = os.path.abspath(project_root)
 
-from src.config.paths import COMPOUNDS_DIR
+from config.paths import COMPOUNDS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +169,7 @@ def download_zinc_files(delay_between_downloads: float = 1.0):
 
     # Download files sequentially to avoid 503 errors
     for i, file_info in enumerate(files_to_download):
-        logger.info(f"Progress: {i+1}/{len(files_to_download)} - Downloading {file_info['filename']}")
+        logger.info(f"Progress: {i + 1}/{len(files_to_download)} - Downloading {file_info['filename']}")
         file_result = {
             "relative_path": f"{file_info['directory']}/{file_info['filename']}",
             "filename": file_info["filename"],

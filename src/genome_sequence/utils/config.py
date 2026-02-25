@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Union, Optional
 
-from src.config.paths import GENOME_SEQUENCE_DIR
+from config.paths import GENOME_SEQUENCE_DIR
 from core.config import Config
 
 

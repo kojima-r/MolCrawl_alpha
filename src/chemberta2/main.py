@@ -222,7 +222,7 @@ if __name__ == "__main__":
                 train_dataset = load_from_disk(train_path)
             else:
                 raise FileNotFoundError(
-                    f"Training dataset not found at {train_path}\n" f"Please run the preparation pipeline first."
+                    f"Training dataset not found at {train_path}\nPlease run the preparation pipeline first."
                 )
 
             # Prefer valid over test

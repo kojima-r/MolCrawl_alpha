@@ -15,7 +15,7 @@ except ModuleNotFoundError:
     Query = None
     CORSMiddleware = None
 
-from src.experiment_tracker import (
+from experiment_tracker import (
     DatasetType,
     ExperimentStatus,
     ExperimentTracker,

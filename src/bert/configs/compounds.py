@@ -4,7 +4,7 @@
 
 
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
-from src.config.paths import COMPOUNDS_DATASET_DIR, get_bert_output_path
+from config.paths import COMPOUNDS_DATASET_DIR, get_bert_output_path
 
 tokenizer = Tokenizer("assets/molecules/vocab.txt", 256)
 

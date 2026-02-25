@@ -15,7 +15,7 @@ from sklearn.metrics import confusion_matrix, roc_auc_score
 
 # プロジェクトルートを追加
 
-from src.utils.base_visualization import BaseVisualizationGenerator
+from utils.base_visualization import BaseVisualizationGenerator
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")

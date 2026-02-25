@@ -22,7 +22,7 @@ import os
 
 
 from compounds.utils.tokenizer import CompoundsTokenizer
-from src.config.paths import COMPOUNDS_DATASET_DIR
+from config.paths import COMPOUNDS_DATASET_DIR
 
 # Model configuration
 model_size = "small"  # Choose between small, medium, large

@@ -22,7 +22,7 @@ from transformers import (
 from compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 
 # 共通環境チェックモジュールを追加
-from src.utils.environment_check import check_learning_source_dir
+from utils.environment_check import check_learning_source_dir
 
 # -----------------------------
 # 既存の前処理ヘルパ

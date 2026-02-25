@@ -25,7 +25,7 @@ from typing import Any, Dict, List
 import torch
 from transformers import DataCollatorForLanguageModeling
 
-from src.config.paths import UNIPROT_DATASET_DIR
+from config.paths import UNIPROT_DATASET_DIR
 from protein_sequence.utils.bert_tokenizer import create_bert_protein_tokenizer
 
 # Model configuration

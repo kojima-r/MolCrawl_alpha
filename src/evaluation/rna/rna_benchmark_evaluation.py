@@ -20,7 +20,7 @@ from torch import Tensor
 from transformers import BertForMaskedLM
 
 from rna.dataset.geneformer.tokenizer import TranscriptomeTokenizer
-from src.utils.evaluation_output import setup_evaluation_logging
+from utils.evaluation_output import setup_evaluation_logging
 
 
 @dataclass
