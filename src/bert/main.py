@@ -10,6 +10,7 @@ try:
         BertConfig,
         BertForMaskedLM,
         DataCollatorForLanguageModeling,
+        EarlyStoppingCallback,
         Trainer,
         TrainingArguments,
     )
@@ -258,6 +259,14 @@ if __name__ == "__main__":
 
         data_collator = DataCollatorForLanguageModeling(tokenizer=actual_tokenizer, mlm=True, mlm_probability=0.2)
 
+    # Early stopping configuration
+    early_stopping = globals().get("early_stopping", True)  # Enable by default
+    early_stopping_patience = globals().get("early_stopping_patience", 10)  # Default patience
+    if early_stopping:
+        print(f"⏰ Early stopping enabled with patience={early_stopping_patience}")
+    else:
+        print("⏰ Early stopping disabled")
+
     training_args = TrainingArguments(
         output_dir=model_path,  # output directory to where save model checkpoint
         logging_strategy="steps",  # log every `logging_steps`
@@ -274,8 +283,10 @@ if __name__ == "__main__":
         learning_rate=learning_rate,
         weight_decay=weight_decay,
         report_to="wandb" if use_wandb else "none",  # Enable wandb if configured, otherwise disable integrations
-        # load_best_model_at_end=True,  # whether to load the best model (in terms of loss) at the end of training
-        # save_total_limit=3,           # whether you don't have much space so you let only 3 model weights saved in the disk
+        load_best_model_at_end=early_stopping,  # Load best model at end when early stopping is enabled
+        metric_for_best_model="eval_loss",  # Use eval_loss to determine best model
+        greater_is_better=False,  # Lower loss is better
+        save_total_limit=5,  # Keep only the 5 most recent checkpoints
     )
 
     # Check if we should use custom dataset loading (for RNA data)
@@ -456,12 +467,19 @@ if __name__ == "__main__":
     else:
         print("No preprocessing function found or not callable.")
 
+    # Configure callbacks
+    callbacks = []
+    if early_stopping:
+        callbacks.append(EarlyStoppingCallback(early_stopping_patience=early_stopping_patience))
+        print(f"📋 Added EarlyStoppingCallback (patience={early_stopping_patience})")
+
     trainer = Trainer(
         model=model,
         args=training_args,
         data_collator=data_collator,
         train_dataset=train_dataset,
         eval_dataset=test_dataset,
+        callbacks=callbacks if callbacks else None,
     )
 
     # Resume from checkpoint by default if available
