@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, Union
 
 from molcrawl.core.config import Config
 
@@ -18,8 +17,8 @@ class MoleculeNLPreparationConfig(Config):
 
 @dataclass
 class MoleculeNLConfig(Config):
-    data_preparation: Union[MoleculeNLPreparationConfig, Dict[str, Any]] = field(default_factory=dict)
+    data_preparation: MoleculeNLPreparationConfig = field(default_factory=MoleculeNLPreparationConfig)
 
     def __post_init__(self):
-        if isinstance(self.data_preparation, dict):
-            self.data_preparation = MoleculeNLPreparationConfig(**self.data_preparation)
+        if not isinstance(self.data_preparation, MoleculeNLPreparationConfig):  # type: ignore[misc]
+            self.data_preparation = MoleculeNLPreparationConfig(**self.data_preparation)  # type: ignore[arg-type]

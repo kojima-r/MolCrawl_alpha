@@ -228,7 +228,7 @@ if __name__ == "__main__":
         }
 
         # Initialize wandb
-        wandb_run = wandb.init(
+        wandb_run = wandb.init(  # type: ignore[attr-defined]
             project=wandb_project,
             entity=wandb_entity,
             name=wandb_run_name,

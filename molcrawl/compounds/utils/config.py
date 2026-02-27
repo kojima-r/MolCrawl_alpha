@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, Union
 
 from molcrawl.core.config import Config
 
@@ -26,8 +25,8 @@ class Organix13PreparationConfig:
 
 @dataclass
 class CompoundConfig(Config):
-    data_preparation: Union[Organix13PreparationConfig, Dict[str, Any]] = field(default_factory=dict)
+    data_preparation: Organix13PreparationConfig = field(default_factory=Organix13PreparationConfig)
 
     def __post_init__(self):
-        if isinstance(self.data_preparation, dict):
-            self.data_preparation = Organix13PreparationConfig(**self.data_preparation)
+        if not isinstance(self.data_preparation, Organix13PreparationConfig):  # type: ignore[misc]
+            self.data_preparation = Organix13PreparationConfig(**self.data_preparation)  # type: ignore[arg-type]

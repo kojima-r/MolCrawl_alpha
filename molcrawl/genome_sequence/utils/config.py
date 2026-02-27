@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, Union, Optional
+from typing import Optional
 
 from molcrawl.config.paths import GENOME_SEQUENCE_DIR
 from molcrawl.core.config import Config
@@ -34,8 +34,8 @@ class RefSeqPreparationConfig:
 
 @dataclass
 class GenomeSequenceConfig(Config):
-    data_preparation: Union[RefSeqPreparationConfig, Dict[str, Any]] = field(default_factory=dict)
+    data_preparation: RefSeqPreparationConfig = field(default_factory=RefSeqPreparationConfig)
 
     def __post_init__(self):
-        if isinstance(self.data_preparation, dict):
-            self.data_preparation = RefSeqPreparationConfig(**self.data_preparation)
+        if not isinstance(self.data_preparation, RefSeqPreparationConfig):  # type: ignore[misc]
+            self.data_preparation = RefSeqPreparationConfig(**self.data_preparation)  # type: ignore[arg-type]

@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     if not os.path.exists(logging_dir):
         os.makedirs(logging_dir)
-    setup_logging(logging_dir)
+    setup_logging(str(logging_dir))
 
     # Check if dataset directory exists
     if not base_dataset_dir.exists():

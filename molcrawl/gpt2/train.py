@@ -177,7 +177,7 @@ if use_wandb and master_process:
     }
 
     # Initialize wandb
-    wandb_run = wandb.init(
+    wandb_run = wandb.init(  # type: ignore[attr-defined]
         project=wandb_project,
         entity=wandb_entity,
         name=wandb_run_name,
@@ -211,8 +211,8 @@ if dataset == "rna":
     meta_vocab_size = training_data.vocab_size
 else:
     print(f"Loading dataset: {dataset_params}")
-    training_data = PreparedDataset(**dataset_params, split="train")
-    test_data = PreparedDataset(**dataset_params, split="valid")
+    training_data = PreparedDataset(**dataset_params, split="train")  # type: ignore[assignment]
+    test_data = PreparedDataset(**dataset_params, split="valid")  # type: ignore[assignment]
 
 # training_data = torch.load(os.path.join(data_dir, "train.pt"))
 # test_data = torch.load(
@@ -298,7 +298,7 @@ if init_from == "scratch":
     if meta_vocab_size is None:
         print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
     model_args["vocab_size"] = meta_vocab_size if meta_vocab_size is not None else 50304
-    gptconf = GPTConfig(**model_args)
+    gptconf = GPTConfig(**model_args)  # type: ignore[arg-type]
     model = GPT(gptconf)
 elif init_from == "resume":
     print(f"Resuming training from {out_dir}")
@@ -343,7 +343,7 @@ elif init_from == "resume":
         if meta_vocab_size is None:
             print("defaulting to vocab_size of GPT-2 to 50304 (50257 rounded up for efficiency)")
         model_args["vocab_size"] = meta_vocab_size if meta_vocab_size is not None else 50304
-        gptconf = GPTConfig(**model_args)
+        gptconf = GPTConfig(**model_args)  # type: ignore[arg-type]
         model = GPT(gptconf)
     else:
         checkpoint_model_args = checkpoint["model_args"]
@@ -352,7 +352,7 @@ elif init_from == "resume":
         for k in ["n_layer", "n_head", "n_embd", "block_size", "bias", "vocab_size"]:
             model_args[k] = checkpoint_model_args[k]
         # create the model
-        gptconf = GPTConfig(**model_args)
+        gptconf = GPTConfig(**model_args)  # type: ignore[arg-type]
         model = GPT(gptconf)
         state_dict = checkpoint["model"]
         # fix the keys of the state dictionary :(
@@ -662,7 +662,7 @@ while True:
 
                 # Log checkpoint to wandb as artifact BEFORE cleanup
                 if wandb_run is not None and wandb_log_model:
-                    artifact = wandb.Artifact(
+                    artifact = wandb.Artifact(  # type: ignore[attr-defined]
                         name=f"model-{wandb_run.id}",
                         type="model",
                         description=f"Model checkpoint at step {iter_num}",

@@ -278,7 +278,7 @@ class ProteinClassificationEvaluator(ModelEvaluator):
         true_labels = np.array(true_labels)
 
         # Binary predictions (negative fitness = pathogenic)
-        predictions = (fitness_scores < threshold).astype(int)
+        predictions = (fitness_scores < threshold).astype(int)  # type: ignore[operator]
 
         # Calculate metrics
         metrics = self._calculate_metrics(true_labels, predictions, fitness_scores)
@@ -290,9 +290,9 @@ class ProteinClassificationEvaluator(ModelEvaluator):
 
         return {
             "metrics": metrics,
-            "true_labels": true_labels.tolist(),
+            "true_labels": true_labels.tolist(),  # type: ignore[attr-defined]
             "predictions": predictions.tolist(),
-            "fitness_scores": fitness_scores.tolist(),
+            "fitness_scores": fitness_scores.tolist(),  # type: ignore[attr-defined]
             "threshold": threshold,
         }
 

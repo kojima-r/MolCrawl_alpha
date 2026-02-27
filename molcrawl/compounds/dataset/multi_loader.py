@@ -72,22 +72,23 @@ class MultiDatasetLoader:
             splits = ["train", "valid", "test"]
 
         # 読み込むデータセットを決定
+        enum_types: List[CompoundDatasetType]
         if dataset_types is None:
-            dataset_types = self.get_available_datasets()
-            if not dataset_types:
+            enum_types = self.get_available_datasets()
+            if not enum_types:
                 raise ValueError(
                     f"No HuggingFace datasets found in {self.compounds_dir}/hf_datasets/\n"
                     "Please run the preparation pipeline first."
                 )
         else:
             # 文字列の場合はEnumに変換
-            dataset_types = [CompoundDatasetType(dt) if isinstance(dt, str) else dt for dt in dataset_types]
+            enum_types = [CompoundDatasetType(dt) if isinstance(dt, str) else dt for dt in dataset_types]  # type: ignore[misc]
 
-        logger.info(f"Loading {len(dataset_types)} datasets: {[dt.value for dt in dataset_types]}")
+        logger.info(f"Loading {len(enum_types)} datasets: {[dt.value for dt in enum_types]}")
 
         # 各データセットを読み込み
         loaded_datasets = {}
-        for dataset_type in dataset_types:
+        for dataset_type in enum_types:
             info = get_dataset_info(dataset_type)
             hf_path = info.get_hf_dataset_path(self.compounds_dir)
 

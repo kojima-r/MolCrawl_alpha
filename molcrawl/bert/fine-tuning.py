@@ -366,7 +366,7 @@ if __name__ == "__main__":
                 # -----------------------------
                 if benchmark_name in ["qm8", "qm9"]:
                     for i in range(len(tasks)):
-                        wandb.init(
+                        wandb.init(  # type: ignore[attr-defined]
                             project="molecule-benchmark",  # プロジェクト名（任意）
                             name=f"{tasks[i]}_pretrained{pretrained}_seed{seed}",  # run名
                             config={
@@ -417,10 +417,10 @@ if __name__ == "__main__":
                         print(f"Test score: {test_score}")
                         with open(f"{training_args.output_dir}/test_score.txt", "w") as f:
                             f.write(str(test_score))
-                        wandb.log({"test_score": test_score})
-                        wandb.finish()
+                        wandb.log({"test_score": test_score})  # type: ignore[attr-defined]
+                        wandb.finish()  # type: ignore[attr-defined]
                 else:
-                    wandb.init(
+                    wandb.init(  # type: ignore[attr-defined]
                         project="molecule-benchmark",  # プロジェクト名（任意）
                         name=f"{benchmark_name}_pretrained{pretrained}_seed{seed}",  # run名
                         config={
@@ -460,5 +460,5 @@ if __name__ == "__main__":
                     print(f"Test score: {test_score}")
                     with open(f"{training_args.output_dir}/test_score.txt", "w") as f:
                         f.write(str(test_score))
-                    wandb.log({"test_score": test_score})
-                    wandb.finish()
+                    wandb.log({"test_score": test_score})  # type: ignore[attr-defined]
+                    wandb.finish()  # type: ignore[attr-defined]

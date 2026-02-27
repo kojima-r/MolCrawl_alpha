@@ -39,7 +39,7 @@ class RNAEncodingValidator:
 
         self.vocab = None
         self.dataset = None
-        self.issues = []
+        self.issues: list[str] = []
 
     def load_vocabulary(self) -> bool:
         """語彙ファイルを読み込み"""

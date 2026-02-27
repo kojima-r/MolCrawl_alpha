@@ -93,7 +93,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     cfg = RnaConfig.from_file(args.config).data_preparation
 
-    setup_logging(Path(RNA_DATASET_DIR))
+    setup_logging(str(RNA_DATASET_DIR))
 
     # 各処理段階のマーカー（完了印）ファイル
     build_list_marker = Path(RNA_DATASET_DIR) / "build_list_complete.marker"
