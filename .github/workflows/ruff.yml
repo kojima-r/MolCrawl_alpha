@@ -1,5 +1,6 @@
 name: Ruff Lint
 on:
+  workflow_dispatch:
   push:
     branches: [main, develop, "update/**", "feature/**"]
   pull_request:

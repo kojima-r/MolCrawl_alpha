@@ -1,5 +1,6 @@
 name: CI Tests
 on:
+  workflow_dispatch:
   push:
     branches: [main, develop, "update/**", "feature/**", "phase/**"]
     paths:

@@ -3,25 +3,25 @@ on:
   push:
     branches: [main, develop, "feature/**", "phase/**"]
     paths:
-      - 'molcrawl/compounds/**'
-      - 'tests/unit/test_compounds.py'
-      - 'tests/integration/test_compounds_pipeline.py'
-      - '.github/workflows/compounds-validation.yml'
+      - "molcrawl/compounds/**"
+      - "tests/unit/test_compounds.py"
+      - "tests/integration/test_compounds_pipeline.py"
+      - ".github/workflows/compounds-validation.yml"
   pull_request:
     branches: [main, develop]
     paths:
-      - 'molcrawl/compounds/**'
+      - "molcrawl/compounds/**"
   workflow_dispatch:
     inputs:
       test_level:
-        description: 'Test level to run'
+        description: "Test level to run"
         required: true
         type: choice
         options:
-          - 'unit'
-          - 'integration'
-          - 'all'
-        default: 'all'
+          - "unit"
+          - "integration"
+          - "all"
+        default: "all"
 jobs:
   unit-tests:
     name: Compounds Unit Tests
@@ -33,7 +33,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-          cache: 'pip'
+          cache: "pip"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -68,7 +68,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-          cache: 'pip'
+          cache: "pip"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -102,7 +102,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-          cache: 'pip'
+          cache: "pip"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -140,7 +140,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-          cache: 'pip'
+          cache: "pip"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -168,7 +168,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-          cache: 'pip'
+          cache: "pip"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
