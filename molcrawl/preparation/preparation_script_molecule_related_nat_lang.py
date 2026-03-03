@@ -242,14 +242,29 @@ if __name__ == "__main__":
 
         # Apply validation and tokenization
         logger.info(f"Processing {split} split...")
-        processed_split = dataset[split].map(
-            validate_and_tokenize,
-            batched=False,
-            num_proc=cfg.num_workers,
-            load_from_cache_file=False,
-            desc="Validating and tokenizing {}".format(split),
-            remove_columns=dataset[split].column_names,  # Remove original columns to save space
-        )
+        num_proc = cfg.num_workers
+        try:
+            processed_split = dataset[split].map(
+                validate_and_tokenize,
+                batched=False,
+                num_proc=num_proc,
+                load_from_cache_file=False,
+                desc="Validating and tokenizing {}".format(split),
+                remove_columns=dataset[split].column_names,
+            )
+        except RuntimeError as e:
+            logger.warning(
+                f"Multiprocessing map failed (num_proc={num_proc}): {e}\n"
+                "Retrying with num_proc=1 (single process)..."
+            )
+            processed_split = dataset[split].map(
+                validate_and_tokenize,
+                batched=False,
+                num_proc=1,
+                load_from_cache_file=False,
+                desc="Validating and tokenizing {} (single-proc)".format(split),
+                remove_columns=dataset[split].column_names,
+            )
 
         # Filter out None results (invalid samples)
         processed_split = processed_split.filter(lambda x: x is not None)
