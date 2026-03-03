@@ -157,13 +157,14 @@ def read_dataset(dataset_path: Union[str, Path]):
         raise
 
 
-def save_dataset(dataset, dataset_path: Union[str, Path]):
+def save_dataset(dataset, dataset_path: Union[str, Path], batch_size: int = 50000):
     """
     Save dataset to disk or as parquet file
 
     Args:
         dataset: Dictionary of Dataset objects or DatasetDict
         dataset_path: Path to save the dataset (directory or .parquet file)
+        batch_size: Number of rows per batch when writing parquet (avoids OOM)
     """
     dataset_path_obj = Path(dataset_path)
 
@@ -178,24 +179,32 @@ def save_dataset(dataset, dataset_path: Union[str, Path]):
         if not isinstance(dataset, DatasetDict):
             dataset = DatasetDict(dataset)
 
-        # Concatenate all splits and save as single parquet
         import pyarrow as pa
         import pyarrow.parquet as pq
 
-        # Combine all splits
-        all_data = []
-        for split_name, split_dataset in dataset.items():
-            # Add split column
-            split_data = split_dataset.to_pandas()
-            split_data["split"] = split_name
-            all_data.append(split_data)
+        writer = None
+        total_saved = 0
+        try:
+            for split_name, split_dataset in dataset.items():
+                logger.info(f"Writing split '{split_name}' ({len(split_dataset)} samples) to parquet...")
+                num_rows = len(split_dataset)
+                for start in range(0, num_rows, batch_size):
+                    end = min(start + batch_size, num_rows)
+                    batch = split_dataset.select(range(start, end))
+                    # Add split column as a plain Python list to avoid schema issues
+                    batch_pa = batch.to_arrow()
+                    split_col = pa.array([split_name] * len(batch), type=pa.string())
+                    batch_pa = batch_pa.append_column("split", split_col)
+                    if writer is None:
+                        writer = pq.ParquetWriter(str(dataset_path_obj), batch_pa.schema)
+                    writer.write_table(batch_pa)
+                    total_saved += len(batch)
+                    logger.info(f"  ... written {end}/{num_rows} rows for '{split_name}'")
+        finally:
+            if writer is not None:
+                writer.close()
 
-        import pandas as pd
-
-        combined_df = pd.concat(all_data, ignore_index=True)
-        table = pa.Table.from_pandas(combined_df)
-        pq.write_table(table, dataset_path_obj)
-        logger.info(f"Saved {len(combined_df)} samples to parquet file")
+        logger.info(f"Saved {total_saved} samples to parquet file")
         return
 
     # Otherwise save as directory structure
