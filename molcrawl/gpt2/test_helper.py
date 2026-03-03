@@ -43,14 +43,14 @@ def get_domain_info():
     import os
     import sys
 
-    from molcrawl.config.paths import COMPOUNDS_DATASET_DIR, MOLECULE_NL_DATASET_DIR
+    from molcrawl.config.paths import COMPOUNDS_DATASET_DIR, MOLECULE_NAT_LANG_DATASET_DIR
 
     return {
         "compounds": {
             "vocab_path": "assets/molecules/vocab.txt",
             "dataset_dir": COMPOUNDS_DATASET_DIR,
         },
-        "molecule_nat_lang": {"vocab_path": None, "dataset_dir": MOLECULE_NL_DATASET_DIR},
+        "molecule_nat_lang": {"vocab_path": None, "dataset_dir": MOLECULE_NAT_LANG_DATASET_DIR},
         "genome": {
             "vocab_path": None,  # SentencePieceモデルパスが必要
             "dataset_dir": "outputs/genome_sequence/training_ready_hf_dataset",

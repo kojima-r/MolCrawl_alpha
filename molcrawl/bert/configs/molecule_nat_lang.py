@@ -18,8 +18,8 @@ Tokenizer = tokenizer_module.MoleculeNatLangTokenizer
 
 # Get LEARNING_SOURCE_DIR from environment variable directly
 LEARNING_SOURCE_DIR = os.environ.get("LEARNING_SOURCE_DIR", "./learning_source_20260105-molecule-nl")
-MOLECULE_NL_DIR = LEARNING_SOURCE_DIR + "/molecule_nat_lang"
-MOLECULE_NL_DATASET_DIR = MOLECULE_NL_DIR + "/training_ready_hf_dataset"
+MOLECULE_NAT_LANG_DIR = LEARNING_SOURCE_DIR + "/molecule_nat_lang"
+MOLECULE_NAT_LANG_DATASET_DIR = MOLECULE_NAT_LANG_DIR + "/training_ready_hf_dataset"
 
 tokenizer = Tokenizer()
 
@@ -48,7 +48,7 @@ max_steps = 600000
 model_size = "small"  # Choose between small, medium or large
 model_path = get_bert_output_path("molecule_nat_lang", model_size)
 max_length = 1024
-dataset_dir = MOLECULE_NL_DATASET_DIR
+dataset_dir = MOLECULE_NAT_LANG_DATASET_DIR
 learning_rate = 6e-6
 weight_decay = 1e-1
 log_interval = 100

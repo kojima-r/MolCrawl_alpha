@@ -3,7 +3,7 @@
 # $ torchrun --standalone --nproc_per_node=8 train.py config/train_gpt2.py
 
 
-from molcrawl.config.paths import MOLECULE_NL_DATASET_DIR, get_gpt2_output_path
+from molcrawl.config.paths import MOLECULE_NAT_LANG_DATASET_DIR, get_gpt2_output_path
 from molcrawl.molecule_nat_lang.utils.tokenizer import MoleculeNatLangTokenizer as Tokenizer
 
 # EX-Large-Sized GPT2 Model
@@ -11,7 +11,7 @@ n_layer = 48
 n_head = 25
 n_embd = 1600
 
-dataset_dir = MOLECULE_NL_DATASET_DIR
+dataset_dir = MOLECULE_NAT_LANG_DATASET_DIR
 
 tensorboard = True  # log training metrics to tensorboard
 tensorboard_dir = get_gpt2_output_path("molecule_nat_lang", "xl")

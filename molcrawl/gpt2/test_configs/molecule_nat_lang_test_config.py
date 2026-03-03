@@ -1,11 +1,11 @@
-# MOLECULE_NLドメイン用GPT2テスト設定
+# MOLECULE_NAT_LANGドメイン用GPT2テスト設定
 
 import os
 import sys
 
 import torch
 
-from molcrawl.config.paths import MOLECULE_NL_DATASET_DIR
+from molcrawl.config.paths import MOLECULE_NAT_LANG_DATASET_DIR
 
 # 基本設定
 domain = "molecule_nat_lang"
@@ -13,7 +13,7 @@ max_test_samples = 1000
 convert_to_hf = True
 
 # データセット設定
-dataset_params = {"dataset_dir": MOLECULE_NL_DATASET_DIR}
+dataset_params = {"dataset_dir": MOLECULE_NAT_LANG_DATASET_DIR}
 
 # 出力設定
 output_dir = "test_results_molecule_nat_lang"
