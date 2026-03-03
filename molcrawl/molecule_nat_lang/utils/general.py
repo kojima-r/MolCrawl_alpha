@@ -9,6 +9,96 @@ from typing import Union
 logger = logging.getLogger(__name__)
 
 
+def get_available_memory_bytes() -> tuple[int, int]:
+    """
+    Return (available_bytes, total_bytes) from /proc/meminfo.
+    Falls back to psutil if /proc/meminfo is absent (non-Linux).
+    """
+    proc_meminfo = Path("/proc/meminfo")
+    if proc_meminfo.exists():
+        mem: dict[str, int] = {}
+        with open(proc_meminfo) as fh:
+            for line in fh:
+                parts = line.split()
+                if len(parts) >= 2:
+                    mem[parts[0].rstrip(":")] = int(parts[1]) * 1024  # kB → bytes
+        available = mem.get("MemAvailable", mem.get("MemFree", 8 * 1024**3))
+        total = mem.get("MemTotal", available)
+        return available, total
+
+    try:
+        import psutil  # type: ignore[import]
+
+        vm = psutil.virtual_memory()
+        return vm.available, vm.total
+    except ImportError:
+        fallback = 8 * 1024**3  # assume 8 GB when nothing else is available
+        return fallback, fallback
+
+
+def compute_resource_aware_params(
+    num_rows: int = 3_300_000,
+    bytes_per_row_estimate: int = 2_048,
+    safety_factor: float = 0.5,
+    max_workers: int = 8,
+    target_batch_bytes: int = 256 * 1024 * 1024,  # 256 MB
+) -> dict:
+    """
+    Inspect available system memory and CPU count, then compute safe values for:
+    - ``num_workers``  — parallelism for ``Dataset.map()``
+    - ``batch_size``   — rows per batch for streaming parquet writes
+
+    Parameters
+    ----------
+    num_rows:
+        Estimated total number of rows across all splits.
+    bytes_per_row_estimate:
+        Estimated bytes per row in memory (input_ids + masks, etc.).
+    safety_factor:
+        Fraction of available memory that this process may consume.
+    max_workers:
+        Hard upper bound on the returned ``num_workers``.
+    target_batch_bytes:
+        Target memory footprint per parquet write batch.
+
+    Returns
+    -------
+    dict with keys ``num_workers``, ``batch_size``, ``available_gb``, ``total_gb``.
+    """
+    available_bytes, total_bytes = get_available_memory_bytes()
+    available_gb = available_bytes / 1024**3
+    total_gb = total_bytes / 1024**3
+    cpu_count = os.cpu_count() or 1
+
+    budget_bytes = available_bytes * safety_factor
+    dataset_bytes = max(num_rows * bytes_per_row_estimate, 1)
+
+    # Each worker needs ~1 partition of the dataset; pick largest safe count
+    workers_by_mem = max(1, int(budget_bytes / dataset_bytes))
+    num_workers = min(workers_by_mem, cpu_count, max_workers)
+
+    # Parquet batch: aim for target_batch_bytes per batch, clamp to [1 000, 200 000]
+    batch_size = max(1_000, min(int(target_batch_bytes / bytes_per_row_estimate), 200_000))
+
+    logger.info(
+        "[ResourceAware] memory: available=%.1f GB / total=%.1f GB | "
+        "CPUs=%d | estimated dataset=%.1f GB | "
+        "→ num_workers=%d  batch_size=%d",
+        available_gb,
+        total_gb,
+        cpu_count,
+        dataset_bytes / 1024**3,
+        num_workers,
+        batch_size,
+    )
+    return {
+        "num_workers": num_workers,
+        "batch_size": batch_size,
+        "available_gb": available_gb,
+        "total_gb": total_gb,
+    }
+
+
 def load_jsonl_dataset(dataset_path: Union[str, Path]):
     """
     Load SMolInstruct dataset from JSONL files in raw/ directory
@@ -188,19 +278,20 @@ def save_dataset(dataset, dataset_path: Union[str, Path], batch_size: int = 5000
             for split_name, split_dataset in dataset.items():
                 logger.info(f"Writing split '{split_name}' ({len(split_dataset)} samples) to parquet...")
                 num_rows = len(split_dataset)
+                # .data returns a huggingface InMemoryTable wrapper; .table is the
+                # actual pyarrow.lib.Table that ParquetWriter.write_table() requires.
+                # .slice() on a pyarrow Table is zero-copy — no extra memory allocated.
+                pa_table = split_dataset.data.table
                 for start in range(0, num_rows, batch_size):
-                    end = min(start + batch_size, num_rows)
-                    batch = split_dataset.select(range(start, end))
-                    # .data is the underlying pyarrow.Table (works across datasets versions)
-                    batch_pa = batch.data.to_pydict()
-                    batch_pa = pa.table(batch_pa)
-                    split_col = pa.array([split_name] * len(batch), type=pa.string())
+                    length = min(batch_size, num_rows - start)
+                    batch_pa = pa_table.slice(start, length)
+                    split_col = pa.array([split_name] * length, type=pa.string())
                     batch_pa = batch_pa.append_column("split", split_col)
                     if writer is None:
                         writer = pq.ParquetWriter(str(dataset_path_obj), batch_pa.schema)
                     writer.write_table(batch_pa)
-                    total_saved += len(batch)
-                    logger.info(f"  ... written {end}/{num_rows} rows for '{split_name}'")
+                    total_saved += length
+                    logger.info(f"  ... written {start + length}/{num_rows} rows for '{split_name}'")
         finally:
             if writer is not None:
                 writer.close()

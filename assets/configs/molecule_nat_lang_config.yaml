@@ -1,4 +1,7 @@
 data_preparation:
   dataset: "molecule_nat_lang/osunlp/SMolInstruct"
   save_path: "molecule_nat_lang/molecule_related_natural_language_tokenized.parquet"
-  num_workers: 1
+  # Upper ceiling for parallelism. The actual value used at runtime is
+  # min(this, compute_resource_aware_params(...)["num_workers"]), so setting
+  # this high lets the resource-aware function pick the safe value dynamically.
+  num_workers: 16
