@@ -8,13 +8,9 @@
 # $ torchrun --standalone --nproc_per_node=8 train.py config/train_gpt2.py
 
 import os
-from importlib import import_module
 
-
-config_paths = import_module("config.paths")
-get_bert_output_path = config_paths.get_bert_output_path
-tokenizer_module = import_module("molecule_nat_lang.utils.tokenizer")
-Tokenizer = tokenizer_module.MoleculeNatLangTokenizer
+from molcrawl.config.paths import get_bert_output_path
+from molcrawl.molecule_nat_lang.utils.tokenizer import MoleculeNatLangTokenizer as Tokenizer
 
 # Get LEARNING_SOURCE_DIR from environment variable directly
 LEARNING_SOURCE_DIR = os.environ.get("LEARNING_SOURCE_DIR", "./learning_source_20260105-molecule-nl")

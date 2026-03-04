@@ -11,7 +11,7 @@ import torch
 # プロジェクトルートのsrcディレクトリをパスに追加
 from molcrawl.core.base import setup_logging
 from molcrawl.molecule_nat_lang.utils.config import MoleculeNLConfig
-from molcrawl.molecule_nat_lang.utils.general import read_dataset, save_dataset
+from molcrawl.molecule_nat_lang.utils.general import compute_resource_aware_params, read_dataset, save_dataset
 from molcrawl.molecule_nat_lang.utils.tokenizer import MoleculeNatLangTokenizer
 
 logger = logging.getLogger(__name__)
@@ -193,6 +193,21 @@ if __name__ == "__main__":
 
     tokenizer = MoleculeNatLangTokenizer()
 
+    # ── Resource-aware parameter computation ──────────────────────────────────
+    # Estimate total rows so the memory model can compute safe parallelism.
+    total_rows_estimate = sum(len(dataset[s]) for s in dataset.keys())
+    resource_params = compute_resource_aware_params(num_rows=total_rows_estimate)
+    # Respect config ceiling: use the smaller of what the config says and what
+    # memory allows.  cfg.num_workers == 1 acts as a safe hard cap during debug.
+    dynamic_num_workers = min(cfg.num_workers, resource_params["num_workers"])
+    dynamic_batch_size = resource_params["batch_size"]
+    logger.info(
+        "Effective preparation parameters: num_workers=%d  parquet_batch_size=%d",
+        dynamic_num_workers,
+        dynamic_batch_size,
+    )
+    # ─────────────────────────────────────────────────────────────────────────
+
     logger.info(msg="Processing dataset with chemical validation...")
 
     processed_dataset = {}
@@ -242,14 +257,29 @@ if __name__ == "__main__":
 
         # Apply validation and tokenization
         logger.info(f"Processing {split} split...")
-        processed_split = dataset[split].map(
-            validate_and_tokenize,
-            batched=False,
-            num_proc=cfg.num_workers,
-            load_from_cache_file=False,
-            desc="Validating and tokenizing {}".format(split),
-            remove_columns=dataset[split].column_names,  # Remove original columns to save space
-        )
+        num_proc = dynamic_num_workers
+        try:
+            processed_split = dataset[split].map(
+                validate_and_tokenize,
+                batched=False,
+                num_proc=num_proc,
+                load_from_cache_file=False,
+                desc="Validating and tokenizing {}".format(split),
+                remove_columns=dataset[split].column_names,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Multiprocessing map failed (num_proc={num_proc}): {type(e).__name__}: {e}\n"
+                "Retrying with num_proc=1 (single process)..."
+            )
+            processed_split = dataset[split].map(
+                validate_and_tokenize,
+                batched=False,
+                num_proc=1,
+                load_from_cache_file=False,
+                desc="Validating and tokenizing {} (single-proc)".format(split),
+                remove_columns=dataset[split].column_names,
+            )
 
         # Filter out None results (invalid samples)
         processed_split = processed_split.filter(lambda x: x is not None)
@@ -305,7 +335,7 @@ if __name__ == "__main__":
     logger.info(msg="- Task type preservation")
 
     logger.info(msg="Saving processed dataset to {}.".format(parquet_file))
-    save_dataset(processed_dataset, parquet_file)
+    save_dataset(processed_dataset, parquet_file, batch_size=dynamic_batch_size)
 
     # Also save in arrow format for BERT training (keeps individual samples)
     arrow_output_dir = Path(learning_source_dir) / "molecule_nat_lang" / "arrow_splits"
