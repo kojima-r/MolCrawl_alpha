@@ -1,44 +1,35 @@
 #!/usr/bin/env python3
 """
-paths.pyからLEARNING_SOURCE_DIRを取得してJSONで出力するスクリプト
-環境変数LEARNING_SOURCE_DIRが必要です
+LEARNING_SOURCE_DIRを環境変数から取得してJSONで出力するスクリプト。
+外部パッケージに依存せず自己完結している。
+環境変数LEARNING_SOURCE_DIRが必要です。
 """
 
 import json
 import os
 import sys
 
-# プロジェクトルートのsrcディレクトリをパスに追加
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(script_dir)
-src_path = os.path.join(project_root, "src")
-
 try:
-    from config.paths import (
-        ABSOLUTE_LEARNING_SOURCE_PATH,
-        LEARNING_SOURCE_DIR,
-        PROJECT_ROOT,
-    )
+    learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
+    if not learning_source_dir:
+        print(
+            json.dumps({"error": "LEARNING_SOURCE_DIR environment variable is not set"}),
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    # 結果をJSON形式で出力
+    # このスクリプトは molcrawl-web/ 直下にあるので、1つ上がプロジェクトルート
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    absolute_path = os.path.join(project_root, learning_source_dir)
+
     result = {
-        "learning_source_dir": LEARNING_SOURCE_DIR,
-        "project_root": PROJECT_ROOT,
-        "absolute_path": ABSOLUTE_LEARNING_SOURCE_PATH,
+        "learning_source_dir": learning_source_dir,
+        "project_root": project_root,
+        "absolute_path": absolute_path,
     }
 
     print(json.dumps(result))
 
-except ImportError as e:
-    print(json.dumps({"error": f"Cannot import paths: {e}"}), file=sys.stderr)
-    sys.exit(1)
-except SystemExit:
-    # paths.pyでの環境変数チェックによる終了をキャッチ
-    print(
-        json.dumps({"error": "LEARNING_SOURCE_DIR environment variable is not set"}),
-        file=sys.stderr,
-    )
-    sys.exit(1)
 except Exception as e:
     print(json.dumps({"error": f"Unexpected error: {e}"}), file=sys.stderr)
     sys.exit(1)
