@@ -10,13 +10,13 @@ class NCBIBacteriaUpdaterWebAPI:
     def __init__(self):
         self.base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
         self.output_dir = Path("assets/genome_species_list/species")
-        self.email = "kazunobu.matsubara@riken.jp"  # NCBI推奨：メールアドレス設定
+        self.email = "kazunobu.matsubara@riken.jp"  # NCBI recommended: Email address settings
 
     def search_bacteria_genomes(self, retmax=5000):
-        """NCBI E-utilsを使って細菌ゲノムIDを検索"""
+        """Search bacterial genome ID using NCBI E-utils"""
         print("🔍 Searching bacteria genomes via NCBI E-utils...")
 
-        # 検索クエリ：細菌の完全ゲノムまたは染色体レベル
+        # Search query: complete bacterial genome or chromosome level
         search_url = f"{self.base_url}/esearch.fcgi"
         params = {
             "db": "genome",
@@ -44,12 +44,11 @@ class NCBIBacteriaUpdaterWebAPI:
             return []
 
     def fetch_genome_details(self, genome_ids, batch_size=100):
-        """ゲノムIDから詳細情報を取得"""
+        """Get detailed information from genome ID"""
         print(f"📋 Fetching details for {len(genome_ids)} genomes...")
 
         all_organisms = set()
 
-        # バッチ処理で実行
         for i in range(0, len(genome_ids), batch_size):
             batch_ids = genome_ids[i : i + batch_size]
             print(f"  Processing batch {i // batch_size + 1}/{(len(genome_ids) - 1) // batch_size + 1}")
@@ -66,11 +65,11 @@ class NCBIBacteriaUpdaterWebAPI:
                 response = requests.get(fetch_url, params=params)
                 response.raise_for_status()
 
-                # XMLを解析
+                # parse XML
                 organisms = self.parse_genome_xml(response.text)
                 all_organisms.update(organisms)
 
-                # NCBI API制限に配慮して少し待機
+                # Wait for a while due to NCBI API limitations
                 time.sleep(0.5)
 
             except Exception as e:
@@ -81,22 +80,22 @@ class NCBIBacteriaUpdaterWebAPI:
         return sorted(list(all_organisms))
 
     def parse_genome_xml(self, xml_content):
-        """XMLから生物名を抽出"""
+        """Extract organism name from XML"""
         organisms = set()
 
         try:
             root = ET.fromstring(xml_content)
 
-            # 生物名を探す（複数の可能なパス）
+            # Find organism name (multiple possible paths)
             for genome in root.findall(".//Genome"):
-                # OrganismName要素を探す
+                # Find the OrganismName element
                 org_name = genome.find(".//OrganismName")
                 if org_name is not None and org_name.text:
                     cleaned = self.clean_organism_name(org_name.text)
                     if cleaned:
                         organisms.add(cleaned)
 
-                # 代替パス：ProjectName等
+                # Alternative path: ProjectName etc.
                 proj_name = genome.find(".//ProjectName")
                 if proj_name is not None and proj_name.text:
                     cleaned = self.clean_organism_name(proj_name.text)
@@ -109,13 +108,13 @@ class NCBIBacteriaUpdaterWebAPI:
         return organisms
 
     def clean_organism_name(self, name):
-        """生物名をクリーニングして属レベルに標準化"""
+        """Cleaning and standardizing organism names to genus level"""
         if not name:
             return None
 
         name = name.strip()
 
-        # 不要な情報を除去
+        # remove unnecessary information
         for pattern in [
             " strain ",
             " substrain ",
@@ -127,14 +126,14 @@ class NCBIBacteriaUpdaterWebAPI:
             if pattern in name:
                 name = name.split(pattern)[0]
 
-        # 括弧内を除去
+        # remove inside parentheses
         if "(" in name:
             name = name.split("(")[0].strip()
 
-        # 数字やコード的な部分を除去
+        # Remove numbers and code parts
         parts = []
         for part in name.split():
-            # 明らかに属名でない部分をスキップ
+            # Skip parts that are obviously not genus names
             if len(part) < 3:
                 continue
             if part.lower() in ["sp.", "bacterium", "strain", "isolate"]:
@@ -146,18 +145,18 @@ class NCBIBacteriaUpdaterWebAPI:
         if not parts:
             return None
 
-        # Candidatus の特別処理
+        # Special handling of Candidatus
         if len(parts) >= 2 and parts[0].lower() == "candidatus":
             return f"Candidatus {parts[1]}"
 
-        # 通常は属名のみ返す
+        # Usually returns only the genus name
         return parts[0]
 
     def get_bacteria_via_taxonomy(self):
-        """NCBI Taxonomyから細菌の分類を取得"""
+        """Obtain bacterial classification from NCBI Taxonomy"""
         print("🌳 Fetching bacteria taxonomy...")
 
-        # 細菌のtaxon ID (2) から下位分類を取得
+        # Get subclassification from bacterial taxon ID (2)
         search_url = f"{self.base_url}/esearch.fcgi"
         params = {
             "db": "taxonomy",
@@ -176,7 +175,7 @@ class NCBIBacteriaUpdaterWebAPI:
                 tax_ids = data["esearchresult"]["idlist"]
                 print(f"✅ Found {len(tax_ids)} bacterial genera")
 
-                # 分類名を取得
+                # get classification name
                 genera = self.fetch_taxonomy_names(tax_ids)
                 return genera
             else:
@@ -187,7 +186,7 @@ class NCBIBacteriaUpdaterWebAPI:
             return []
 
     def fetch_taxonomy_names(self, tax_ids, batch_size=200):
-        """分類IDから分類名を取得"""
+        """Get the classification name from the classification ID"""
         print("📋 Fetching taxonomy names...")
 
         genera = set()
@@ -207,11 +206,11 @@ class NCBIBacteriaUpdaterWebAPI:
                 response = requests.get(fetch_url, params=params)
                 response.raise_for_status()
 
-                # XMLから属名を抽出
+                # Extract genus name from XML
                 names = self.parse_taxonomy_xml(response.text)
                 genera.update(names)
 
-                time.sleep(0.3)  # API制限対応
+                time.sleep(0.3)  # Compatible with API restrictions
 
             except Exception as e:
                 print(f"  ⚠️ Error in taxonomy batch: {e}")
@@ -220,18 +219,18 @@ class NCBIBacteriaUpdaterWebAPI:
         return sorted(list(genera))
 
     def parse_taxonomy_xml(self, xml_content):
-        """Taxonomy XMLから属名を抽出"""
+        """Extract genus name from Taxonomy XML"""
         genera = set()
 
         try:
             root = ET.fromstring(xml_content)
 
             for taxon in root.findall(".//Taxon"):
-                # ScientificNameを取得
+                # get ScientificName
                 sci_name = taxon.find(".//ScientificName")
                 if sci_name is not None and sci_name.text:
                     name = sci_name.text.strip()
-                    # 属レベルの名前のみ（スペースが含まれていない）
+                    # Genus level name only (no spaces)
                     if " " not in name and len(name) > 2:
                         genera.add(name)
 
@@ -241,20 +240,20 @@ class NCBIBacteriaUpdaterWebAPI:
         return genera
 
     def update_bacteria_list(self):
-        """メイン更新処理"""
+        """Main update process"""
         print("🧬 NCBI Bacteria List Updater (Web API)")
         print("=" * 50)
 
-        # 方法1: ゲノムデータベースから取得
-        genome_ids = self.search_bacteria_genomes(retmax=3000)  # 最新3000件
+        # Method 1: Obtain from genome database
+        genome_ids = self.search_bacteria_genomes(retmax=3000)  # The latest 3000 items
         organisms_from_genome = []
         if genome_ids:
             organisms_from_genome = self.fetch_genome_details(genome_ids)
 
-        # 方法2: 分類データベースから取得
+        # Method 2: Get from classification database
         organisms_from_taxonomy = self.get_bacteria_via_taxonomy()
 
-        # 両方の結果をマージ
+        # merge both results
         all_organisms = set(organisms_from_genome + organisms_from_taxonomy)
         final_list = sorted(list(all_organisms))
 
@@ -263,16 +262,16 @@ class NCBIBacteriaUpdaterWebAPI:
         print(f"  From taxonomy: {len(organisms_from_taxonomy)}")
         print(f"  Combined unique: {len(final_list)}")
 
-        # 既存リストとの比較と保存
+        # Compare with existing listand save
         self.save_updated_list(final_list)
 
         return True
 
     def save_updated_list(self, new_organisms):
-        """更新されたリストを保存"""
+        """Save updated list"""
         output_file = self.output_dir / "bacteria.txt"
 
-        # 既存リストとの比較
+        # Compare with existing list
         current_organisms = set()
         if output_file.exists():
             with open(output_file, "r") as f:
@@ -291,13 +290,13 @@ class NCBIBacteriaUpdaterWebAPI:
         print(f"  Added: {len(added)}")
         print(f"  Removed: {len(removed)}")
 
-        # バックアップ
+        # backup
         if output_file.exists():
             backup_file = output_file.with_suffix(f".backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
             backup_file.write_text(output_file.read_text())
             print(f"💾 Backup: {backup_file}")
 
-        # 新しいリストを保存
+        # save new list
         output_file.parent.mkdir(parents=True, exist_ok=True)
         with open(output_file, "w") as f:
             f.write(f"// filepath: {output_file}\n")
@@ -308,7 +307,7 @@ class NCBIBacteriaUpdaterWebAPI:
 
         print(f"✅ Updated list saved: {output_file}")
 
-        # 変更があった場合は詳細レポート
+        # Detailed report if there are any changes
         if added or removed:
             self.save_change_report(added, removed)
 

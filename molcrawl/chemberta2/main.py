@@ -2,14 +2,14 @@
 """
 ChemBERTa-2 Training Script
 
-SMILES化合物データに特化したRoBERTaベースのTransformerモデルの学習スクリプト。
-ChemBERTa-2アーキテクチャを使用し、大規模な化合物データで学習します。
+RoBERTa-based Transformer model training script specialized for SMILES compound data.
+Learn on large-scale compound data using the ChemBERTa-2 architecture.
 
 Features:
-- SMILES専用のトークナイゼーション
-- RoBERTaアーキテクチャ（BERTの改良版）
-- 化合物特性予測への転移学習が容易
-- 効率的なバッチ処理とメモリ管理
+- Tokenization exclusively for SMILES
+- RoBERTa architecture (improved version of BERT)
+- Easy transfer learning to compound property prediction
+- Efficient batch processing and memory management
 """
 
 import os
@@ -167,10 +167,10 @@ if __name__ == "__main__":
 
     class CompoundsDatasetLoader:
         """
-        SMILES Compounds Dataset Loader
+                SMILES Compounds Dataset Loader
 
-        SMILES化合物データを読み込み、ChemBERTa-2学習用に前処理します。
-        複数のデータセットを動的に読み込み、結合することができます。
+        Load SMILES compound data and preprocess it for ChemBERTa-2 training.
+        You can dynamically load and combine multiple datasets.
         """
 
         def __init__(self, dataset_dir, tokenizer, max_length=256):
@@ -182,7 +182,7 @@ if __name__ == "__main__":
             """Load train and test datasets"""
             logger.info("📂 Loading datasets...")
 
-            # 新しいマルチデータセットローダーを試す
+            # Try the new multi-dataset loader
             try:
                 from pathlib import Path
                 from molcrawl.compounds.dataset.multi_loader import MultiDatasetLoader
@@ -190,13 +190,13 @@ if __name__ == "__main__":
                 compounds_dir = Path(self.dataset_dir).parent
                 loader = MultiDatasetLoader(compounds_dir)
 
-                # 利用可能なデータセットを取得
+                # get available datasets
                 available = loader.get_available_datasets()
 
                 if available:
                     logger.info(f"📊 Found {len(available)} available datasets: {[d.value for d in available]}")
 
-                    # 全データセットを結合して読み込み
+                    # Combine and load all datasets
                     dataset_dict = loader.load_datasets(combine=True)
 
                     train_dataset = dataset_dict.get("train")
@@ -211,7 +211,7 @@ if __name__ == "__main__":
             except Exception as e:
                 logger.warning(f"⚠ Multi-loader failed ({e}), falling back to legacy single-dataset loader")
 
-            # レガシーローダー（後方互換性）
+            # Legacy loader (backward compatibility)
             train_path = os.path.join(self.dataset_dir, "train")
             test_path = os.path.join(self.dataset_dir, "test")
             valid_path = os.path.join(self.dataset_dir, "valid")

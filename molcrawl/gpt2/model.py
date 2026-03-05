@@ -334,37 +334,37 @@ class GPT(nn.Module):
         pad_token_id=None,
     ):
         """
-        idx: LongTensor [B, T]
-        逐次1トークンずつ追加。各バッチ要素で EOS が出たら以後は PAD（指定が無ければ EOS を繰返し）を出力。
-        全要素が終了したら早期打ち切り。
+                idx: LongTensor [B, T]
+        Add one token at a time. If EOS is output for each batch element, PAD will be output (EOS will be repeated if not specified).
+        Early termination when all elements are completed.
         """
         device = idx.device
         B = idx.size(0)
 
-        # 各行がEOSを出したかどうか
+        # Whether each line issued an EOS
         finished = torch.zeros(B, dtype=torch.bool, device=device)
 
-        # PAD未指定の場合はEOSを繰返すフォールバック
+        # Fallback to repeat EOS if PAD is not specified
         pad_or_eos = pad_token_id if pad_token_id is not None else eos_token_id
 
         for _ in range(max_new_tokens):
-            # すでに全行終了していれば終わり
+            # End if all lines are already finished
             if eos_token_id is not None and finished.all():
                 break
 
-            # コンテキスト長を block_size に収める
+            # Keep context length within block_size
             if idx.size(1) > self.config.block_size:
                 idx_cond = idx[:, -self.config.block_size :]
             else:
                 idx_cond = idx
 
-            # 通常の前向き
+            # Normal forward
             logits, _ = self(idx_cond)  # [B, T_ctx, V]
             logits = logits[:, -1, :] / temperature  # [B, V]
 
-            # 既に終了した行は sampling させない（PAD or EOS固定に誘導）
+            # Do not sample lines that have already finished (fixed to PAD or EOS)
             if eos_token_id is not None and pad_or_eos is not None:
-                # 終了行のロジットを -inf にして pad_or_eos だけ0に（softmax後ほぼ1.0）
+                # Set the end line logit to -inf and set only pad_or_eos to 0 (almost 1.0 after softmax)
                 mask = finished.unsqueeze(1)  # [B,1]
                 if mask.any():
                     logits = logits.clone()
@@ -375,18 +375,18 @@ class GPT(nn.Module):
             if top_k is not None:
                 k = min(top_k, logits.size(-1))
                 v, _ = torch.topk(logits, k)
-                # 注意: 既に finished 行は上で pad_or_eos=0.0 にしてあるので除外されない
+                # Note: Finished lines are not excluded because we have already set pad_or_eos=0.0 above.
                 thresh = v[:, [-1]]
                 logits[logits < thresh] = -float("inf")
 
-            # サンプリング
+            # sampling
             probs = F.softmax(logits, dim=-1)  # [B, V]
             idx_next = torch.multinomial(probs, num_samples=1)  # [B, 1]
 
-            # 連結
+            # Concatenation
             idx = torch.cat((idx, idx_next), dim=1)  # [B, T+1]
 
-            # 新たにEOSが出た行を finished に反映
+            # Reflect the new EOS line in finished
             if eos_token_id is not None:
                 newly_finished = idx_next.squeeze(1) == eos_token_id
                 finished |= newly_finished

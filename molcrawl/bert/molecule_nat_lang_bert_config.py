@@ -10,7 +10,7 @@ from molcrawl.utils.environment_check import check_learning_source_dir
 
 # Add parent directory to path
 
-# 共通環境チェックモジュールを追加
+# Add common environment check module
 
 # Model configuration
 model_size = "small"  # Options: "small", "medium", "large"

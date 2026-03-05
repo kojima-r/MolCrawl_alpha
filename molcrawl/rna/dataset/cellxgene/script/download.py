@@ -82,21 +82,21 @@ def run(output_dir: Path, version, argv: Tuple[str, int, int, List[int]]) -> Non
 
 def divide_workload(path: Union[str, Path], size_workload: int) -> List[Tuple[str, int, int, List[int]]]:
     """
-    ワークロードを指定されたサイズに分割する関数
+    Function to split workload into specified sizes
 
-    指定されたディレクトリ内の*.obs_id.tsvファイルを読み込み、
-    各ファイルのIDリストを指定されたワークロードサイズに分割する。
+    Read the *.obs_id.tsv file in the specified directory,
+    Split each file's ID list into specified workload sizes.
 
-    Args:
-        path (Union[str, Path]): メタデータ準備ディレクトリのパス
-        size_workload (int): 各ワークロードのサイズ（サンプル数）
+        Args:
+    path (Union[str, Path]): path of metadata preparation directory
+    size_workload (int): Size of each workload (number of samples)
 
-    Returns:
-        List[Tuple[str, int, int, List[int]]]: 分割されたワークロードのリスト
-            - str: ファイル名（拡張子なし）
-            - int: 開始行番号
-            - int: 終了行番号
-            - List[int]: 該当範囲のIDリスト
+        Returns:
+    List[Tuple[str, int, int, List[int]]]: List of partitioned workloads
+    - str: file name (no extension)
+    - int: starting line number
+    - int: end line number
+    - List[int]: ID list of applicable range
     """
     divided_workload = []
     for filename in Path(path).rglob("*.obs_id.tsv"):

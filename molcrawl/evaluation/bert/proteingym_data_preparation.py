@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-BERT版ProteinGymデータセットの前処理スクリプト
+Preprocessing script for BERT version of ProteinGym dataset
 
-BERTモデル用にProteinGymデータセットを前処理し、
-評価に適した形式で保存します。
+Preprocess the ProteinGym dataset for the BERT model,
+Save it in a format suitable for evaluation.
 """
 
 import os
@@ -20,19 +20,19 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-# 共通モジュールを追加
+# Add common module
 from molcrawl.utils.environment_check import check_learning_source_dir
 
 
 def get_log_dir() -> Path:
-    """ProteinGym前処理ログの出力先を取得し、存在しなければ作成する。"""
+    """Get the output destination of the ProteinGym preprocessing log and create it if it does not exist."""
     learning_source_dir: str = check_learning_source_dir()
     log_dir: Path = Path(learning_source_dir) / "protein_sequence" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
 
 
-# ログ設定
+# Log settings
 log_dir: Path = get_log_dir()
 log_file: Path = log_dir / f"bert_proteingym_prep_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 logging.basicConfig(
@@ -47,37 +47,37 @@ logger = logging.getLogger(__name__)
 
 
 class BERTProteinGymDataProcessor:
-    """BERT用ProteinGymデータセットの前処理クラス"""
+    """Preprocessing class for ProteinGym dataset for BERT"""
 
-    # ProteinGym v1.3データセットの公式URL
+    # Official URL of ProteinGym v1.3 dataset
     PROTEINGYM_URLS = {
-        # DMS (Deep Mutational Scanning) データ - メイン評価用
+        # DMS (Deep Mutational Scanning) data - for main evaluation
         "substitutions": "https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_ProteinGym_substitutions.zip",
         "reference_substitutions": "https://marks.hms.harvard.edu/proteingym/ProteinGym_v1.3/DMS_substitutions.csv",
     }
 
     def __init__(self, output_dir: str = "./bert_proteingym_data") -> None:
         """
-        初期化
+        initialization
 
         Args:
-            output_dir (str): 出力ディレクトリ
+            output_dir (str): Output directory
         """
         self.output_dir: Path = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # ログディレクトリはget_log_dirで作成済み
+        # Log directory has been created with get_log_dir
 
     def download_file(self, url: str, filename: Optional[str] = None) -> str:
         """
-        ファイルをダウンロード
+        Download file
 
         Args:
-            url (str): ダウンロードURL
-            filename (str): 保存ファイル名（Noneの場合は自動生成）
+            url (str): Download URL
+            filename (str): Save file name（Noneautomatically generated)
 
         Returns:
-            str: ダウンロードしたファイルのパス
+            str: path of the downloaded file
         """
         if filename is None:
             filename = Path(urlparse(url).path).name
@@ -110,13 +110,13 @@ class BERTProteinGymDataProcessor:
 
     def extract_zip(self, zip_path: str) -> str:
         """
-        ZIPファイルを展開
+        Extract the ZIP file
 
         Args:
-            zip_path (str): ZIPファイルのパス
+            zip_path (str): ZIP file path
 
         Returns:
-            str: 展開されたディレクトリのパス
+            str: path of expanded directory
         """
         extract_dir = self.output_dir / Path(zip_path).stem
         extract_dir.mkdir(exist_ok=True)
@@ -131,21 +131,21 @@ class BERTProteinGymDataProcessor:
 
     def load_proteingym_data(self, data_dir: str, reference_csv: Optional[str] = None) -> Dict[str, pd.DataFrame]:
         """
-        ProteinGymデータを読み込み
+        Load ProteinGym data
 
         Args:
-            data_dir (str): データディレクトリ
-            reference_csv (str): 参照CSVファイル（オプション）
+            data_dir (str): data directory
+            reference_csv (str): Reference CSV file (optional)
 
         Returns:
-            dict: データセット辞書
+            dict: dataset dictionary
         """
         logger.info(f"Loading ProteinGym data from {data_dir}")
 
         data_dir_path: Path = Path(data_dir)
         datasets: Dict[str, pd.DataFrame] = {}
 
-        # ProteinGym構造を確認
+        # Check ProteinGym structure
         dms_dir = None
         possible_dirs = [
             data_dir_path / "DMS_ProteinGym_substitutions" / "DMS_ProteinGym_substitutions",
@@ -163,7 +163,7 @@ class BERTProteinGymDataProcessor:
             logger.error(f"No ProteinGym CSV files found in {data_dir} or subdirectories")
             return datasets
 
-        # DMS CSVファイルを読み込み
+        # Read DMS CSV file
         csv_files = list(dms_dir.glob("*.csv"))
         logger.info(f"Found {len(csv_files)} CSV files")
 
@@ -176,7 +176,7 @@ class BERTProteinGymDataProcessor:
             except Exception as e:
                 logger.warning(f"Failed to load {csv_file}: {e}")
 
-        # 参照情報を読み込み（オプション）
+        # Load reference information (optional)
         if reference_csv and os.path.exists(reference_csv):
             try:
                 ref_df = pd.read_csv(reference_csv)
@@ -193,14 +193,14 @@ class BERTProteinGymDataProcessor:
         max_variants_per_assay: int = 1000,
     ) -> pd.DataFrame:
         """
-        BERT評価用にデータを前処理
+        Preprocess data for BERT evaluation
 
         Args:
-            datasets (dict): データセット辞書
-            max_variants_per_assay (int): アッセイごとの最大変異数
+            datasets (dict): dataset dictionary
+            max_variants_per_assay (int): Maximum number of variants per assay
 
         Returns:
-            pd.DataFrame: 前処理済みデータ
+            pd.DataFrame: Preprocessed data
         """
         logger.info("Starting BERT-specific preprocessing")
 
@@ -212,7 +212,7 @@ class BERTProteinGymDataProcessor:
 
             logger.info(f"Processing dataset: {dataset_name}")
 
-            # 必要なカラムの確認
+            # Check required columns
             required_columns = ["mutated_sequence", "DMS_score"]
             missing_columns = [col for col in required_columns if col not in df.columns]
 
@@ -221,27 +221,27 @@ class BERTProteinGymDataProcessor:
                 logger.info(f"Available columns: {list(df.columns)}")
                 continue
 
-            # データの基本的なフィルタリング
+            # Basic filtering of data
             df_clean = df.dropna(subset=required_columns).copy()
 
-            # DMS_scoreの有効性チェック
+            # Check the validity of DMS_score
             df_clean = df_clean[(df_clean["DMS_score"].notna()) & (np.isfinite(df_clean["DMS_score"]))].copy()
 
-            # 配列長の妥当性チェック
+            # Check the validity of array length
             df_clean = df_clean[
                 (df_clean["mutated_sequence"].str.len() > 10)
-                & (df_clean["mutated_sequence"].str.len() < 2000)  # BERTの制限を考慮
+                & (df_clean["mutated_sequence"].str.len() < 2000)  # Consider BERT limitations
             ].copy()
 
-            # アッセイごとのサンプリング
+            # Sampling per assay
             if len(df_clean) > max_variants_per_assay:
                 df_clean = df_clean.sample(n=max_variants_per_assay, random_state=42)
                 logger.info(f"Sampled {max_variants_per_assay} variants from {dataset_name}")
 
-            # データセット名を追加
+            # add dataset name
             df_clean["assay_name"] = dataset_name
 
-            # 野生型配列の推定（必要に応じて）
+            # Infer wild type sequence (if necessary)
             if "target_seq" not in df_clean.columns:
                 df_clean = self._infer_wildtype_sequences(df_clean)
 
@@ -251,10 +251,10 @@ class BERTProteinGymDataProcessor:
         if not all_variants:
             raise ValueError("No valid datasets found")
 
-        # 全データを結合
+        # combine all data
         combined_df: pd.DataFrame = pd.concat(all_variants, ignore_index=True)
 
-        # 最終的なクリーニング
+        # Final cleaning
         combined_df = self._final_cleaning(combined_df)
 
         logger.info(f"Total processed variants: {len(combined_df)}")
@@ -262,29 +262,29 @@ class BERTProteinGymDataProcessor:
 
     def _infer_wildtype_sequences(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        野生型配列を推定
+        Estimated wild type sequence
 
         Args:
-            df (pd.DataFrame): 変異データ
+            df (pd.DataFrame): variant data
 
         Returns:
-            pd.DataFrame: 野生型配列が追加されたデータ
+            pd.DataFrame: data with wild type sequences added
         """
         logger.info("Inferring wildtype sequences")
 
         def infer_wildtype(mutated_seq: str, mutant_info: Any) -> str:
-            """単一変異から野生型を推定"""
+            """Inferring wild type from a single mutation"""
             if pd.isna(mutant_info) or mutant_info == "WT":
                 return mutated_seq
 
-            # 単一変異の場合のみ対応 (例: A1V)
+            # Supported only for single mutation (example: A1V)
             if isinstance(mutant_info, str) and len(mutant_info) >= 3:
                 try:
                     orig_aa = mutant_info[0]
-                    pos = int(mutant_info[1:-1]) - 1  # 0-indexedに変換
+                    pos = int(mutant_info[1:-1]) - 1  # convert to 0-indexed
                     mut_aa = mutant_info[-1]
 
-                    # 変異配列を野生型に戻す
+                    # Return the mutant sequence to wild type
                     wt_seq = list(mutated_seq)
                     if 0 <= pos < len(wt_seq) and wt_seq[pos] == mut_aa:
                         wt_seq[pos] = orig_aa
@@ -294,14 +294,14 @@ class BERTProteinGymDataProcessor:
 
             return mutated_seq
 
-        # mutantカラムがある場合
+        # If there is a mutant column
         if "mutant" in df.columns:
             df["target_seq"] = df.apply(
                 lambda row: infer_wildtype(row["mutated_sequence"], row.get("mutant", "")),
                 axis=1,
             )
         else:
-            # mutant情報がない場合は、mutated_sequenceをそのまま使用
+            # If there is no mutant information, use mutated_sequence as is
             df["target_seq"] = df["mutated_sequence"]
             logger.warning("No mutant information found, using mutated_sequence as target_seq")
 
@@ -309,27 +309,26 @@ class BERTProteinGymDataProcessor:
 
     def _final_cleaning(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        最終的なデータクリーニング
+        Final data cleaning
 
         Args:
-            df (pd.DataFrame): 前処理データ
+            df (pd.DataFrame): Preprocessed data
 
         Returns:
-            pd.DataFrame: クリーニング済みデータ
+            pd.DataFrame: Cleaned data
         """
         logger.info("Final data cleaning")
 
-        # 重複除去
+        # Duplicate removal
         before_dedup = len(df)
         df = df.drop_duplicates(subset=["mutated_sequence"], keep="first")
         after_dedup = len(df)
         logger.info(f"Removed {before_dedup - after_dedup} duplicate sequences")
 
-        # アミノ酸配列の妥当性チェック
         valid_aa: set = set("ACDEFGHIKLMNPQRSTVWY")
 
         def is_valid_protein_sequence(seq: Any) -> bool:
-            """有効なタンパク質配列かチェック"""
+            """Check if the protein sequence is valid"""
             if not isinstance(seq, str):
                 return False
             return all(aa in valid_aa for aa in seq.upper())
@@ -338,26 +337,26 @@ class BERTProteinGymDataProcessor:
         df = df[valid_seq_mask].copy()
         logger.info(f"Retained {len(df)} variants with valid amino acid sequences")
 
-        # DMS_scoreの統計情報をログ出力
+        # Log DMS_score statistics
         logger.info(f"DMS_score statistics:\n{df['DMS_score'].describe()}")
 
         return df
 
     def save_bert_ready_data(self, df: pd.DataFrame, filename: str = "bert_proteingym_dataset.csv") -> None:
         """
-        BERT用データとして保存
+        Save as BERT data
 
         Args:
-            df (pd.DataFrame): 前処理済みデータ
-            filename (str): 保存ファイル名
+            df (pd.DataFrame): Preprocessed data
+            filename (str): Save file name
         """
         filepath = self.output_dir / filename
 
-        # CSV形式で保存
+        # Save in CSV format
         df.to_csv(filepath, index=False)
         logger.info(f"Saved BERT-ready dataset: {filepath}")
 
-        # JSON形式でも保存（メタデータ付き）
+        # Save also in JSON format (with metadata)
         json_data: Dict[str, Any] = {
             "metadata": {
                 "total_variants": len(df),
@@ -366,7 +365,7 @@ class BERTProteinGymDataProcessor:
                 "avg_sequence_length": float(df["mutated_sequence"].str.len().mean()),
                 "processing_date": datetime.now().isoformat(),
             },
-            "data": df.to_dict("records")[:100],  # 最初の100件のみJSONに含める
+            "data": df.to_dict("records")[:100],  # Include only the first 100 records in JSON
         }
 
         json_filepath = filepath.with_suffix(".json")
@@ -374,15 +373,15 @@ class BERTProteinGymDataProcessor:
             json.dump(json_data, f, indent=2)
         logger.info(f"Saved metadata and sample data: {json_filepath}")
 
-        # 統計レポートも作成
+        # Also create statistical report
         self._create_statistics_report(df)
 
     def _create_statistics_report(self, df: pd.DataFrame) -> None:
         """
-        統計レポートを作成
+        Create statistical report
 
         Args:
-            df (pd.DataFrame): データセット
+            df (pd.DataFrame): Dataset
         """
         report_file = self.output_dir / "bert_proteingym_statistics.txt"
 
@@ -426,7 +425,7 @@ def main() -> None:
 
     try:
         if args.sample_only:
-            # サンプルデータセットを作成
+            # create sample dataset
             logger.info("Creating sample dataset")
             sample_data: List[Dict[str, Any]] = [
                 {
@@ -458,35 +457,35 @@ def main() -> None:
             return
 
         if args.download:
-            # データのダウンロード
+            # Download data
             logger.info("Downloading ProteinGym data")
 
-            # 置換変異データをダウンロード
+            # Download substitution mutation data
             zip_file = processor.download_file(processor.PROTEINGYM_URLS["substitutions"])
 
-            # 参照データをダウンロード
+            # Download reference data
             ref_file = processor.download_file(processor.PROTEINGYM_URLS["reference_substitutions"])
 
-            # ZIPを展開
+            # unzip
             extract_dir = processor.extract_zip(zip_file)
 
-            # データを読み込み
+            # read data
             datasets: Dict[str, pd.DataFrame] = processor.load_proteingym_data(extract_dir, ref_file)
         else:
-            # 既存データを使用
+            # Use existing data
             data_dir = args.data_dir
             if not Path(data_dir).exists():
                 raise ValueError(f"Data directory not found: {data_dir}")
 
             datasets = processor.load_proteingym_data(data_dir)
 
-        # BERT用に前処理
+        # Preprocess for BERT
         processed_df: pd.DataFrame = processor.preprocess_for_bert(
             datasets,
             max_variants_per_assay=args.max_variants_per_assay,
         )
 
-        # 保存
+        # keep
         processor.save_bert_ready_data(processed_df)
 
         logger.info("BERT ProteinGym data preprocessing completed successfully")

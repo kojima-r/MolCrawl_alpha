@@ -1,80 +1,80 @@
 """
-BERT版ProteinGym評価の設定ファイル
+BERT version ProteinGym evaluation configuration file
 """
 
 import os
 from pathlib import Path
 
-# 共通環境チェックモジュールを追加
+# Add common environment check module
 from molcrawl.utils.environment_check import check_learning_source_dir
 
-# プロジェクトルートの取得
+# Get project root
 PROJECT_ROOT = Path(__file__).parent.parent
 
 
 class BERTProteinGymConfig:
-    """BERT ProteinGym評価設定クラス"""
+    """BERT ProteinGym evaluation setting class"""
 
-    # モデル設定
+    # Model settings
     MODEL_PATH = "runs_train_bert_protein_sequence/checkpoint-5000"
     learning_source_dir = check_learning_source_dir()
     TOKENIZER_PATH = f"{learning_source_dir}/protein_sequence/spm_tokenizer.model"
 
-    # 評価設定
+    # Evaluation settings
     DEVICE = "cuda"
     BATCH_SIZE = 16
     MAX_SEQUENCE_LENGTH = 512
 
-    # データ設定
+    # Data settings
     DEFAULT_OUTPUT_DIR = "./bert_proteingym_evaluation_results"
 
-    # ログ設定
+    # Log settings
     LOG_DIR = "logs"
     LOG_LEVEL = "INFO"
 
-    # BERT固有設定
+    # BERT specific settings
     BERT_CONFIG = {
-        "vocab_size": None,  # トークナイザーから自動取得
+        "vocab_size": None,  # Automatically obtained from tokenizer
         "hidden_size": 768,
         "num_hidden_layers": 12,
         "num_attention_heads": 12,
         "intermediate_size": 3072,
         "max_position_embeddings": 1024,
-        "dropout": 0.0,  # 評価時は無効
-        "attention_dropout": 0.0,  # 評価時は無効
+        "dropout": 0.0,  # disabled during evaluation
+        "attention_dropout": 0.0,  # Disabled during evaluation
     }
 
-    # 評価指標の設定
+    # Setting evaluation indicators
     METRICS = ["spearman_correlation", "pearson_correlation", "mae", "rmse"]
 
-    # サンプリング設定
-    DEFAULT_SAMPLE_SIZE = None  # Noneで全件評価
+    # Sampling settings
+    DEFAULT_SAMPLE_SIZE = None  # Rating all items with None
 
     @classmethod
     def get_model_path(cls):
-        """モデルパスを取得"""
+        """Get model path"""
         return os.path.join(PROJECT_ROOT, cls.MODEL_PATH)
 
     @classmethod
     def get_tokenizer_path(cls):
-        """トークナイザーパスを取得"""
+        """Get Tokenizer Pass"""
         return os.path.join(PROJECT_ROOT, cls.TOKENIZER_PATH)
 
     @classmethod
     def get_output_dir(cls, custom_dir=None):
-        """出力ディレクトリを取得"""
+        """Get output directory"""
         if custom_dir:
             return custom_dir
         return os.path.join(PROJECT_ROOT, cls.DEFAULT_OUTPUT_DIR)
 
     @classmethod
     def get_log_dir(cls):
-        """ログディレクトリを取得"""
+        """Get log directory"""
         return os.path.join(PROJECT_ROOT, cls.LOG_DIR)
 
     @classmethod
     def validate_paths(cls):
-        """パスの存在確認"""
+        """Check the existence of the path"""
         model_path = cls.get_model_path()
         tokenizer_path = cls.get_tokenizer_path()
 
@@ -89,5 +89,5 @@ class BERTProteinGymConfig:
         return issues
 
 
-# デフォルト設定のインスタンス
+# Instance with default settings
 config = BERTProteinGymConfig()

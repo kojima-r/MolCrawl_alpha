@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-化合物データセット準備スクリプト
+Compound dataset preparation script
 
-個別データセット処理により、部分的なダウンロードに対応します。
+Partial downloads are supported through individual dataset processing.
 
-使用例:
-    # 全データセットを処理
+Usage example:
+    # Process the entire dataset
     python src/preparation/preparation_script_compounds.py assets/configs/compounds.yaml
 
-    # 特定のデータセットのみダウンロード
+    # Download only specific datasets
     python src/preparation/preparation_script_compounds.py assets/configs/compounds.yaml \
         --download-only --datasets zinc20 opv
 
-    # 処理とトークナイズのみ（ダウンロード済みの場合）
+    # Processing and tokenization only (if downloaded)
     python src/preparation/preparation_script_compounds.py assets/configs/compounds.yaml \
         --skip-download
 
-    # 強制再処理
+    # forced reprocessing
     python src/preparation/preparation_script_compounds.py assets/configs/compounds.yaml --force
 """
 
@@ -48,13 +48,13 @@ logger = logging.getLogger(__name__)
 
 def download_datasets_individually(cfg, compounds_dir, dataset_types, force=False):
     """
-    個別にデータセットをダウンロード
+    Download datasets individually
 
     Args:
-        cfg: 設定オブジェクト
-        compounds_dir: compoundsディレクトリ
-        dataset_types: ダウンロードするデータセット種別のリスト
-        force: 強制再ダウンロードフラグ
+        cfg: configuration object
+        compounds_dir: compounds directory
+        dataset_types: List of dataset types to download
+        force: force redownload flag
     """
     data_dir = os.path.join(compounds_dir, "data")
     os.makedirs(data_dir, exist_ok=True)
@@ -81,14 +81,14 @@ def download_datasets_individually(cfg, compounds_dir, dataset_types, force=Fals
                 CompoundDatasetType.PUBCHEMQC_2017,
                 CompoundDatasetType.PUBCHEMQC_2020,
             ]:
-                # LlaMolデータセットはまとめてダウンロード
+                # Download LlaMol dataset all at once
                 llamol_marker = Path(data_dir) / "llamol_download.marker"
                 if not force and llamol_marker.exists():
                     logger.info("✓ LlaMol datasets: Already downloaded, skipping")
                     continue
                 download_llamol_datasets(compounds_dir)
                 llamol_marker.touch()
-                # 個別のマーカーも作成
+                # Also create individual markers
                 for dt in [
                     CompoundDatasetType.PC9_GAP,
                     CompoundDatasetType.ZINC_QM9,
@@ -98,7 +98,7 @@ def download_datasets_individually(cfg, compounds_dir, dataset_types, force=Fals
                     CompoundDatasetType.PUBCHEMQC_2020,
                 ]:
                     (Path(data_dir) / f"{dt.value}_download.marker").touch()
-                break  # LlaMolは一度だけダウンロード
+                break  # Download LlaMol only once
             elif dataset_type == CompoundDatasetType.GUACAMOL:
                 download_guacamol(compounds_dir)
             else:
@@ -113,79 +113,79 @@ def download_datasets_individually(cfg, compounds_dir, dataset_types, force=Fals
 
 
 def main():
-    """メイン実行関数"""
-    parser = ArgumentParser(description="化合物データセット準備スクリプト")
-    parser.add_argument("config", help="設定ファイルのパス")
+    """Main execution function"""
+    parser = ArgumentParser(description="Compound dataset preparation script")
+    parser.add_argument("config", help="Configuration file path")
     parser.add_argument(
         "--datasets",
         nargs="+",
         choices=[dt.value for dt in get_all_dataset_types()],
-        help="処理するデータセット（指定しない場合は利用可能な全て）",
+        help="Dataset to process (all available if not specified)",
     )
     parser.add_argument(
         "--force",
         action="store_true",
-        help="強制再処理（既存ファイルを上書き）",
+        help="Force reprocessing (overwrite existing files)",
     )
     parser.add_argument(
         "--download-only",
         action="store_true",
-        help="ダウンロードのみ実行",
+        help="Run only download",
     )
     parser.add_argument(
         "--skip-download",
         action="store_true",
-        help="ダウンロードをスキップ",
+        help="Skip download",
     )
     parser.add_argument(
         "--skip-process",
         action="store_true",
-        help="処理（物性計算）をスキップ",
+        help="Skip processing (property calculation)",
     )
     parser.add_argument(
         "--skip-tokenize",
         action="store_true",
-        help="トークナイズをスキップ",
+        help="Skip tokenization",
     )
     parser.add_argument(
         "--skip-convert",
         action="store_true",
-        help="HuggingFace形式への変換をスキップ",
+        help="Skip conversion to HuggingFace format",
     )
     parser.add_argument(
         "--skip-stats",
         action="store_true",
-        help="統計計算・可視化をスキップ",
+        help="Skip statistical calculation/visualization",
     )
     parser.add_argument(
         "--num-processes",
         type=int,
         default=16,
-        help="並列処理のプロセス数（物性計算用、デフォルト: 16）",
+        help="Number of parallel processing processes (for physical property calculations, default: 16)",
     )
     parser.add_argument(
         "--tokenization-processes",
         type=int,
         default=2,
-        help="トークナイズの並列処理数（デフォルト: 2）",
+        help="Number of parallel processing for tokenization (default: 2)",
     )
 
     args = parser.parse_args()
 
-    # 設定の読み込み
+    # Load configuration
     cfg = CompoundConfig.from_file(args.config).data_preparation
     compounds_dir = COMPOUNDS_DIR
     os.makedirs(compounds_dir, exist_ok=True)
 
-    # ロギングのセットアップ
+    # Set up logging
     setup_logging(compounds_dir + "/compounds_logs")
 
     logger.info("=" * 70)
-    logger.info("化合物データセット準備スクリプト（改訂版）")
+    logger.info("Compound dataset preparation script (revised version)")
     logger.info("=" * 70)
     logger.info(f"Compounds directory: {compounds_dir}")
 
-    # 処理するデータセットを決定
+    # Decide which dataset to process
     if args.datasets:
         dataset_types = [CompoundDatasetType(dt) for dt in args.datasets]
         logger.info(f"Target datasets: {[dt.value for dt in dataset_types]}")
@@ -193,7 +193,7 @@ def main():
         dataset_types = None
         logger.info("Target datasets: All available")
 
-    # ステップ1: ダウンロード
+    # Step 1: Download
     if not args.skip_download and not args.skip_process and not args.skip_tokenize and not args.skip_convert:
         run_download = True
     elif args.download_only:
@@ -203,24 +203,24 @@ def main():
 
     if run_download:
         logger.info("\n" + "=" * 70)
-        logger.info("STEP 1: データセットダウンロード")
+        logger.info("STEP 1: Dataset download")
         logger.info("=" * 70)
 
         if dataset_types:
             download_datasets_individually(cfg, compounds_dir, dataset_types, args.force)
         else:
-            # 全データセットをダウンロード
+            # Download all datasets
             all_types = list(get_all_dataset_types())
             download_datasets_individually(cfg, compounds_dir, all_types, args.force)
 
     if args.download_only:
-        logger.info("\n✅ ダウンロードのみ完了")
+        logger.info("\n✅ Only download completed")
         return
 
-    # ステップ2: 処理（物性計算）
+    # Step 2: Processing (physical property calculation)
     if not args.skip_process:
         logger.info("\n" + "=" * 70)
-        logger.info("STEP 2: データセット処理（物性計算）")
+        logger.info("STEP 2: Dataset processing (physical property calculation)")
         logger.info("=" * 70)
 
         processed = process_all_available_datasets(
@@ -232,10 +232,10 @@ def main():
 
         logger.info(f"\n✓ {len(processed)} datasets processed")
 
-    # ステップ3: トークナイズ
+    # Step 3: Tokenize
     if not args.skip_tokenize:
         logger.info("\n" + "=" * 70)
-        logger.info("STEP 3: トークナイズ")
+        logger.info("STEP 3: Tokenize")
         logger.info("=" * 70)
 
         tokenized = tokenize_all_processed_datasets(
@@ -249,10 +249,10 @@ def main():
 
         logger.info(f"\n✓ {len(tokenized)} datasets tokenized")
 
-    # ステップ4: HuggingFace形式に変換
+    # Step 4: Convert to HuggingFace format
     if not args.skip_convert:
         logger.info("\n" + "=" * 70)
-        logger.info("STEP 4: HuggingFace Dataset形式に変換")
+        logger.info("STEP 4: Convert to HuggingFace Dataset format")
         logger.info("=" * 70)
 
         converted = convert_all_tokenized_datasets(
@@ -266,10 +266,10 @@ def main():
 
         logger.info(f"\n✓ {len(converted)} datasets converted")
 
-    # ステップ5: 統計計算・可視化
+    # Step 5: Statistical calculation/visualization
     if not args.skip_stats:
         logger.info("\n" + "=" * 70)
-        logger.info("STEP 5: 統計計算・可視化")
+        logger.info("STEP 5: Statistical calculation/visualization")
         logger.info("=" * 70)
 
         stats = compute_tokenization_statistics(
@@ -281,7 +281,7 @@ def main():
         logger.info(f"\n✓ {len(stats)} datasets statistics computed")
 
     logger.info("\n" + "=" * 70)
-    logger.info("✅ 全ての処理が完了しました")
+    logger.info("✅ All processing completed")
     logger.info("=" * 70)
     logger.info(f"Output directory: {compounds_dir}")
     logger.info(f"  - Processed data: {compounds_dir}/processed/")

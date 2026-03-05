@@ -1,14 +1,14 @@
 """
-GPT2チェックポイントテスト用のヘルパースクリプト
-各ドメインのチェックポイントを自動的に検出してテストします。
+Helper script for GPT2 checkpoint testing
+Automatically discover and test checkpoints for each domain.
 
-# チェックポイントをリストアップ
+# List checkpoints
 python gpt2/test_helper.py --search_dir=runs_train_bert_*/checkpoints --list_only
 
-# 特定のチェックポイントをテスト
+# test a specific checkpoint
 python gpt2/test_helper.py --checkpoint_path=path/to/ckpt.pt
 
-# 全チェックポイントを自動テスト
+# Automatically test all checkpoints
 python gpt2/test_helper.py --search_dir=runs_* --auto_run
 
 """
@@ -21,7 +21,7 @@ from pathlib import Path
 
 
 def find_checkpoint_files(search_dir):
-    """チェックポイントファイルを検索"""
+    """Search checkpoint file"""
     checkpoint_patterns = [
         "**/ckpt.pt",
         "**/checkpoint.pt",
@@ -35,11 +35,11 @@ def find_checkpoint_files(search_dir):
         found = glob.glob(os.path.join(search_dir, pattern), recursive=True)
         checkpoints.extend(found)
 
-    return list(set(checkpoints))  # 重複を除去
+    return list(set(checkpoints))  # remove duplicates
 
 
 def get_domain_info():
-    """各ドメインの情報を返す"""
+    """Returns information for each domain"""
     import os
     import sys
 
@@ -52,7 +52,7 @@ def get_domain_info():
         },
         "molecule_nat_lang": {"vocab_path": None, "dataset_dir": MOLECULE_NAT_LANG_DATASET_DIR},
         "genome": {
-            "vocab_path": None,  # SentencePieceモデルパスが必要
+            "vocab_path": None,  # SentencePiece model path required
             "dataset_dir": "outputs/genome_sequence/training_ready_hf_dataset",
         },
         "protein_sequence": {
@@ -67,7 +67,7 @@ def get_domain_info():
 
 
 def detect_domain_from_path(checkpoint_path):
-    """チェックポイントパスからドメインを推測"""
+    """Guess domain from checkpoint path"""
     path_lower = checkpoint_path.lower()
 
     if "compound" in path_lower:
@@ -85,23 +85,23 @@ def detect_domain_from_path(checkpoint_path):
 
 
 def create_test_command(checkpoint_path, domain=None, output_dir=None, max_samples=500):
-    """テストコマンドを生成"""
+    """Generate test command"""
     domain_info = get_domain_info()
 
-    # ドメインを推測
+    # guess domain
     if domain is None:
         domain = detect_domain_from_path(checkpoint_path)
 
     if domain is None:
-        print(f"警告: {checkpoint_path} からドメインを推測できませんでした")
+        print(f"Warning: Could not infer domain from {checkpoint_path}")
         domain = "unknown"
 
-    # 出力ディレクトリを設定
+    # set output directory
     if output_dir is None:
         checkpoint_name = Path(checkpoint_path).parent.name
         output_dir = f"test_results_{domain}_{checkpoint_name}"
 
-    # 基本コマンド
+    # Basic command
     cmd = [
         "python",
         "gpt2/test_checkpoint.py",
@@ -111,7 +111,7 @@ def create_test_command(checkpoint_path, domain=None, output_dir=None, max_sampl
         "--convert_to_hf",
     ]
 
-    # ドメイン特化の設定
+    # Domain-specific settings
     if domain in domain_info:
         cmd.append(f"--domain={domain}")
 
@@ -128,34 +128,34 @@ def create_test_command(checkpoint_path, domain=None, output_dir=None, max_sampl
 
 
 def main():
-    parser = argparse.ArgumentParser(description="GPT2チェックポイントテスト用ヘルパー")
-    parser.add_argument("--search_dir", default=".", help="チェックポイントを検索するディレクトリ")
-    parser.add_argument("--checkpoint_path", help="特定のチェックポイントパス")
+    parser = argparse.ArgumentParser(description="GPT2 checkpoint test helper")
+    parser.add_argument("--search_dir", default=".", help="Directory to search for checkpoints")
+    parser.add_argument("--checkpoint_path", help="Specific checkpoint path")
     parser.add_argument(
         "--domain",
         choices=["compounds", "molecule_nat_lang", "genome", "protein_sequence", "rna"],
-        help="強制的に指定するドメイン",
+        help="Forcibly specify domain",
     )
-    parser.add_argument("--output_dir", help="出力ディレクトリ")
-    parser.add_argument("--max_samples", type=int, default=500, help="テストサンプル数")
-    parser.add_argument("--auto_run", action="store_true", help="自動実行する")
-    parser.add_argument("--list_only", action="store_true", help="チェックポイントをリストアップのみ")
+    parser.add_argument("--output_dir", help="output directory")
+    parser.add_argument("--max_samples", type=int, default=500, help="Number of test samples")
+    parser.add_argument("--auto_run", action="store_true", help="Run automatically")
+    parser.add_argument("--list_only", action="store_true", help="Only list checkpoints")
 
     args = parser.parse_args()
 
     if args.checkpoint_path:
-        # 特定のチェックポイントをテスト
+        # test a specific checkpoint
         checkpoints = [args.checkpoint_path]
     else:
-        # チェックポイントを検索
-        print(f"チェックポイントを検索中: {args.search_dir}")
+        # Search for checkpoints
+        print(f"Searching for checkpoint: {args.search_dir}")
         checkpoints = find_checkpoint_files(args.search_dir)
 
     if not checkpoints:
-        print("チェックポイントが見つかりませんでした。")
+        print("Checkpoint not found.")
         return
 
-    print(f"\n発見されたチェックポイント: {len(checkpoints)}")
+    print(f"\nCheckpoints discovered: {len(checkpoints)}")
     for i, cp in enumerate(checkpoints, 1):
         domain = detect_domain_from_path(cp) or "unknown"
         size_mb = os.path.getsize(cp) / 1024 / 1024 if os.path.exists(cp) else 0
@@ -164,14 +164,14 @@ def main():
     if args.list_only:
         return
 
-    # 各チェックポイントのテストコマンドを生成
+    # Generate test commands for each checkpoint
     for checkpoint in checkpoints:
         print(f"\n{'=' * 60}")
-        print(f"チェックポイント: {checkpoint}")
+        print(f"Checkpoint: {checkpoint}")
 
         domain = args.domain or detect_domain_from_path(checkpoint)
         if domain:
-            print(f"検出ドメイン: {domain}")
+            print(f"Detection domain: {domain}")
 
         cmd = create_test_command(
             checkpoint,
@@ -180,41 +180,41 @@ def main():
             max_samples=args.max_samples,
         )
 
-        print("実行コマンド:")
+        print("Run command:")
         print(" ".join(cmd))
 
         if args.auto_run:
-            print("\n実行中...")
+            print("\nRunning...")
             import subprocess
 
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True)
                 if result.returncode == 0:
-                    print("✓ テスト成功")
+                    print("✓ Test successful")
                 else:
-                    print(f"✗ テスト失敗: {result.stderr}")
+                    print(f"✗ Test failed: {result.stderr}")
             except Exception as e:
-                print(f"✗ 実行エラー: {e}")
+                print(f"✗ Execution error: {e}")
         else:
-            print("\n上記コマンドを実行してテストを開始してください。")
+            print("\nPlease execute the above command to start the test.")
 
 
 def create_test_configs():
-    """各ドメイン用のテスト設定ファイルを作成"""
+    """Create a test configuration file for each domain"""
     configs_dir = Path("gpt2/test_configs")
     configs_dir.mkdir(exist_ok=True)
 
     domain_info = get_domain_info()
 
     for domain, info in domain_info.items():
-        config_content = f"""# {domain.upper()}ドメイン用GPT2テスト設定
+        config_content = f"""# {domain.upper()} GPT2 test configuration for domain
 
-# 基本設定
+# Basic settings
 domain = "{domain}"
 max_test_samples = 1000
 convert_to_hf = True
 
-# データセット設定
+# datasetsetting
 """
 
         if info["dataset_dir"]:
@@ -225,15 +225,15 @@ convert_to_hf = True
 
         if info["vocab_path"]:
             config_content += f"""
-# 語彙ファイル
+# vocabulary file
 vocab_path = "{info["vocab_path"]}"
 """
 
         config_content += f"""
-# 出力設定
+# Output settings
 output_dir = "test_results_{domain}"
 
-# デバイス設定
+# device settings
 device = "cuda" if torch.cuda.is_available() else "cpu"
 """
 
@@ -241,14 +241,14 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
         with open(config_file, "w", encoding="utf-8") as f:
             f.write(config_content)
 
-        print(f"設定ファイルを作成: {config_file}")
+        print(f"Create configuration file: {config_file}")
 
 
 if __name__ == "__main__":
-    # まず設定ファイルを作成
-    print("テスト設定ファイルを作成中...")
+    # First create a configuration file
+    print("Creating test configuration file...")
     create_test_configs()
     print()
 
-    # メイン処理
+    # Main processing
     main()

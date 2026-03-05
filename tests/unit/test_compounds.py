@@ -1,7 +1,7 @@
 """
-Compounds (化合物) 処理の包括的テスト
+Comprehensive tests for Compounds processing
 
-このテストスイートは、化合物処理パイプライン全体の正確性を検証します：
+This test suite validates the correctness of the entire compound processing pipeline:
 1. SMILES tokenization
 2. SMILES validation
 3. Scaffold generation
@@ -14,125 +14,125 @@ import pytest
 @pytest.mark.unit
 @pytest.mark.compound
 class TestSmilesTokenization:
-    """SMILES tokenization の基本機能テスト"""
+    """Basic functionality tests for SMILES tokenization."""
 
     def test_smiles_tokenizer_import(self):
-        """SmilesTokenizer が正しくインポートできることを確認"""
+        """Verify that SmilesTokenizer can be imported correctly."""
         from molcrawl.compounds.utils.tokenizer import SmilesTokenizer
 
         assert SmilesTokenizer is not None
 
     def test_smiles_regex_pattern(self):
-        """SMILES regex パターンが正しく定義されていることを確認"""
+        """Verify that the SMILES regex pattern is correctly defined."""
         from molcrawl.compounds.utils.tokenizer import SMI_REGEX_PATTERN
 
         assert SMI_REGEX_PATTERN is not None
         assert isinstance(SMI_REGEX_PATTERN, str)
-        # パターンが主要なSMILES文字をカバーしていることを確認
+        # Verify that the pattern covers the main SMILES characters
         assert "Br" in SMI_REGEX_PATTERN  # Bromine
         assert "Cl" in SMI_REGEX_PATTERN  # Chlorine
 
     @pytest.mark.parametrize(
         "smiles,expected_tokens",
         [
-            ("CCO", ["C", "C", "O"]),  # エタノール
-            ("c1ccccc1", ["c", "1", "c", "c", "c", "c", "c", "1"]),  # ベンゼン
-            ("C(=O)O", ["C", "(", "=", "O", ")", "O"]),  # カルボキシル基
+            ("CCO", ["C", "C", "O"]),  # Ethanol
+            ("c1ccccc1", ["c", "1", "c", "c", "c", "c", "c", "1"]),  # Benzene
+            ("C(=O)O", ["C", "(", "=", "O", ")", "O"]),  # Carboxyl group
         ],
     )
     def test_basic_tokenization(self, smiles, expected_tokens, sample_vocab_file):
-        """基本的なSMILES文字列が正しくトークン化されることを確認"""
+        """Verify that basic SMILES strings are correctly tokenized."""
         pytest.skip("Requires vocab file setup - implement in integration tests")
 
     def test_tokenizer_with_special_tokens(self, sample_vocab_file):
-        """特殊トークン ([CLS], [SEP], [PAD]) が正しく処理されることを確認"""
+        """Verify that special tokens ([CLS], [SEP], [PAD]) are correctly processed."""
         pytest.skip("Requires vocab file setup - implement in integration tests")
 
 
 @pytest.mark.unit
 @pytest.mark.compound
 class TestSmilesValidation:
-    """SMILES validation とエラーハンドリングのテスト"""
+    """Tests for SMILES validation and error handling."""
 
     def test_valid_smiles(self):
-        """有効なSMILES構造が正しく処理されることを確認"""
+        """Verify that valid SMILES structures are correctly processed."""
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
-        # 有効なSMILES例（scaffoldを持つもの）
+        # Valid SMILES examples (those with scaffolds)
         valid_smiles = [
-            "c1ccccc1",  # ベンゼン - 環構造なのでscaffold有り
-            "C1=CC=C(C=C1)O",  # フェノール - 環構造
-            "C1=CC=C(C=C1)C(=O)O",  # 安息香酸 - 環構造
+            "c1ccccc1",  # Benzene - has scaffold due to ring structure
+            "C1=CC=C(C=C1)O",  # Phenol - ring structure
+            "C1=CC=C(C=C1)C(=O)O",  # Benzoic acid - ring structure
         ]
 
         for smiles in valid_smiles:
             scaffold = prepare_scaffolds(smiles)
-            # RDKitでパースできることを確認（エラーにならない）
+            # Verify that it can be parsed by RDKit (no error)
             assert isinstance(scaffold, str), f"scaffold should be string for '{smiles}'"
 
     def test_valid_smiles_without_scaffold(self):
-        """有効だがscaffoldを持たないSMILES（非環式化合物）の処理を確認"""
+        """Verify handling of valid SMILES without scaffolds (acyclic compounds)."""
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
-        # 非環式化合物（scaffoldは空になる）
+        # Acyclic compounds (scaffold will be empty)
         acyclic_smiles = [
-            "CCO",  # エタノール - 環なし
-            "CC(=O)O",  # 酢酸 - 環なし
-            "CC(C)C",  # イソブタン - 環なし
+            "CCO",  # Ethanol - no ring
+            "CC(=O)O",  # Acetic acid - no ring
+            "CC(C)C",  # Isobutane - no ring
         ]
 
         for smiles in acyclic_smiles:
             scaffold = prepare_scaffolds(smiles)
-            # 非環式化合物はscaffoldが空でも正常
+            # Acyclic compounds may have empty scaffolds, which is normal
             assert isinstance(scaffold, str)
 
     def test_invalid_smiles(self):
-        """無効なSMILES構造が適切に処理されることを確認"""
+        """Verify that invalid SMILES structures are handled appropriately."""
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
-        # 無効なSMILES例
+        # Invalid SMILES examples
         invalid_smiles = [
-            "",  # 空文字列
-            ".",  # ドット
-            "INVALID",  # 構文エラー
-            "C(C(C",  # 括弧が閉じていない
+            "",  # Empty string
+            ".",  # Dot
+            "INVALID",  # Syntax error
+            "C(C(C",  # Unclosed parenthesis
         ]
 
         for smiles in invalid_smiles:
             scaffold = prepare_scaffolds(smiles)
-            # 無効なSMILESは空文字列を返すはず
+            # Invalid SMILES should return an empty string
             assert scaffold == "", f"Invalid SMILES '{smiles}' should return empty string, got '{scaffold}'"
 
     def test_complex_valid_smiles(self):
-        """複雑だが有効なSMILES構造の処理を確認"""
+        """Verify processing of complex but valid SMILES structures."""
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
         complex_smiles = [
-            "C1=CC=C(C=C1)C(=O)O",  # 安息香酸
-            "CC(C)Cc1ccc(cc1)C(C)C(=O)O",  # イブプロフェン（簡略版）
+            "C1=CC=C(C=C1)C(=O)O",  # Benzoic acid
+            "CC(C)Cc1ccc(cc1)C(C)C(=O)O",  # Ibuprofen (simplified)
         ]
 
         for smiles in complex_smiles:
             scaffold = prepare_scaffolds(smiles)
             assert isinstance(scaffold, str)
-            # 複雑なSMILESでもscaffoldが生成される
+            # Scaffold is generated even for complex SMILES
             assert len(scaffold) > 0, f"Complex SMILES '{smiles}' failed to generate scaffold"
 
     def test_invalid_smiles_statistics(self):
-        """無効なSMILES統計が正しく追跡されることを確認"""
+        """Verify that invalid SMILES statistics are correctly tracked."""
         from molcrawl.compounds.utils.preprocessing import get_invalid_smiles_stats, prepare_scaffolds
 
-        # 統計をリセット（テスト用）
-        # Note: 実際のテストでは、テスト間で状態をリセットする仕組みが必要
+        # Reset statistics (for testing)
+        # Note: In actual tests, a mechanism to reset state between tests is needed
 
-        # いくつかのSMILESを処理
+        # Process some SMILES
         prepare_scaffolds("CCO")  # valid
         prepare_scaffolds("INVALID")  # invalid
         prepare_scaffolds("c1ccccc1")  # valid
 
         invalid_count, total_count, invalid_rate, examples = get_invalid_smiles_stats()
 
-        # 統計が追跡されていることを確認
+        # Verify that statistics are tracked
         assert total_count >= 3, "Statistics should track processed SMILES"
         assert invalid_count >= 1, "Invalid SMILES should be counted"
         assert 0 <= invalid_rate <= 100, "Invalid rate should be a percentage"
@@ -142,19 +142,19 @@ class TestSmilesValidation:
 @pytest.mark.integration
 @pytest.mark.compound
 class TestCompoundsDataPipeline:
-    """Compounds データパイプライン全体の統合テスト"""
+    """Integration tests for the entire Compounds data pipeline."""
 
     def test_dataset_download_function(self):
-        """データセットダウンロード関数が存在し呼び出し可能であることを確認"""
+        """Verify that the dataset download function exists and is callable."""
         from molcrawl.compounds.utils.datasets import download
 
         assert callable(download)
 
     def test_smiles_preprocessing_pipeline(self):
-        """SMILES前処理パイプライン全体が機能することを確認"""
+        """Verify that the entire SMILES preprocessing pipeline functions correctly."""
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
-        # 実際の化合物データをシミュレート
+        # Simulate actual compound data
         sample_smiles = ["CCO", "c1ccccc1", "CC(=O)O", "INVALID", "CC(C)C"]
 
         scaffolds = []
@@ -162,66 +162,66 @@ class TestCompoundsDataPipeline:
             scaffold = prepare_scaffolds(smiles)
             scaffolds.append(scaffold)
 
-        # 環構造を含むSMILESはscaffoldを持つ
+        # SMILES containing ring structures have scaffolds
         valid_scaffolds = [s for s in scaffolds if s != ""]
         assert len(valid_scaffolds) >= 1, "At least one scaffold should be generated"
 
     def test_tokenizer_preprocessing_integration(self, sample_vocab_file):
-        """Tokenizer と preprocessing の統合動作を確認"""
+        """Verify the integrated behavior of Tokenizer and preprocessing."""
         pytest.skip("Requires full vocab file setup - implement when vocab is ready")
 
 
 @pytest.mark.phase1
 @pytest.mark.compound
 class TestCompoundsBERTVerification:
-    """Phase 1: Compounds BERT モデル検証"""
+    """Phase 1: Compounds BERT model validation."""
 
     def test_bert_model_exists(self):
-        """Compounds用BERTモデルのチェックポイントが存在することを確認"""
-        # TODO: 実際のモデルパスを指定
+        """Verify that the BERT model checkpoint for Compounds exists."""
+        # TODO: Specify the actual model path
         pytest.skip("Model checkpoint path to be specified")
 
     def test_bert_tokenization_pipeline(self):
-        """BERT用のtokenizationパイプラインが機能することを確認"""
+        """Verify that the tokenization pipeline for BERT functions correctly."""
         pytest.skip("To be implemented with actual BERT model")
 
     def test_bert_inference(self):
-        """BERT モデルで推論が実行できることを確認"""
+        """Verify that inference can be executed with the BERT model."""
         pytest.skip("To be implemented with actual BERT model")
 
 
 @pytest.mark.phase1
 @pytest.mark.compound
 class TestCompoundsGPT2Verification:
-    """Phase 1: Compounds GPT2 モデル検証"""
+    """Phase 1: Compounds GPT2 model validation."""
 
     def test_gpt2_model_exists(self):
-        """Compounds用GPT2モデルのチェックポイントが存在することを確認"""
+        """Verify that the GPT2 model checkpoint for Compounds exists."""
         pytest.skip("Model checkpoint path to be specified")
 
     def test_gpt2_smiles_generation(self):
-        """GPT2で有効なSMILESが生成できることを確認"""
+        """Verify that valid SMILES can be generated with GPT2."""
         pytest.skip("To be implemented with actual GPT2 model")
 
     def test_gpt2_generated_smiles_validity(self):
-        """生成されたSMILESの妥当性を確認"""
+        """Verify the validity of generated SMILES."""
         pytest.skip("To be implemented with actual GPT2 model")
 
 
 @pytest.mark.benchmark
 @pytest.mark.compound
 class TestCompoundsPerformance:
-    """Compounds 処理のパフォーマンステスト"""
+    """Performance tests for Compounds processing."""
 
     def test_tokenization_speed(self, benchmark):
-        """Tokenization の速度を測定"""
+        """Measure the speed of Tokenization."""
         pytest.skip("Benchmark to be implemented")
 
     def test_scaffold_generation_speed(self, benchmark):
-        """Scaffold 生成の速度を測定"""
+        """Measure the speed of Scaffold generation."""
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
-        # 大量のSMILESでベンチマーク
+        # Benchmark with a large number of SMILES
         sample_smiles = ["CCO", "c1ccccc1", "CC(=O)O"] * 100
 
         def run_scaffolds():

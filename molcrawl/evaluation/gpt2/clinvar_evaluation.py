@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ClinVarデータベースを使用したgenome sequenceモデルの精度検証スクリプト
+Genome sequence model accuracy verification script using ClinVar database
 
-このスクリプトは、訓練済みのGPT-2 genome sequenceモデルを使って
-ClinVarデータベースの病原性変異を識別する精度を検証します。
+This script uses a trained GPT-2 genome sequence model to
+Validate the accuracy of identifying pathogenic variants in the ClinVar database.
 """
 
 import argparse
@@ -23,7 +23,7 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
 )
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.gpt2.model import GPT, GPTConfig
 
@@ -36,27 +36,27 @@ from molcrawl.utils.evaluation_output import (
 )
 from molcrawl.utils.model_evaluator import ModelEvaluator
 
-# ログ設定は後でsetup_evaluation_loggingで行う
+# Log settingslatersetup_evaluation_loggingdo it with
 logger = logging.getLogger(__name__)
 
 
 class GPT2ClinVarEvaluator(ModelEvaluator):
-    """ClinVarデータを使用したモデル評価クラス"""
+    """Model evaluation class using ClinVar data"""
 
     def __init__(self, model_path, tokenizer_path, device="cuda"):
         """
-        初期化
+        initialization
 
         Args:
-            model_path (str): 訓練済みモデルのパス
-            tokenizer_path (str): SentencePieceトークナイザーのパス
-            device (str): 使用デバイス
+            model_path (str): path of the trained model
+            tokenizer_path (str): SentencePiece tokenizer path
+            device (str): Device used
         """
-        # 親クラスの初期化（トークナイザーとモデルを自動初期化）
+        # Initialize parent class(Auto-initialize tokenizer and model)
         super().__init__(model_path, tokenizer_path, device)
 
     def _init_tokenizer(self):
-        """トークナイザーの初期化（抽象メソッドの実装）"""
+        """Tokenizer initialization (abstract method implementation)"""
         logger.info(f"Loading tokenizer from {self.tokenizer_path}")
         tokenizer = spm.SentencePieceProcessor(model_file=self.tokenizer_path)
         self.vocab_size = tokenizer.vocab_size()
@@ -64,28 +64,27 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         return tokenizer
 
     def _init_model(self):
-        """モデルの初期化（抽象メソッドの実装）"""
+        """Model initialization (abstract method implementation)"""
         logger.info(f"Loading model from {self.model_path}")
         return self._load_model()
 
     def encode_sequence(self, sequence: str, **kwargs):
         """
-        配列をトークンIDにエンコード（抽象メソッドの実装）
+        Encode array to token ID (implementation of abstract method)
 
         Args:
-            sequence: ゲノム配列
-            **kwargs: 追加の引数
+            sequence: genome sequence
 
         Returns:
-            トークンIDのリスト
+            List of token IDs
         """
         return self.tokenizer.encode(sequence)
 
     def _load_model(self):
-        """訓練済みモデルの読み込み"""
+        """Load trained model"""
         checkpoint = torch.load(self.model_path, map_location=self.device)
 
-        # モデル設定の復元
+        # Restore model settings
         model_args = checkpoint.get("model_args", {})
         config = GPTConfig(
             vocab_size=self.vocab_size,
@@ -93,7 +92,7 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
             n_layer=model_args.get("n_layer", 12),
             n_head=model_args.get("n_head", 12),
             n_embd=model_args.get("n_embd", 768),
-            dropout=0.0,  # 評価時はdropoutを無効
+            dropout=0.0,  # Disable dropout during evaluation
             bias=model_args.get("bias", True),
         )
 
@@ -106,15 +105,15 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         return model
 
     def calculate_perplexity(self, sequence, variant_pos=None):
-        """シーケンスのパープレキシティを計算"""
-        """DNA配列をトークンIDにエンコード"""
-        # 配列を適切にフォーマット（大文字変換、無効文字の除去など）
+        """Calculate the perplexity of a sequence"""
+        """Encode DNA sequence into token ID"""
+        # Format the array properly (convert uppercase, remove invalid characters, etc.)
         sequence = sequence.upper().replace("N", "").replace("-", "")
 
-        # SentencePieceでエンコード
+        # Encode with SentencePiece
         tokens = self.tokenizer.encode(sequence)
 
-        # デバッグ用ログ
+        # debug log
         logger.debug(f"Original sequence length: {len(sequence)}")
         logger.debug(f"Encoded tokens length: {len(tokens)}")
         logger.debug(f"First 10 chars: {sequence[:10]}")
@@ -122,29 +121,29 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
 
         if not tokens:
             logger.warning(f"Empty tokenization for sequence: {sequence[:50]}...")
-            # 空の場合は未知トークンを返す
+            # Return unknown token if empty
             tokens = [self.tokenizer.unk_id()] if hasattr(self.tokenizer, "unk_id") else [0]
 
         return torch.tensor(tokens, dtype=torch.long)
 
     def get_variant_probability(self, reference_seq, variant_seq, context_length=512):
         """
-        変異の病原性確率を計算
+        Calculate the pathogenicity probability of a mutation
 
         Args:
-            reference_seq (str): 参照配列
-            variant_seq (str): 変異配列
-            context_length (int): 評価に使用するコンテキスト長
+            reference_seq (str): reference sequence
+            variant_seq (str): variant sequence
+            context_length (int): Context length used for evaluation
 
         Returns:
-            float: 変異の病原性確率（相対的な尤度の差）
+            float: Pathogenic probability of mutation (difference in relative likelihood)
         """
         with torch.no_grad():
-            # 参照配列と変異配列をエンコード
+            # encode reference and variant sequences
             ref_tokens = self.encode_sequence(reference_seq)
             var_tokens = self.encode_sequence(variant_seq)
 
-            # 最小長を確保（1以上）
+            # Ensure minimum length (1 or more)
             if len(ref_tokens) == 0:
                 logger.warning("Reference sequence tokenization resulted in empty tokens")
                 return 0.0
@@ -152,20 +151,20 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
                 logger.warning("Variant sequence tokenization resulted in empty tokens")
                 return 0.0
 
-            # コンテキスト長に調整
+            # adjust to context length
             if len(ref_tokens) > context_length:
                 ref_tokens = ref_tokens[:context_length]
             if len(var_tokens) > context_length:
                 var_tokens = var_tokens[:context_length]
 
-            # リストをテンソルに変換してからバッチ次元を追加
+            # Convert list to tensor then add batch dimension
             ref_tokens = torch.tensor(ref_tokens, dtype=torch.long).unsqueeze(0).to(self.device)
             var_tokens = torch.tensor(var_tokens, dtype=torch.long).unsqueeze(0).to(self.device)
 
             logger.debug(f"Model input shapes - ref: {ref_tokens.shape}, var: {var_tokens.shape}")
 
-            # モデルの予測確率を取得（全系列の予測）
-            # targetsにダミー値を渡して、全系列のlogitsを取得（推論時の最適化を無効化）
+            # Model predictionGet probability (prediction of all series)
+            # Pass dummy value to targets and get logits of all series (disable optimization during inference)
             ref_dummy_targets = torch.zeros_like(ref_tokens)
             var_dummy_targets = torch.zeros_like(var_tokens)
             ref_logits, _ = self.model(ref_tokens, targets=ref_dummy_targets)
@@ -173,22 +172,22 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
 
             logger.debug(f"Model output shapes - ref: {ref_logits.shape}, var: {var_logits.shape}")
 
-            # 対数尤度を計算
+            # calculate log likelihood
             ref_log_prob = F.log_softmax(ref_logits, dim=-1)
             var_log_prob = F.log_softmax(var_logits, dim=-1)
 
-            # 各トークンの尤度を計算
+            # Compute the likelihood of each token
             ref_likelihood = self._calculate_sequence_likelihood(ref_tokens, ref_log_prob)
             var_likelihood = self._calculate_sequence_likelihood(var_tokens, var_log_prob)
 
-            # 相対的な尤度の差を病原性スコアとして使用
+            # Use relative likelihood difference as pathogenicity score
             pathogenicity_score = ref_likelihood - var_likelihood
 
             return pathogenicity_score.item()
 
     def _calculate_sequence_likelihood(self, tokens, log_probs):
-        """配列の対数尤度を計算"""
-        # 入力チェック
+        """Calculate the log-likelihood of an array"""
+        # Input check
         if tokens.size(1) <= 1:
             logger.warning(f"Sequence too short for likelihood calculation: {tokens.shape}")
             return torch.tensor(0.0, device=tokens.device)
@@ -197,39 +196,39 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
             logger.warning(f"Empty log_probs: {log_probs.shape}")
             return torch.tensor(0.0, device=tokens.device)
 
-        # 最後のトークンを除く（予測対象がないため）
+        # Exclude the last token (because there is no prediction target)
         target_tokens = tokens[:, 1:]
         pred_log_probs = log_probs[:, :-1, :]
 
-        # サイズの再確認
+        # Double check the size
         if pred_log_probs.size(1) != target_tokens.size(1):
             logger.warning(f"Size mismatch: pred_log_probs={pred_log_probs.shape}, target_tokens={target_tokens.shape}")
             return torch.tensor(0.0, device=tokens.device)
 
-        # 各位置での正解トークンの対数確率を取得
+        # Get the log probability of the correct token at each position
         token_log_probs = pred_log_probs.gather(2, target_tokens.unsqueeze(2)).squeeze(2)
 
-        # 平均対数尤度を返す
+        # Return the average log-likelihood
         return token_log_probs.mean()
 
     def _calculate_likelihood_token_by_token(self, tokens):
-        """トークンごとに尤度を計算（生成モード対応）"""
+        """Calculate the likelihood for each token (compatible with generation mode)"""
         if tokens.size(1) <= 1:
             return torch.tensor(0.0, device=tokens.device)
 
         total_log_prob = 0.0
         count = 0
 
-        # 各位置での条件付き確率を計算
+        # Compute the conditional probability at each position
         for i in range(1, tokens.size(1)):
-            context = tokens[:, :i]  # i番目までのコンテキスト
-            target = tokens[:, i : i + 1]  # i+1番目のトークン（予測対象）
+            context = tokens[:, :i]  # Context up to i-th
+            target = tokens[:, i : i + 1]  # i+1th token (prediction target)
 
             with torch.no_grad():
                 logits, _ = self.model(context)
-                log_probs = F.log_softmax(logits[:, -1:, :], dim=-1)  # 最後の位置の予測のみ
+                log_probs = F.log_softmax(logits[:, -1:, :], dim=-1)  # Only predict the last position
 
-                # 正解トークンの対数確率
+                # Log probability of correct token
                 token_log_prob = log_probs.gather(2, target.unsqueeze(2)).squeeze()
                 total_log_prob += token_log_prob.item()
                 count += 1
@@ -238,17 +237,17 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
 
     def load_clinvar_data(self, clinvar_file):
         """
-        ClinVarデータの読み込み
+        Loading ClinVar data
 
         Args:
-            clinvar_file (str): ClinVarデータファイルのパス
+            clinvar_file (str): ClinVar data file path
 
         Returns:
-            pd.DataFrame: ClinVarデータ
+            pd.DataFrame: ClinVar data
         """
         logger.info(f"Loading ClinVar data from {clinvar_file}")
 
-        # ファイル形式に応じて読み込み
+        # Load according to file format
         if clinvar_file.endswith(".csv"):
             df = pd.read_csv(clinvar_file)
         elif clinvar_file.endswith(".tsv"):
@@ -258,7 +257,7 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         else:
             raise ValueError(f"Unsupported file format: {clinvar_file}")
 
-        # 必要なカラムの確認
+        # Check required columns
         required_columns = [
             "reference_sequence",
             "variant_sequence",
@@ -270,7 +269,7 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
             logger.warning(f"Missing columns: {missing_columns}")
             logger.info(f"Available columns: {list(df.columns)}")
 
-        # 病原性ラベルの標準化
+        # Standardization of pathogenicity labels
         df = self._standardize_clinical_significance(df)
 
         logger.info(f"Loaded {len(df)} ClinVar variants")
@@ -279,7 +278,7 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         return df
 
     def _standardize_clinical_significance(self, df):
-        """臨床的意義を病原性/非病原性の二値分類に標準化"""
+        """Standardize clinical significance into a binary classification of pathogenic/non-pathogenic"""
         pathogenic_terms = [
             "pathogenic",
             "likely pathogenic",
@@ -292,15 +291,15 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
                 return None
             significance = significance.lower()
             if any(term in significance for term in pathogenic_terms):
-                return 1  # 病原性
+                return 1  # Pathogenicity
             elif any(term in significance for term in benign_terms):
-                return 0  # 非病原性
+                return 0  # non-pathogenic
             else:
-                return None  # 不明（評価から除外）
+                return None  # Unknown (excluded from evaluation)
 
         df["pathogenic"] = df["ClinicalSignificance"].apply(classify_pathogenicity)
 
-        # 不明なものを除外
+        # exclude unknowns
         df = df.dropna(subset=["pathogenic"])
         df["pathogenic"] = df["pathogenic"].astype(int)
 
@@ -308,14 +307,14 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
 
     def evaluate_model(self, clinvar_data, batch_size=32):
         """
-        モデルの評価実行
+        Run model evaluation
 
         Args:
-            clinvar_data (pd.DataFrame): ClinVarデータ
-            batch_size (int): バッチサイズ
+            clinvar_data (pd.DataFrame): ClinVar data
+            batch_size (int): Batch size
 
         Returns:
-            dict: 評価結果
+            dict: evaluation result
         """
         logger.info("Starting model evaluation on ClinVar data")
 
@@ -323,13 +322,12 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         true_labels = []
         pathogenicity_scores = []
 
-        # バッチ処理で評価
         for i in range(0, len(clinvar_data), batch_size):
             batch = clinvar_data.iloc[i : i + batch_size]
 
             for _, row in batch.iterrows():
                 try:
-                    # 病原性スコアを計算
+                    # Calculate virulence score
                     score = self.get_variant_probability(row["reference_sequence"], row["variant_sequence"])
 
                     pathogenicity_scores.append(score)
@@ -344,15 +342,15 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
             if (i // batch_size + 1) % 10 == 0:
                 logger.info(f"Processed {i + len(batch)}/{len(clinvar_data)} variants")
 
-        # 閾値を最適化して予測ラベルを決定
+        # Optimize the threshold to determine the predicted label
         pathogenicity_scores = np.array(pathogenicity_scores)
         true_labels = np.array(true_labels)
 
-        # ROC曲線から最適閾値を計算
+        # ROCCalculate optimal threshold from curve
         optimal_threshold = self._find_optimal_threshold(pathogenicity_scores, true_labels)
         predictions = (pathogenicity_scores > optimal_threshold).astype(int)
 
-        # 評価指標を計算
+        # Calculate evaluation metrics
         results = self._calculate_metrics(true_labels, predictions, pathogenicity_scores)
         results["optimal_threshold"] = optimal_threshold
 
@@ -360,12 +358,12 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         return results
 
     def _find_optimal_threshold(self, scores, labels):
-        """ROC曲線からF1スコアを最大化する閾値を見つける"""
+        """Find the threshold that maximizes the F1 score from the ROC curve"""
         from sklearn.metrics import roc_curve
 
         fpr, tpr, thresholds = roc_curve(labels, scores)
 
-        # F1スコアを最大化する閾値を見つける
+        # Find the threshold that maximizes F1 score
         best_f1 = 0
         best_threshold = 0
 
@@ -380,18 +378,18 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         return best_threshold
 
     def _calculate_metrics(self, true_labels, predictions, scores):
-        """評価指標を計算"""
+        """Calculate evaluation metrics"""
         from sklearn.metrics import average_precision_score, roc_auc_score
 
-        # 基本指標
+        # Basic indicators
         accuracy = accuracy_score(true_labels, predictions)
         precision, recall, f1, _ = precision_recall_fscore_support(true_labels, predictions, average="binary")
 
-        # AUC指標
+        # AUCindex
         roc_auc = roc_auc_score(true_labels, scores)
         pr_auc = average_precision_score(true_labels, scores)
 
-        # 混同行列
+        # Mix rows
         cm = confusion_matrix(true_labels, predictions)
         tn, fp, fn, tp = cm.ravel()
 
@@ -415,17 +413,17 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
         return results
 
     def save_results(self, results, output_file):
-        """評価結果を保存"""
+        """Save evaluation results"""
         logger.info(f"Saving results to {output_file}")
 
-        # NumPy配列をリストに変換
+        # Convert NumPy array to list
         serializable_results = self._make_serializable(results)
 
         with open(output_file, "w") as f:
             json.dump(serializable_results, f, indent=2)
 
     def _make_serializable(self, obj):
-        """オブジェクトをJSON serializable形式に変換"""
+        """Convert object to JSON serializable format"""
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         elif isinstance(obj, np.integer):
@@ -442,7 +440,7 @@ class GPT2ClinVarEvaluator(ModelEvaluator):
 
 def create_sample_clinvar_data(output_file):
     """
-    ⚠️ DEPRECATED: データ準備機能は clinvar_data_preparation.py に移行してください
+    ⚠️ DEPRECATED: Move data preparation functionality to clinvar_data_preparation.py
     Use: python scripts/evaluation/gpt2/clinvar_data_preparation.py --mode sample
     """
     logger.warning("⚠️  create_sample_clinvar_data() is deprecated.")
@@ -481,7 +479,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 出力ディレクトリを自動生成または指定されたものを使用
+    # Automatically generate output directory or use specified one
     if args.output_dir is None:
         model_type = get_model_type_from_path(args.model_path)
         model_name = get_model_name_from_path(args.model_path)
@@ -489,17 +487,17 @@ def main():
     else:
         os.makedirs(args.output_dir, exist_ok=True)
 
-    # ログ設定
+    # Log settings
     logger = setup_evaluation_logging(Path(args.output_dir), "clinvar_evaluation")
 
-    # サンプルデータ作成モード
+    # Sample data creation mode
     if args.create_sample_data:
         create_sample_clinvar_data(args.clinvar_data)
         logger.info("Sample data created. Run again without --create_sample_data to evaluate.")
         return
 
     try:
-        # トークナイザーパスの取得
+        # Get tokenizer pass
         if args.tokenizer_path:
             tokenizer_path = args.tokenizer_path
             logger.info(f"Using specified tokenizer: {tokenizer_path}")
@@ -507,20 +505,20 @@ def main():
             tokenizer_path = get_genome_tokenizer_path()
             logger.info(f"Using auto-detected tokenizer: {tokenizer_path}")
 
-        # 評価器の初期化
+        # Initialize the evaluator
         evaluator = GPT2ClinVarEvaluator(
             model_path=args.model_path,
             tokenizer_path=tokenizer_path,
             device=args.device,
         )
 
-        # ClinVarデータの読み込み
+        # Load ClinVar data
         clinvar_data = evaluator.load_clinvar_data(args.clinvar_data)
 
-        # モデル評価の実行
+        # model evaluationexecution of
         results = evaluator.evaluate_model(clinvar_data, batch_size=args.batch_size)
 
-        # 結果の表示
+        # Display results
         logger.info("=== Evaluation Results ===")
         logger.info(f"Accuracy: {results['accuracy']:.4f}")
         logger.info(f"Precision: {results['precision']:.4f}")
@@ -531,11 +529,11 @@ def main():
         logger.info(f"Sensitivity: {results['sensitivity']:.4f}")
         logger.info(f"Specificity: {results['specificity']:.4f}")
 
-        # 結果の保存
+        # Save results
         results_file = os.path.join(args.output_dir, "evaluation_results.json")
         evaluator.save_results(results, results_file)
 
-        # 詳細レポートの作成
+        # Create detailed report
         report_file = os.path.join(args.output_dir, "evaluation_report.txt")
         with open(report_file, "w") as f:
             f.write("ClinVar Evaluation Report\n")

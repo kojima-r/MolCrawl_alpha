@@ -3,15 +3,15 @@
 OMIM Evaluation Visualization Script
 ====================================
 
-OMIM (Online Mendelian Inheritance in Man) 評価結果の可視化スクリプト
+OMIM (Online Mendelian Inheritance in Man) evaluation result visualization script
 
-生成される可視化:
-1. 混同行列 (Confusion Matrix)
-2. 性能指標チャート (Performance Metrics)
-3. 遺伝形式別分析 (Inheritance Pattern Analysis)
-4. ROC・PR曲線 (ROC & PR Curves)
-5. 予測スコア分布 (Prediction Score Distribution)
-6. 包括的HTMLレポート (Comprehensive HTML Report)
+Visualization generated:
+1. Confusion Matrix
+2. Performance Metrics
+3. Analysis by genetic type (Inheritance Pattern Analysis)
+4. ROC&PR Curves
+5. Prediction Score Distribution
+6. Comprehensive HTML Report
 """
 
 import argparse
@@ -34,9 +34,9 @@ from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
 warnings.filterwarnings("ignore")
 
-# プロジェクトルートを追加
+# add project root
 
-# 日本語フォント設定
+# Japanese font settings
 plt.rcParams["font.family"] = [
     "DejaVu Sans",
     "Hiragino Sans",
@@ -51,7 +51,7 @@ plt.rcParams["font.family"] = [
 
 
 def setup_logging() -> logging.Logger:
-    """ログ設定をセットアップ"""
+    """Set up log settings"""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -60,25 +60,25 @@ def setup_logging() -> logging.Logger:
 
 
 class OMIMVisualizationGenerator(BaseVisualizationGenerator):
-    """OMIM評価結果可視化生成クラス"""
+    """OMIM evaluation result visualization generation class"""
 
     def __init__(self, results_dir: str, logger: Optional[logging.Logger] = None):
         self.results_dir = results_dir
 
-        # 結果ファイルを探して読み込み
+        # Find and read the result file
         results_file = self._find_results_file(results_dir)
 
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(results_file, results_dir, logger or logging.getLogger(__name__))
 
-        # viz_dir 属性を設定（親クラスのoutput_dirと同じ）
+        # Set viz_dir attribute (same as parent class's output_dir)
         self.viz_dir = str(self.output_dir)
 
-        # OMIM固有の検証
+        # OMIM specific validation
         self._setup_omim_data()
 
     def _find_results_file(self, results_dir: str) -> str:
-        """結果ファイルを探す"""
+        """Find result file"""
         results_path = Path(results_dir)
         possible_files = [
             results_path / "omim_evaluation_results.json",
@@ -90,11 +90,11 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
             if file_path.exists():
                 return str(file_path)
 
-        # ファイルが見つからない場合はダミーデータを作成
+        # Create dummy data if the file is not found
         return self._create_dummy_results(results_path)
 
     def _create_dummy_results(self, results_path: Path) -> str:
-        """ダミーの結果データを作成"""
+        """Create dummy result data"""
         dummy_results = {
             "accuracy": 0.85,
             "precision": 0.82,
@@ -117,18 +117,17 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         return str(dummy_file)
 
     def _setup_omim_data(self):
-        """OMIM固有のデータ設定"""
-        # OMIM固有の検証
+        """OMIM-specific data settings"""
+        # OMIM specific validation
         required_keys = ["accuracy", "precision", "recall", "f1_score"]
         try:
             self._validate_results(required_keys)
         except KeyError as e:
             self.logger.warning(f"Missing keys in results: {e}. Using available data.")
 
-        # OMIM固有のデータロード（既存の実装を保持）
+        # OMIM specific data load (keep existing implementation)
         self.predictions_df = self.load_predictions()
 
-        # カラーパレット設定
         self.colors = {
             "primary": "#2E86C1",
             "secondary": "#F39C12",
@@ -140,7 +139,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         }
 
     def load_results(self) -> Dict:
-        """評価結果をロード"""
+        """Load evaluation results"""
         results_file = os.path.join(self.results_dir, "omim_evaluation_results.json")
         try:
             with open(results_file, "r") as f:
@@ -150,7 +149,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
             return {}
 
     def load_predictions(self) -> pd.DataFrame:
-        """予測結果をロード"""
+        """Load prediction results"""
         pred_file = os.path.join(self.results_dir, "omim_predictions.csv")
         try:
             return pd.read_csv(pred_file)
@@ -159,7 +158,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
             return pd.DataFrame()
 
     def generate_confusion_matrix(self) -> str:
-        """混同行列を生成"""
+        """Generate confusion matrix"""
         self.logger.info("Generating confusion matrix plot")
 
         if self.predictions_df.empty:
@@ -167,10 +166,10 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         fig, ax = plt.subplots(figsize=(8, 6))
 
-        # 混同行列計算
+        # Mix rowscalculation
         cm = confusion_matrix(self.predictions_df["true_label"], self.predictions_df["prediction"])
 
-        # ヒートマップ作成
+        # Create heatmap
         sns.heatmap(
             cm,
             annot=True,
@@ -189,7 +188,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         ax.set_xlabel("Predicted Label", fontsize=12)
         ax.set_ylabel("True Label", fontsize=12)
 
-        # 統計情報追加
+        # Add statistics
         if self.results:
             accuracy = self.results.get("accuracy", 0)
             f1_score = self.results.get("f1_score", 0)
@@ -204,7 +203,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         plt.tight_layout()
 
-        # 保存
+        # keep
         output_file = os.path.join(self.viz_dir, "confusion_matrix.png")
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close()
@@ -213,13 +212,13 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_performance_metrics(self) -> str:
-        """性能指標チャートを生成"""
+        """Generate performance indicator chart"""
         self.logger.info("Generating performance metrics chart")
 
         if not self.results:
             return ""
 
-        # メトリクス抽出
+        # Metrics extraction
         metrics = {
             "Accuracy": self.results.get("accuracy", 0),
             "Precision": self.results.get("precision", 0),
@@ -233,7 +232,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
-        # 基本メトリクス棒グラフ
+        # Basic metrics bar graph
         basic_metrics = {k: v for k, v in metrics.items() if k not in ["ROC-AUC", "PR-AUC"]}
         bars1 = ax1.bar(
             basic_metrics.keys(),
@@ -253,7 +252,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         ax1.set_ylim(0, 1)
         ax1.tick_params(axis="x", rotation=45)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars1, basic_metrics.values()):
             ax1.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -264,7 +263,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
                 fontweight="bold",
             )
 
-        # AUCメトリクス
+        # AUC metrics
         auc_metrics = {"ROC-AUC": metrics["ROC-AUC"], "PR-AUC": metrics["PR-AUC"]}
         bars2 = ax2.bar(
             auc_metrics.keys(),
@@ -276,7 +275,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         ax2.set_ylabel("AUC Score", fontsize=12)
         ax2.set_ylim(0, 1)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars2, auc_metrics.values()):
             ax2.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -289,7 +288,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         plt.tight_layout()
 
-        # 保存
+        # keep
         output_file = os.path.join(self.viz_dir, "performance_metrics.png")
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close()
@@ -298,7 +297,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_inheritance_analysis(self) -> str:
-        """遺伝形式別分析チャートを生成"""
+        """Generate analysis chart by genetic type"""
         self.logger.info("Generating inheritance pattern analysis")
 
         if not self.results or "inheritance_analysis" not in self.results:
@@ -311,7 +310,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         patterns = list(inheritance_data.keys())
 
-        # F1スコア比較
+        # F1 score comparison
         f1_scores = [inheritance_data[p]["f1_score"] for p in patterns]
         bars1 = ax1.bar(patterns, f1_scores, color=self.colors["primary"])
         ax1.set_title("F1-Score by Inheritance Pattern", fontsize=12, fontweight="bold")
@@ -327,7 +326,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
                 va="bottom",
             )
 
-        # 精度比較
+        # Accuracy comparison
         accuracies = [inheritance_data[p]["accuracy"] for p in patterns]
         bars2 = ax2.bar(patterns, accuracies, color=self.colors["secondary"])
         ax2.set_title("Accuracy by Inheritance Pattern", fontsize=12, fontweight="bold")
@@ -343,7 +342,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
                 va="bottom",
             )
 
-        # サンプル数
+        # Number of samples
         sample_counts = [inheritance_data[p]["sample_count"] for p in patterns]
         bars3 = ax3.bar(patterns, sample_counts, color=self.colors["success"])
         ax3.set_title("Sample Count by Inheritance Pattern", fontsize=12, fontweight="bold")
@@ -359,7 +358,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
                 va="bottom",
             )
 
-        # ポジティブ率
+        # Positive rate
         positive_rates = [inheritance_data[p]["positive_count"] / inheritance_data[p]["sample_count"] for p in patterns]
         bars4 = ax4.bar(patterns, positive_rates, color=self.colors["danger"])
         ax4.set_title(
@@ -382,7 +381,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         plt.suptitle("OMIM Inheritance Pattern Analysis", fontsize=16, fontweight="bold")
         plt.tight_layout()
 
-        # 保存
+        # keep
         output_file = os.path.join(self.viz_dir, "inheritance_analysis.png")
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close()
@@ -391,7 +390,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_roc_pr_curves(self) -> str:
-        """ROC曲線とPR曲線を生成"""
+        """Generate ROC curve and PR curve"""
         self.logger.info("Generating ROC and PR curves")
 
         if self.predictions_df.empty:
@@ -402,7 +401,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         y_true = self.predictions_df["true_label"]
         y_scores = self.predictions_df["prediction_score"]
 
-        # ROC曲線
+        # ROCcurve
         fpr, tpr, _ = roc_curve(y_true, y_scores)
         roc_auc = self.results.get("roc_auc", 0)
 
@@ -422,7 +421,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         ax1.legend(loc="lower right")
         ax1.grid(True, alpha=0.3)
 
-        # PR曲線
+        # PRcurve
         precision, recall, _ = precision_recall_curve(y_true, y_scores)
         pr_auc = self.results.get("pr_auc", 0)
 
@@ -443,7 +442,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         plt.tight_layout()
 
-        # 保存
+        # keep
         output_file = os.path.join(self.viz_dir, "roc_pr_curves.png")
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close()
@@ -452,7 +451,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_score_distribution(self) -> str:
-        """予測スコア分布を生成"""
+        """Generate predicted score distribution"""
         self.logger.info("Generating prediction score distribution")
 
         if self.predictions_df.empty:
@@ -460,7 +459,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
-        # クラス別スコア分布
+        # Score distribution by class
         disease_scores = self.predictions_df[self.predictions_df["true_label"] == 1]["prediction_score"]
         benign_scores = self.predictions_df[self.predictions_df["true_label"] == 0]["prediction_score"]
 
@@ -487,7 +486,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # 閾値表示
+        # Threshold display
         threshold = self.results.get("optimal_threshold", 0)
         ax1.axvline(
             threshold,
@@ -498,11 +497,11 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         )
         ax1.legend()
 
-        # ボックスプロット
+        # box plot
         data_for_box = [benign_scores, disease_scores]
         box_plot = ax2.boxplot(data_for_box, labels=["Benign", "Disease-causing"], patch_artist=True)
 
-        # ボックスプロットの色設定
+        # box plotcolor settings
         colors = [self.colors["success"], self.colors["danger"]]
         for patch, color in zip(box_plot["boxes"], colors):
             patch.set_facecolor(color)
@@ -514,7 +513,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
         plt.tight_layout()
 
-        # 保存
+        # keep
         output_file = os.path.join(self.viz_dir, "score_distribution.png")
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close()
@@ -523,7 +522,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_html_report(self) -> str:
-        """包括的HTMLレポートを生成"""
+        """Generate comprehensive HTML report"""
         self.logger.info("Generating HTML report")
 
         html_content = f"""
@@ -691,7 +690,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         </div>
         """
 
-        # 遺伝形式別分析テーブル
+        # Analysis by genetic typetable
         if "inheritance_analysis" in self.results:
             html_content += """
         <h2>🧬 Inheritance Pattern Analysis</h2>
@@ -728,7 +727,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         </table>
         """
 
-        # 画像セクション
+        # Image section
         html_content += """
         <h2>📊 Visualization Results</h2>
         <div class="image-grid">
@@ -755,7 +754,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         </div>
         """
 
-        # フッター
+        # footer
         html_content += f"""
         <div class="footer">
             <p>Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
@@ -766,7 +765,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 </html>
         """
 
-        # HTMLファイル保存
+        # Save HTML file
         html_file = os.path.join(self.viz_dir, "omim_evaluation_report.html")
         with open(html_file, "w", encoding="utf-8") as f:
             f.write(html_content)
@@ -775,28 +774,28 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         return html_file
 
     def _create_comprehensive_evaluation_dashboard(self):
-        """OMIM用の包括的評価ダッシュボードを作成"""
+        """Create a comprehensive assessment dashboard for OMIM"""
         self.logger.info("Creating comprehensive OMIM evaluation dashboard")
 
-        # OMIMの結果から仮想的なDataFrameを作成
+        # Create a virtual DataFrame from OMIM results
         import numpy as np
 
         np.random.seed(42)
 
-        # サンプルデータを作成（実際の実装では実データを使用）
+        # Create sample data (actual data will be used in actual implementation)
         n_samples = 800
 
-        # 遺伝的変異の予測スコアを生成
-        labels = np.random.binomial(1, 0.4, n_samples)  # 40%がpathogenic
+        # Generate a predicted score for genetic variation
+        labels = np.random.binomial(1, 0.4, n_samples)  # 40%butpathogenic
         scores = []
 
         for label in labels:
             if label == 1:  # pathogenic
-                scores.append(np.random.beta(2, 1))  # 高いスコア
+                scores.append(np.random.beta(2, 1))  # high score
             else:  # benign
-                scores.append(np.random.beta(1, 2))  # 低いスコア
+                scores.append(np.random.beta(1, 2))  # low score
 
-        # DataFrameを作成
+        # create a DataFrame
         results_df = pd.DataFrame(
             {
                 "label": labels,
@@ -806,7 +805,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
             }
         )
 
-        # 汎用ダッシュボードを作成
+        # Create a generic dashboard
         self._create_comprehensive_dashboard(
             results_df=results_df,
             prediction_score_col="score",
@@ -816,9 +815,9 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
             custom_title="OMIM Comprehensive Evaluation Dashboard",
         )
 
-    # 抽象メソッドの実装
+    # Implementing abstract methods
     def plot_confusion_matrix(self):
-        """混同行列プロット"""
+        """Confusion matrix plot"""
         self.logger.info("Creating OMIM confusion matrix plot")
         if "confusion_matrix" in self.results:
             cm = self.results["confusion_matrix"]
@@ -842,10 +841,10 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
             self._save_plot("omim_confusion_matrix")
 
     def plot_performance_metrics(self):
-        """性能指標プロット"""
+        """Performance index plot"""
         self.logger.info("Creating OMIM performance metrics plot")
         metrics = ["accuracy", "precision", "recall", "f1_score"]
-        values = [self.results.get(m, 0.8) for m in metrics]  # デフォルト値
+        values = [self.results.get(m, 0.8) for m in metrics]  # default value
 
         plt.figure(figsize=(10, 6))
         plt.bar(metrics, values, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"])
@@ -855,7 +854,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("omim_performance_metrics")
 
     def create_summary_dashboard(self):
-        """サマリーダッシュボード"""
+        """Summary Dashboard"""
         self.logger.info("Creating OMIM summary dashboard")
         plt.figure(figsize=(12, 8))
         plt.text(
@@ -869,15 +868,15 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("omim_summary_dashboard")
 
     def generate_all_visualizations(self):
-        """全ての可視化を生成"""
+        """Generate all visualizations"""
         self.logger.info("Generating all OMIM visualizations")
 
-        # 基底クラスの抽象メソッド実装
+        # Abstract method implementation in base class
         self.plot_confusion_matrix()
         self.plot_performance_metrics()
         self.create_summary_dashboard()
 
-        # 既存のOMIM固有メソッドも呼び出し
+        # Also call existing OMIM specific methods
         try:
             confusion_matrix_file = self.generate_confusion_matrix()
             metrics_file = self.generate_performance_metrics()
@@ -906,7 +905,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
             return []
 
     def create_html_report(self):
-        """HTMLレポート作成"""
+        """HTML report creation"""
         self.logger.info("Creating OMIM HTML report")
 
         html_content = self._create_html_header("OMIM Evaluation Report")
@@ -923,7 +922,7 @@ class OMIMVisualizationGenerator(BaseVisualizationGenerator):
 
 
 def main():
-    """メイン関数"""
+    """Main function"""
     parser = argparse.ArgumentParser(description="OMIM Evaluation Visualization Generator")
     parser.add_argument(
         "--results_dir",
@@ -938,7 +937,7 @@ def main():
         logger = setup_logging()
         logger.info("Starting OMIM visualization generation")
 
-        # 可視化生成
+        # visualization generation
         viz_generator = OMIMVisualizationGenerator(args.results_dir, logger)
         generated_files = viz_generator.generate_all_visualizations()
 

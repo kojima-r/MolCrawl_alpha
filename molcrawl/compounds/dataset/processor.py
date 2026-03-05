@@ -1,7 +1,7 @@
 """
-個別データセット処理プロセッサー
+Individual dataset processing processor
 
-各データセットを独立して処理するためのクラスを提供します。
+Provides classes for processing each dataset independently.
 """
 
 import logging
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def _get_rdkit_helpers():
-    """RDKitヘルパー関数を取得"""
+    """Get RDKit helper functions"""
     from rdkit import Chem
     from rdkit.Chem import Descriptors
     from rdkit.Contrib.SA_Score import sascorer
@@ -25,7 +25,7 @@ def _get_rdkit_helpers():
 
 
 def calcLogPIfMol(smi):
-    """LogP値を計算"""
+    """Calculate LogP value"""
     Chem, Descriptors, _ = _get_rdkit_helpers()
     m = Chem.MolFromSmiles(smi)
     if m is not None:
@@ -35,7 +35,7 @@ def calcLogPIfMol(smi):
 
 
 def calcMolWeight(smi):
-    """分子量を計算"""
+    """Calculate molecular weight"""
     Chem, Descriptors, _ = _get_rdkit_helpers()
     mol = Chem.MolFromSmiles(smi)
     if mol is not None:
@@ -45,7 +45,7 @@ def calcMolWeight(smi):
 
 
 def calcSascore(smi):
-    """SA scoreを計算"""
+    """Calculate SA score"""
     Chem, _, sascorer = _get_rdkit_helpers()
     mol = Chem.MolFromSmiles(smi)
     if mol is not None:
@@ -56,20 +56,20 @@ def calcSascore(smi):
 
 class DatasetProcessor:
     """
-    個別データセット処理クラス
+    Individual dataset processing class
 
-    各データセットを独立して処理します：
-    1. 生データの読み込み
-    2. 物性計算（必要な場合）
-    3. 処理済みデータの保存
+    Process each dataset independently:
+    1. Loading raw data
+    2. Physical property calculations (if necessary)
+    3. Saving processed data
     """
 
     def __init__(self, dataset_info: DatasetInfo, compounds_dir: Path, num_processes: int = 16):
         """
         Args:
-            dataset_info: データセット情報
-            compounds_dir: compoundsディレクトリのパス
-            num_processes: 並列処理のプロセス数
+            dataset_info: Dataset information
+            compounds_dir: Path to the compounds directory
+            num_processes: Number of parallel processing processes
         """
         self.dataset_info = dataset_info
         self.compounds_dir = Path(compounds_dir)
@@ -77,38 +77,38 @@ class DatasetProcessor:
 
     def process(self, force: bool = False) -> Optional[pd.DataFrame]:
         """
-        データセットを処理
+        Process the dataset
 
         Args:
-            force: 強制再処理フラグ
+            force: Force reprocessing flag
 
         Returns:
-            処理済みDataFrame（エラー時はNone）
+            Processed DataFrame (None on error)
         """
         processed_path = self.dataset_info.get_processed_path(self.compounds_dir)
 
-        # 既に処理済みの場合はスキップ
+        # Skip if already processed
         if not force and processed_path.exists():
             logger.info(f"✓ {self.dataset_info.name}: Already processed, skipping")
             return pd.read_parquet(processed_path)
 
-        # 生データを読み込み
+        # read raw data
         df = self._load_raw_data()
         if df is None:
             return None
 
-        # サンプリング
+        # sampling
         if self.dataset_info.sample_size is not None and len(df) > self.dataset_info.sample_size:
             logger.info(f"  Sampling {self.dataset_info.sample_size} from {len(df)} samples")
             df = df.sample(n=self.dataset_info.sample_size, random_state=42)
 
-        # 物性計算
+        # Physical property calculation
         if self.dataset_info.requires_properties:
             df = self._calculate_properties(df)
             if df is None:
                 return None
 
-        # 保存
+        # keep
         processed_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(processed_path, index=False)
         logger.info(f"✓ {self.dataset_info.name}: Saved {len(df)} samples to {processed_path}")
@@ -116,7 +116,7 @@ class DatasetProcessor:
         return df
 
     def _load_raw_data(self) -> Optional[pd.DataFrame]:
-        """生データを読み込み"""
+        """Load raw data"""
         raw_path = self.dataset_info.get_raw_path(self.compounds_dir)
 
         if not raw_path.exists():
@@ -129,7 +129,7 @@ class DatasetProcessor:
             logger.info(f"📂 {self.dataset_info.name}: Loading from {raw_path}")
             df = pd.read_parquet(raw_path)
 
-            # SMILES列が存在することを確認
+            # check that SMILES column exists
             if "smiles" not in df.columns:
                 logger.error(f"✗ {self.dataset_info.name}: 'smiles' column not found")
                 return None
@@ -142,41 +142,41 @@ class DatasetProcessor:
             return None
 
     def _calculate_properties(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
-        """物性を計算"""
+        """Calculate physical properties"""
         logger.info(f"🧪 {self.dataset_info.name}: Calculating properties...")
 
         try:
             smi_series = df["smiles"]
 
             with multiprocessing.Pool(self.num_processes) as pool:
-                # LogP計算
+                # LogPcalculation
                 logger.info("  Computing LogP...")
                 logps_list = pool.map(calcLogPIfMol, smi_series)
 
-                # 有効な分子のみをフィルタ
+                # filter only valid molecules
                 valid_mols = ~pd.isna(logps_list)
                 valid_smiles = smi_series[valid_mols].reset_index(drop=True)
                 valid_logps = pd.Series(logps_list)[valid_mols].reset_index(drop=True)
 
-                # 分子量計算
+                # Molecular weight calculation
                 logger.info("  Computing molecular weight...")
                 mol_weights = pool.map(calcMolWeight, valid_smiles)
 
-                # SA score計算
+                # SA scorecalculation
                 logger.info("  Computing SA score...")
                 sascores = pool.map(calcSascore, valid_smiles)
 
-            # 結果をDataFrameに変換
+            # Convert result to DataFrame
             result_df = pd.DataFrame(
                 {
                     "smiles": valid_smiles,
                     "logp": valid_logps,
-                    "mol_weight": [w / 100.0 if w is not None else None for w in mol_weights],  # 正規化
+                    "mol_weight": [w / 100.0 if w is not None else None for w in mol_weights],  # Normalization
                     "sascore": sascores,
                 }
             )
 
-            # NaNを含む行を削除
+            # Delete lines containing NaN
             initial_count = len(result_df)
             result_df = result_df.dropna()
             removed_count = initial_count - len(result_df)
@@ -199,32 +199,32 @@ def process_all_available_datasets(
     num_processes: int = 16,
 ) -> dict:
     """
-    利用可能な全データセットを処理
+    Process all available datasets
 
     Args:
-        compounds_dir: compoundsディレクトリのパス
-        dataset_types: 処理するデータセット種別のリスト（Noneの場合は利用可能な全て）
-        force: 強制再処理フラグ
-        num_processes: 並列処理のプロセス数
+        compounds_dir: compounds directorypath of
+        dataset_types: List of dataset types to process (all available if None)
+        force: Force reprocessing flag
+        num_processes: Number of parallel processing processes
 
     Returns:
-        {dataset_type: processed_df} の辞書
+        Dictionary of {dataset_type: processed_df}
     """
     from molcrawl.compounds.dataset.dataset_config import (
         get_available_datasets,
         get_dataset_info,
     )
 
-    # 処理対象のデータセットを決定
+    # Determine the dataset to be processed
     if dataset_types is None:
-        # 利用可能な全データセットを取得
+        # Get all available datasets
         available = get_available_datasets(compounds_dir)
         if not available:
             logger.warning("No datasets available for processing")
             return {}
         dataset_types = available
     else:
-        # 指定されたデータセットが文字列の場合はEnumに変換
+        # If the specified dataset is a string, convert it to an Enum
         if isinstance(dataset_types[0], str):
             dataset_types = [CompoundDatasetType(dt) for dt in dataset_types]
 

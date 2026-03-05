@@ -1,7 +1,7 @@
 """
-化合物データセットの定義と設定
+Defining and configuring compound datasets
 
-各データセットを個別に処理するための統一的な定義を提供します。
+Provides a uniform definition for processing each dataset individually.
 """
 
 from dataclasses import dataclass
@@ -11,7 +11,7 @@ from typing import Optional, List
 
 
 class CompoundDatasetType(str, Enum):
-    """化合物データセットの種類"""
+    """Compound dataset type"""
 
     ZINC20 = "zinc20"
     OPV = "opv"
@@ -21,39 +21,39 @@ class CompoundDatasetType(str, Enum):
     CHEMBL = "chembl"
     PUBCHEMQC_2017 = "pubchemqc_2017"
     PUBCHEMQC_2020 = "pubchemqc_2020"
-    GUACAMOL = "guacamol"  # GPT2用のベンチマークデータセット
+    GUACAMOL = "guacamol"  # Benchmark dataset for GPT2
 
 
 @dataclass
 class DatasetInfo:
-    """データセット情報"""
+    """Dataset information"""
 
-    name: str  # データセット名
-    dataset_type: CompoundDatasetType  # データセット種別
-    source_subdir: str  # 生データのサブディレクトリ (data/ 以下)
-    source_filename: str  # 生データのファイル名
-    requires_download: bool = True  # ダウンロードが必要か
-    requires_properties: bool = True  # 物性計算が必要か
-    sample_size: Optional[int] = None  # サンプリングサイズ（Noneの場合は全データ使用）
+    name: str  # dataset name
+    dataset_type: CompoundDatasetType  # Dataset type
+    source_subdir: str  # Raw data subdirectory (under data/)
+    source_filename: str  # Raw data file name
+    requires_download: bool = True  # Is download required?
+    requires_properties: bool = True  # Is property calculation required?
+    sample_size: Optional[int] = None  # Sampling size (if None, all data will be used)
 
     def get_raw_path(self, compounds_dir: Path) -> Path:
-        """生データのパスを取得"""
+        """Get raw data path"""
         return compounds_dir / "data" / self.source_subdir / self.source_filename
 
     def get_processed_path(self, compounds_dir: Path) -> Path:
-        """処理済みデータのパスを取得"""
+        """Get path to processed data"""
         return compounds_dir / "processed" / f"{self.name}.parquet"
 
     def get_tokenized_path(self, compounds_dir: Path) -> Path:
-        """トークナイズ済みデータのパスを取得"""
+        """Get path to tokenized data"""
         return compounds_dir / "tokenized" / f"{self.name}_tokenized.parquet"
 
     def get_hf_dataset_path(self, compounds_dir: Path) -> Path:
-        """HuggingFace Dataset形式のパスを取得"""
+        """Get the path in HuggingFace Dataset format"""
         return compounds_dir / "hf_datasets" / self.name
 
 
-# 各データセットの定義
+# Define each dataset
 DATASET_DEFINITIONS = {
     CompoundDatasetType.ZINC20: DatasetInfo(
         name="zinc20",
@@ -61,7 +61,7 @@ DATASET_DEFINITIONS = {
         source_subdir="zinc20",
         source_filename="zinc_processed.parquet",
         requires_properties=True,
-        sample_size=5_000_000,  # ZINC20は大規模なので5Mにサンプリング
+        sample_size=5_000_000,  # ZINC20 is large, so sample to 5M
     ),
     CompoundDatasetType.OPV: DatasetInfo(
         name="opv",
@@ -116,28 +116,28 @@ DATASET_DEFINITIONS = {
         name="guacamol",
         dataset_type=CompoundDatasetType.GUACAMOL,
         source_subdir="benchmark/GuacaMol",
-        source_filename="guacamol_v1_train.smiles",  # trainのみを代表として指定
-        requires_properties=False,  # ベンチマークデータなので物性計算不要
+        source_filename="guacamol_v1_train.smiles",  # Specify only train as representative
+        requires_properties=False,  # No need to calculate physical properties because it is benchmark data
     ),
 }
 
 
 def get_dataset_info(dataset_type: CompoundDatasetType) -> DatasetInfo:
-    """データセット情報を取得"""
+    """Get dataset information"""
     return DATASET_DEFINITIONS[dataset_type]
 
 
 def get_available_datasets(compounds_dir: Path) -> List[CompoundDatasetType]:
     """
-    利用可能なデータセットのリストを取得
+    Get list of available datasets
 
-    生データが存在するデータセットのみを返します。
+    Returns only datasets with raw data.
 
     Args:
-        compounds_dir: compoundsディレクトリのパス
+        compounds_dir: compounds directorypath of
 
     Returns:
-        利用可能なデータセットのリスト
+        List of available datasets
     """
     available = []
     for dataset_type, info in DATASET_DEFINITIONS.items():
@@ -148,5 +148,5 @@ def get_available_datasets(compounds_dir: Path) -> List[CompoundDatasetType]:
 
 
 def get_all_dataset_types() -> List[CompoundDatasetType]:
-    """全データセット種別のリストを取得"""
+    """Get list of all dataset types"""
     return list(CompoundDatasetType)

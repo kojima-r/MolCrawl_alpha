@@ -1,5 +1,5 @@
 """
-Compounds の統合テスト - 実際のモデルとデータパイプラインの検証
+Integration tests for Compounds - Validation of actual models and data pipeline
 """
 
 import os
@@ -10,19 +10,19 @@ import pytest
 @pytest.mark.integration
 @pytest.mark.compound
 class TestCompoundsEndToEnd:
-    """Compounds の end-to-end 統合テスト"""
+    """End-to-end integration tests for Compounds."""
 
     def test_smiles_to_scaffold_pipeline(self):
-        """SMILES → Scaffold の完全なパイプラインをテスト"""
+        """Test the complete SMILES → Scaffold pipeline."""
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
-        # 実際の化合物例
+        # Actual compound examples
         test_cases = [
-            ("CCO", False),  # エタノール - 環なし
-            ("c1ccccc1", True),  # ベンゼン - 環あり
-            ("CC(=O)O", False),  # 酢酸 - 環なし
-            ("INVALID_SMILES", False),  # 無効
-            ("", False),  # 空 - 無効
+            ("CCO", False),  # Ethanol - no ring
+            ("c1ccccc1", True),  # Benzene - has ring
+            ("CC(=O)O", False),  # Acetic acid - no ring
+            ("INVALID_SMILES", False),  # Invalid
+            ("", False),  # Empty - invalid
         ]
 
         results = []
@@ -40,7 +40,7 @@ class TestCompoundsEndToEnd:
                 }
             )
 
-        # 結果を表示
+        # Display results
         for result in results:
             print(
                 f"SMILES: {result['smiles'][:20]:20s} | "
@@ -49,28 +49,28 @@ class TestCompoundsEndToEnd:
                 f"{'✓' if result['passed'] else '✗'}"
             )
 
-        # 全てのテストケースがパスしたことを確認
+        # Verify that all test cases passed
         assert all(r["passed"] for r in results), "Some test cases failed"
 
     def test_batch_smiles_processing(self):
-        """大量のSMILESをバッチ処理できることを確認"""
+        """Verify that a large number of SMILES can be batch processed."""
         from molcrawl.compounds.utils.preprocessing import get_invalid_smiles_stats, prepare_scaffolds
 
-        # 大量のSMILESデータをシミュレート
+        # Simulate a large volume of SMILES data
         test_smiles = [
             "CCO",
             "c1ccccc1",
             "CC(=O)O",
             "CC(C)C",
             "C1=CC=C(C=C1)O",
-        ] * 20  # 100個のSMILES
+        ] * 20  # 100 SMILES
 
         scaffolds = []
         for smiles in test_smiles:
             scaffold = prepare_scaffolds(smiles)
             scaffolds.append(scaffold)
 
-        # 統計を確認
+        # Check statistics
         invalid_count, total_count, invalid_rate, examples = get_invalid_smiles_stats()
 
         print("\nBatch Processing Results:")
@@ -78,30 +78,30 @@ class TestCompoundsEndToEnd:
         print(f"  Valid scaffolds: {len([s for s in scaffolds if s != ''])}")
         print(f"  Invalid rate: {invalid_rate:.2f}%")
 
-        # 全てのSMILESが処理された
+        # All SMILES were processed
         assert len(scaffolds) == len(test_smiles)
-        # 環構造のSMILESのみscaffoldを持つ
+        # Only SMILES with ring structures have scaffolds
         valid_count = len([s for s in scaffolds if s != ""])
-        assert valid_count >= len(test_smiles) * 0.2  # 環構造は1/5程度
+        assert valid_count >= len(test_smiles) * 0.2  # ~1/5 have ring structures
 
 
 @pytest.mark.integration
 @pytest.mark.compound
 @pytest.mark.slow
 class TestCompoundsBERTIntegration:
-    """Compounds BERT モデルの統合テスト"""
+    """Integration tests for the Compounds BERT model."""
 
     @pytest.fixture
     def bert_model_path(self):
-        """BERT モデルのパスを返す（実際のパスに置き換える）"""
-        # 環境変数から取得、または実際のパスを指定
+        """Return the path to the BERT model (replace with the actual path)."""
+        # Retrieve from environment variable, or specify the actual path
         path = os.environ.get("COMPOUNDS_BERT_MODEL_PATH")
         if path and os.path.exists(path):
             return path
         pytest.skip("BERT model path not found. Set COMPOUNDS_BERT_MODEL_PATH environment variable.")
 
     def test_bert_model_loading(self, bert_model_path):
-        """BERT モデルが正しくロードできることを確認"""
+        """Verify that the BERT model can be loaded correctly."""
         from transformers import BertForMaskedLM
 
         try:
@@ -112,7 +112,7 @@ class TestCompoundsBERTIntegration:
             pytest.fail(f"Failed to load BERT model: {e}")
 
     def test_bert_tokenizer_loading(self, bert_model_path):
-        """BERT tokenizer が正しくロードできることを確認"""
+        """Verify that the BERT tokenizer can be loaded correctly."""
         from molcrawl.compounds.utils.tokenizer import SmilesTokenizer
 
         vocab_path = os.path.join(bert_model_path, "vocab.txt")
@@ -128,7 +128,7 @@ class TestCompoundsBERTIntegration:
             pytest.fail(f"Failed to load tokenizer: {e}")
 
     def test_bert_inference_pipeline(self, bert_model_path):
-        """BERT モデルで推論が実行できることを確認"""
+        """Verify that inference can be executed with the BERT model."""
         import torch
         from transformers import BertForMaskedLM
 
@@ -139,19 +139,19 @@ class TestCompoundsBERTIntegration:
             pytest.skip(f"Vocab file not found at {vocab_path}")
 
         try:
-            # モデルとトークナイザーをロード
+            # Load model and tokenizer
             model = BertForMaskedLM.from_pretrained(bert_model_path)
             tokenizer = SmilesTokenizer(vocab_path)
 
             model.eval()
 
-            # サンプルSMILES
-            test_smiles = "CCO"  # エタノール
+            # Sample SMILES
+            test_smiles = "CCO"  # Ethanol
 
-            # トークン化
+            # Tokenize
             inputs = tokenizer(test_smiles, return_tensors="pt")
 
-            # 推論
+            # Inference
             with torch.no_grad():
                 outputs = model(**inputs)
 
@@ -169,18 +169,18 @@ class TestCompoundsBERTIntegration:
 @pytest.mark.compound
 @pytest.mark.slow
 class TestCompoundsGPT2Integration:
-    """Compounds GPT2 モデルの統合テスト"""
+    """Integration tests for the Compounds GPT2 model."""
 
     @pytest.fixture
     def gpt2_model_path(self):
-        """GPT2 モデルのパスを返す（実際のパスに置き換える）"""
+        """Return the path to the GPT2 model (replace with the actual path)."""
         path = os.environ.get("COMPOUNDS_GPT2_MODEL_PATH")
         if path and os.path.exists(path):
             return path
         pytest.skip("GPT2 model path not found. Set COMPOUNDS_GPT2_MODEL_PATH environment variable.")
 
     def test_gpt2_model_loading(self, gpt2_model_path):
-        """GPT2 モデルが正しくロードできることを確認"""
+        """Verify that the GPT2 model can be loaded correctly."""
         from transformers import GPT2LMHeadModel
 
         try:
@@ -191,7 +191,7 @@ class TestCompoundsGPT2Integration:
             pytest.fail(f"Failed to load GPT2 model: {e}")
 
     def test_gpt2_smiles_generation(self, gpt2_model_path):
-        """GPT2 で SMILES を生成できることを確認"""
+        """Verify that SMILES can be generated with GPT2."""
         import torch
         from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
@@ -201,13 +201,13 @@ class TestCompoundsGPT2Integration:
 
             model.eval()
 
-            # 開始トークン
+            # Start token
             prompt = "C"
 
-            # 入力を準備
+            # Prepare input
             inputs = tokenizer(prompt, return_tensors="pt")
 
-            # 生成
+            # Generate
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
@@ -218,7 +218,7 @@ class TestCompoundsGPT2Integration:
                     pad_token_id=tokenizer.eos_token_id,
                 )
 
-            # デコード
+            # Decode
             generated_smiles = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
 
             print("✓ GPT2 generation successful")
@@ -233,7 +233,7 @@ class TestCompoundsGPT2Integration:
             pytest.fail(f"GPT2 generation failed: {e}")
 
     def test_gpt2_generated_smiles_validity(self, gpt2_model_path):
-        """生成された SMILES の妥当性を確認"""
+        """Verify the validity of generated SMILES."""
         import torch
         from rdkit import Chem
         from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -243,7 +243,7 @@ class TestCompoundsGPT2Integration:
             tokenizer = GPT2Tokenizer.from_pretrained(gpt2_model_path)
             model.eval()
 
-            # 複数の開始点から生成
+            # Generate from multiple starting points
             prompts = ["C", "c1", "CC"]
 
             all_generated = []
@@ -263,7 +263,7 @@ class TestCompoundsGPT2Integration:
                 generated = [tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
                 all_generated.extend(generated)
 
-            # 妥当性をチェック
+            # Check validity
             valid_count = 0
             for smiles in all_generated:
                 mol = Chem.MolFromSmiles(smiles)
@@ -277,7 +277,7 @@ class TestCompoundsGPT2Integration:
             print(f"  Valid SMILES: {valid_count}")
             print(f"  Validity rate: {validity_rate:.1f}%")
 
-            # 有効率が一定以上であることを確認（50%以上を期待）
+            # Verify that the validity rate is above a threshold (expecting >= 50%)
             assert validity_rate >= 50, f"Validity rate too low: {validity_rate:.1f}%"
 
         except Exception as e:
@@ -287,10 +287,10 @@ class TestCompoundsGPT2Integration:
 @pytest.mark.integration
 @pytest.mark.compound
 class TestCompoundsDatasetIntegration:
-    """Compounds データセットの統合テスト"""
+    """Integration tests for the Compounds dataset."""
 
     def test_dataset_loading(self, mock_compounds_dataset):
-        """モックデータセットが正しくロードできることを確認"""
+        """Verify that the mock dataset can be loaded correctly."""
         import pandas as pd
 
         df = pd.read_csv(mock_compounds_dataset)
@@ -300,17 +300,17 @@ class TestCompoundsDatasetIntegration:
         print(f"✓ Dataset loaded: {len(df)} compounds")
 
     def test_dataset_preprocessing(self, mock_compounds_dataset):
-        """データセット前処理パイプラインをテスト"""
+        """Test the dataset preprocessing pipeline."""
         import pandas as pd
 
         from molcrawl.compounds.utils.preprocessing import prepare_scaffolds
 
         df = pd.read_csv(mock_compounds_dataset)
 
-        # Scaffoldを生成
+        # Generate scaffolds
         df["scaffold"] = df["smiles"].apply(prepare_scaffolds)
 
-        # 統計
+        # Statistics
         valid_scaffolds = df[df["scaffold"] != ""]
         invalid_scaffolds = df[df["scaffold"] == ""]
 
@@ -319,5 +319,5 @@ class TestCompoundsDatasetIntegration:
         print(f"  Valid: {len(valid_scaffolds)}")
         print(f"  Invalid: {len(invalid_scaffolds)}")
 
-        # 環構造を含むデータのみscaffoldが生成される
+        # Scaffolds are generated only for data containing ring structures
         assert len(valid_scaffolds) >= 1

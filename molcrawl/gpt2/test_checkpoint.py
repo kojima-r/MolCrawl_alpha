@@ -1,12 +1,12 @@
 """
-GPT2チェックポイントの包括的テスト・検証スクリプト
+Comprehensive testing and validation script for GPT2 checkpoints
 
-このスクリプトは以下の機能を提供します：
-1. GPT2チェックポイントをHugging Face形式に変換
-2. テストデータでの正答率検証
-3. パープレキシティ計算
-4. テキスト生成品質評価
-5. モデルパフォーマンス統計
+This script provides the following functionality:
+1. Convert GPT2 checkpoints to Hugging Face format
+2. Verification of correct answer rate using test data
+3. Perplexity calculation
+4. Text generation quality evaluation
+5. Model performance statistics
 """
 
 import argparse
@@ -25,31 +25,31 @@ from transformers import GPT2Config, GPT2LMHeadModel, PreTrainedTokenizerFast
 
 from molcrawl.core.dataset import PreparedDataset
 
-# プロジェクトのsrcディレクトリをパスに追加
-# GPT2モデルクラスをインポート
+# Add the project's src directory to the path
+# import GPT2 model class
 
 
 def load_gpt2_checkpoint(checkpoint_path, device="cuda"):
     """
-    カスタムGPT2チェックポイントをロードする
+    Load custom GPT2 checkpoint
     """
-    print(f"チェックポイントをロードしています: {checkpoint_path}")
+    print(f"Loading checkpoint: {checkpoint_path}")
 
     try:
         checkpoint = torch.load(checkpoint_path, map_location=device)
 
-        # モデル設定を取得
+        # get model settings
         model_args = checkpoint["model_args"]
-        print(f"モデル設定: {model_args}")
+        print(f"Model settings: {model_args}")
 
-        # GPTConfigを作成
+        # create GPTConfig
         gptconf = GPTConfig(**model_args)
         model = GPT(gptconf)
 
-        # 状態辞書をロード
+        # load state dictionary
         state_dict = checkpoint["model"]
 
-        # 不要なプレフィックスを削除
+        # remove unnecessary prefixes
         unwanted_prefix = "_orig_mod."
         for k, _v in list(state_dict.items()):
             if k.startswith(unwanted_prefix):
@@ -59,9 +59,9 @@ def load_gpt2_checkpoint(checkpoint_path, device="cuda"):
         model.to(device)
         model.eval()
 
-        print("✓ チェックポイントの読み込み成功")
+        print("✓ Checkpoint read successfully")
 
-        # 追加情報
+        # Additional Information
         iter_num = checkpoint.get("iter_num", 0)
         best_val_loss = checkpoint.get("best_val_loss", float("inf"))
         config = checkpoint.get("config", {})
@@ -69,18 +69,18 @@ def load_gpt2_checkpoint(checkpoint_path, device="cuda"):
         return model, model_args, iter_num, best_val_loss, config
 
     except Exception as e:
-        print(f"✗ チェックポイントの読み込み中にエラーが発生しました: {e}")
+        print(f"✗ Error occurred while loading checkpoint: {e}")
         return None, None, None, None, None
 
 
 def convert_to_hf_format(model, model_args, output_dir):
     """
-    カスタムGPTモデルをHugging Face形式に変換する
+    Convert custom GPT models to Hugging Face format
     """
-    print(f"Hugging Face形式に変換中: {output_dir}")
+    print(f"Converting to Hugging Face format: {output_dir}")
 
     try:
-        # HF GPT2Configを作成
+        # Create HF GPT2Config
         hf_config = GPT2Config(
             vocab_size=model_args["vocab_size"],
             n_positions=model_args["block_size"],
@@ -92,13 +92,13 @@ def convert_to_hf_format(model, model_args, output_dir):
             eos_token_id=0,
         )
 
-        # HF GPT2LMHeadModelを作成
+        # Create HF GPT2LMHeadModel
         hf_model = GPT2LMHeadModel(hf_config)
 
-        # 重みをマッピング
+        # map weights
         state_dict_mapping = {}
 
-        # Transformerブロックの重みをマッピング
+        # Mapping Transformer block weights
         for i in range(model_args["n_layer"]):
             # Attention weights
             state_dict_mapping[f"transformer.h.{i}.attn.c_attn.weight"] = f"transformer.h.{i}.attn.c_attn.weight"
@@ -121,7 +121,7 @@ def convert_to_hf_format(model, model_args, output_dir):
                 state_dict_mapping[f"transformer.h.{i}.mlp.c_fc.bias"] = f"transformer.h.{i}.mlp.c_fc.bias"
                 state_dict_mapping[f"transformer.h.{i}.mlp.c_proj.bias"] = f"transformer.h.{i}.mlp.c_proj.bias"
 
-        # 他の重要な重み
+        # Other important weights
         state_dict_mapping["transformer.wte.weight"] = "transformer.wte.weight"  # Token embeddings
         state_dict_mapping["transformer.wpe.weight"] = "transformer.wpe.weight"  # Position embeddings
         state_dict_mapping["transformer.ln_f.weight"] = "transformer.ln_f.weight"  # Final LayerNorm
@@ -130,7 +130,7 @@ def convert_to_hf_format(model, model_args, output_dir):
         if model_args.get("bias", False):
             state_dict_mapping["transformer.ln_f.bias"] = "transformer.ln_f.bias"
 
-        # 重みをコピー
+        # copy weights
         hf_state_dict = {}
         model_state_dict = model.state_dict()
 
@@ -138,33 +138,33 @@ def convert_to_hf_format(model, model_args, output_dir):
             if custom_key in model_state_dict:
                 hf_state_dict[hf_key] = model_state_dict[custom_key].clone()
             else:
-                print(f"警告: {custom_key} がモデルの状態辞書に見つかりません")
+                print(f"Warning: {custom_key} not found in model state dictionary")
 
-        # HFモデルに重みをロード
+        # Load weights into HF model
         hf_model.load_state_dict(hf_state_dict, strict=False)
 
-        # 保存
+        # keep
         os.makedirs(output_dir, exist_ok=True)
         hf_model.save_pretrained(output_dir)
         hf_config.save_pretrained(output_dir)
 
-        print(f"✓ Hugging Face形式での保存完了: {output_dir}")
+        print(f"✓ Saved in Hugging Face format: {output_dir}")
         return hf_model, hf_config
 
     except Exception as e:
-        print(f"✗ Hugging Face形式への変換中にエラー: {e}")
+        print(f"✗ Error converting to Hugging Face format: {e}")
         return None, None
 
 
 def load_domain_tokenizer(domain, vocab_path=None):
-    """ドメイン特化のトークナイザーをロードする"""
+    """Load domain-specific tokenizer"""
     try:
         if domain == "compounds":
             from molcrawl.compounds.utils.tokenizer import CompoundsTokenizer
 
             vocab_file = vocab_path or "assets/molecules/vocab.txt"
             if not os.path.exists(vocab_file):
-                print(f"語彙ファイルが見つかりません: {vocab_file}")
+                print(f"Vocabulary file not found: {vocab_file}")
                 return None
             return CompoundsTokenizer(vocab_file, 256)
 
@@ -192,30 +192,30 @@ def load_domain_tokenizer(domain, vocab_path=None):
             return create_bert_rna_tokenizer()
 
         else:
-            print(f"未知のドメイン: {domain}")
+            print(f"Unknown domain: {domain}")
             return None
 
     except ImportError as e:
-        print(f"ドメイン特化トークナイザーのインポートに失敗: {e}")
+        print(f"Failed to import domain-specific tokenizer: {e}")
         return None
     except Exception as e:
-        print(f"トークナイザーの初期化に失敗: {e}")
+        print(f"Failed to initialize tokenizer: {e}")
         return None
 
 
 def create_simple_tokenizer(vocab_size):
     """
-    簡単なトークナイザーを作成（デバッグ用）
+    Create a simple tokenizer (for debugging)
     """
     try:
-        # 簡単な語彙を作成
+        # Create a simple vocabulary
         vocab = {f"<token_{i}>": i for i in range(vocab_size)}
         special_tokens = ["<pad>", "<unk>", "<s>", "</s>"]
 
         for i, token in enumerate(special_tokens):
             vocab[token] = i
 
-        # PreTrainedTokenizerFastで簡単なトークナイザーを作成
+        # Create a simple tokenizer with PreTrainedTokenizerFast
         from tokenizers import Tokenizer, models, pre_tokenizers
 
         tokenizer_obj = Tokenizer(models.WordLevel(vocab=vocab, unk_token="<unk>"))
@@ -233,16 +233,16 @@ def create_simple_tokenizer(vocab_size):
         return hf_tokenizer
 
     except Exception as e:
-        print(f"簡単なトークナイザー作成エラー: {e}")
+        print(f"Error creating simple tokenizer: {e}")
         return None
 
 
 def evaluate_perplexity(model, dataset, tokenizer=None, max_samples=1000, device="cuda"):
     """
-    データセットでのパープレキシティを計算する
+    Calculate perplexity on a dataset
     """
-    print("\n=== パープレキシティ評価 ===")
-    print(f"評価サンプル数: {min(len(dataset), max_samples)}")
+    print("\n=== Perplexity evaluation ===")
+    print(f"Number of evaluation samples: {min(len(dataset), max_samples)}")
 
     model.eval()
     total_loss = 0.0
@@ -250,32 +250,32 @@ def evaluate_perplexity(model, dataset, tokenizer=None, max_samples=1000, device
     num_batches = 0
 
     with torch.no_grad():
-        for i in tqdm(range(min(len(dataset), max_samples)), desc="パープレキシティ計算中"):
+        for i in tqdm(range(min(len(dataset), max_samples)), desc="Calculating perplexity"):
             try:
-                # データを取得
+                # get data
                 tokens = dataset[i]
                 if torch.is_tensor(tokens):
                     input_ids = tokens.unsqueeze(0).to(device)
                 else:
                     input_ids = torch.tensor(tokens).unsqueeze(0).to(device)
 
-                # 入力と目標を分離（正しいサイズ調整）
+                # Separate input and goal (correct sizing)
                 inputs = input_ids[:, :-1]
                 targets = input_ids[:, 1:]
 
-                if inputs.size(1) == 0 or targets.size(1) == 0:  # 空の場合はスキップ
+                if inputs.size(1) == 0 or targets.size(1) == 0:  # Skip if empty
                     continue
 
-                if inputs.size(1) != targets.size(1):  # サイズが一致しない場合の調整
+                if inputs.size(1) != targets.size(1):  # Adjust if sizes do not match
                     min_len = min(inputs.size(1), targets.size(1))
                     inputs = inputs[:, :min_len]
                     targets = targets[:, :min_len]
 
-                # モデルで予測
+                # Predict with model
                 outputs = model(inputs)
                 logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
 
-                # 損失を計算
+                # calculate loss
                 loss = torch.nn.functional.cross_entropy(
                     logits.reshape(-1, logits.size(-1)),
                     targets.reshape(-1),
@@ -287,31 +287,31 @@ def evaluate_perplexity(model, dataset, tokenizer=None, max_samples=1000, device
                 num_batches += 1
 
             except Exception as e:
-                print(f"サンプル {i} でエラー: {e}")
+                print(f"Error in sample {i}: {e}")
                 continue
 
     if total_tokens > 0:
         avg_loss = total_loss / total_tokens
         perplexity = math.exp(avg_loss)
 
-        print(f"✓ 平均損失: {avg_loss:.4f}")
-        print(f"✓ パープレキシティ: {perplexity:.4f}")
-        print(f"✓ 評価トークン数: {total_tokens:,}")
+        print(f"✓ average loss: {avg_loss:.4f}")
+        print(f"✓ perplexity: {perplexity:.4f}")
+        print(f"✓ Number of evaluation tokens: {total_tokens:,}")
 
         return perplexity, avg_loss
     else:
-        print("✗ 有効なデータが見つかりませんでした")
+        print("✗ No valid data found")
         return float("inf"), float("inf")
 
 
 def generate_text_samples(model, tokenizer, device="cuda", num_samples=5, max_length=100):
     """
-    テキスト生成のサンプルを作成する
+    Create a text generation sample
     """
-    print("\n=== テキスト生成テスト ===")
+    print("\n=== Text generation test ===")
 
     if tokenizer is None:
-        print("トークナイザーが利用できないため、テキスト生成をスキップします")
+        print("Skip text generation because tokenizer is not available")
         return []
 
     model.eval()
@@ -319,7 +319,7 @@ def generate_text_samples(model, tokenizer, device="cuda", num_samples=5, max_le
 
     try:
         for i in range(num_samples):
-            # 開始トークン
+            # start token
             if hasattr(tokenizer, "bos_token_id") and tokenizer.bos_token_id is not None:
                 start_token = tokenizer.bos_token_id
             else:
@@ -328,42 +328,42 @@ def generate_text_samples(model, tokenizer, device="cuda", num_samples=5, max_le
             input_ids = torch.tensor([[start_token]]).to(device)
 
             with torch.no_grad():
-                # 生成
+                # generate
                 for _ in range(max_length):
                     outputs = model(input_ids)
                     logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
 
-                    # 次のトークンを予測
+                    # predict next token
                     next_token_logits = logits[0, -1, :]
                     next_token = torch.multinomial(torch.softmax(next_token_logits, dim=-1), 1)
 
-                    # 入力に追加
+                    # add to input
                     input_ids = torch.cat([input_ids, next_token.unsqueeze(0)], dim=-1)
 
-                    # 終了条件
+                    # Termination condition
                     if hasattr(tokenizer, "eos_token_id") and next_token.item() == tokenizer.eos_token_id:
                         break
 
-            # デコード
+            # decode
             if hasattr(tokenizer, "decode"):
                 generated_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
             else:
                 generated_text = " ".join([f"token_{tid}" for tid in input_ids[0].tolist()])
 
             generated_samples.append(generated_text)
-            print(f"サンプル {i + 1}: {generated_text}")
+            print(f"Sample {i + 1}: {generated_text}")
 
     except Exception as e:
-        print(f"テキスト生成エラー: {e}")
+        print(f"Text generation error: {e}")
 
     return generated_samples
 
 
 def calculate_accuracy_metrics(model, dataset, tokenizer=None, max_samples=500, device="cuda"):
     """
-    各種精度メトリクスを計算する
+    Calculate various accuracy metrics
     """
-    print("\n=== 精度メトリクス計算 ===")
+    print("\n=== Accuracy metrics calculation ===")
 
     model.eval()
     correct_predictions = 0
@@ -371,7 +371,7 @@ def calculate_accuracy_metrics(model, dataset, tokenizer=None, max_samples=500, 
     top5_correct = 0
 
     with torch.no_grad():
-        for i in tqdm(range(min(len(dataset), max_samples)), desc="精度計算中"):
+        for i in tqdm(range(min(len(dataset), max_samples)), desc="Calculating accuracy"):
             try:
                 tokens = dataset[i]
                 if torch.is_tensor(tokens):
@@ -382,18 +382,18 @@ def calculate_accuracy_metrics(model, dataset, tokenizer=None, max_samples=500, 
                 inputs = input_ids[:, :-1]
                 targets = input_ids[:, 1:]
 
-                if inputs.size(1) == 0 or targets.size(1) == 0:  # 空の場合はスキップ
+                if inputs.size(1) == 0 or targets.size(1) == 0:  # Skip if empty
                     continue
 
                 outputs = model(inputs)
                 logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
 
-                # Top-1 精度
+                # Top-1 accuracy
                 predictions = torch.argmax(logits, dim=-1)
                 correct_predictions += (predictions == targets).sum().item()
                 total_predictions += targets.numel()
 
-                # Top-5 精度
+                # Top-5 accuracy
                 top5_preds = torch.topk(logits, 5, dim=-1).indices
                 top5_correct += sum([targets[i] in top5_preds[i] for i in range(len(targets))])
 
@@ -404,39 +404,39 @@ def calculate_accuracy_metrics(model, dataset, tokenizer=None, max_samples=500, 
         accuracy = correct_predictions / total_predictions
         top5_accuracy = top5_correct / total_predictions
 
-        print(f"✓ Top-1 精度: {accuracy:.4f} ({correct_predictions}/{total_predictions})")
-        print(f"✓ Top-5 精度: {top5_accuracy:.4f}")
+        print(f"✓ Top-1 accuracy: {accuracy:.4f} ({correct_predictions}/{total_predictions})")
+        print(f"✓ Top-5 accuracy: {top5_accuracy:.4f}")
 
         return accuracy, top5_accuracy
     else:
-        print("✗ 精度計算用の有効なデータが見つかりませんでした")
+        print("✗ No valid data found for accuracy calculation")
         return 0.0, 0.0
 
 
 def test_model_performance(model, model_args, device="cuda"):
     """
-    モデルのパフォーマンス統計を取得する
+    Get model performance statistics
     """
-    print("\n=== モデルパフォーマンス統計 ===")
+    print("\n=== Model performance statistics ===")
 
-    # パラメータ数
+    # Number of parameters
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-    print(f"総パラメータ数: {total_params:,}")
-    print(f"訓練可能パラメータ数: {trainable_params:,}")
-    print(f"モデルサイズ: {total_params * 4 / 1024 / 1024:.2f} MB (float32)")
-    print(f"語彙サイズ: {model_args.get('vocab_size', 'Unknown'):,}")
-    print(f"ブロックサイズ: {model_args.get('block_size', 'Unknown')}")
-    print(f"レイヤー数: {model_args.get('n_layer', 'Unknown')}")
-    print(f"ヘッド数: {model_args.get('n_head', 'Unknown')}")
-    print(f"埋め込み次元: {model_args.get('n_embd', 'Unknown')}")
-    print(f"使用デバイス: {device}")
+    print(f"Total number of parameters: {total_params:,}")
+    print(f"Number of trainable parameters: {trainable_params:,}")
+    print(f"Model size: {total_params * 4 / 1024 / 1024:.2f} MB (float32)")
+    print(f"Vocabulary size: {model_args.get('vocab_size', 'Unknown'):,}")
+    print(f"Block size: {model_args.get('block_size', 'Unknown')}")
+    print(f"Number of layers: {model_args.get('n_layer', 'Unknown')}")
+    print(f"Number of heads: {model_args.get('n_head', 'Unknown')}")
+    print(f"Embedded dimensions: {model_args.get('n_embd', 'Unknown')}")
+    print(f"Device used: {device}")
 
-    # GPU使用量の確認
+    # Check GPU usage
     if torch.cuda.is_available() and "cuda" in device:
-        print(f"GPU メモリ使用量: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
-        print(f"GPU メモリ予約量: {torch.cuda.memory_reserved() / 1024 / 1024:.2f} MB")
+        print(f"GPU memory usage: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
+        print(f"GPU memory reservation: {torch.cuda.memory_reserved() / 1024 / 1024:.2f} MB")
 
     return {
         "total_params": total_params,
@@ -450,10 +450,10 @@ def test_model_performance(model, model_args, device="cuda"):
 
 
 def generate_test_report(checkpoint_path, results, output_dir):
-    """テスト結果のレポートを生成"""
+    """Generate report of test results"""
     report_path = Path(output_dir) / "gpt2_test_report.json"
 
-    # Tensorなどをシリアライズ可能な形式に変換
+    # Convert Tensor etc. to serializable format
     def make_serializable(obj):
         if torch.is_tensor(obj):
             return obj.tolist()
@@ -479,46 +479,46 @@ def generate_test_report(checkpoint_path, results, output_dir):
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
-    print(f"\n✓ テストレポートを保存しました: {report_path}")
+    print(f"\n✓ Test report saved: {report_path}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="GPT2チェックポイントの包括的テスト・検証スクリプト")
-    parser.add_argument("--checkpoint_path", required=True, help="テストするチェックポイントのパス")
-    parser.add_argument("--output_dir", default="gpt2_test_output", help="出力ディレクトリ")
-    parser.add_argument("--convert_to_hf", action="store_true", help="Hugging Face形式に変換")
+    parser = argparse.ArgumentParser(description="Comprehensive testing and validation script for GPT2 checkpoints")
+    parser.add_argument("--checkpoint_path", required=True, help="Path of checkpoint to test")
+    parser.add_argument("--output_dir", default="gpt2_test_output", help="output directory")
+    parser.add_argument("--convert_to_hf", action="store_true", help="Convert to Hugging Face format")
     parser.add_argument(
         "--test_dataset_params",
         type=str,
-        help="テストデータセットのパラメータ (JSON形式)",
+        help="Test dataset parameters (JSON format)",
     )
     parser.add_argument(
         "--domain",
         choices=["compounds", "molecule_nat_lang", "genome", "protein_sequence", "rna"],
-        help="使用するドメイン",
+        help="Domain to use",
     )
-    parser.add_argument("--vocab_path", help="語彙ファイルのパス")
+    parser.add_argument("--vocab_path", help="Vocabulary file path")
     parser.add_argument(
         "--max_test_samples",
         type=int,
         default=1000,
-        help="テストに使用する最大サンプル数",
+        help="Maximum number of samples to use for testing",
     )
-    parser.add_argument("--device", default="cuda", help="使用するデバイス")
+    parser.add_argument("--device", default="cuda", help="Device to use")
 
     args = parser.parse_args()
 
-    print("=== GPT2チェックポイント テスト・検証スクリプト ===")
-    print(f"チェックポイント: {args.checkpoint_path}")
-    print(f"出力ディレクトリ: {args.output_dir}")
+    print("=== GPT2 checkpoint test/verification script ===")
+    print(f"Checkpoint: {args.checkpoint_path}")
+    print(f"Output directory: {args.output_dir}")
 
     results = {}
 
-    # チェックポイントをロード
+    # load checkpoint
     model, model_args, iter_num, best_val_loss, config = load_gpt2_checkpoint(args.checkpoint_path, args.device)
 
     if model is None:
-        print("チェックポイントの読み込みに失敗したため、テストを終了します。")
+        print("Test is terminating because reading the checkpoint failed.")
         return
 
     results["checkpoint_info"] = {
@@ -527,75 +527,75 @@ def main():
         "config": config,
     }
 
-    # Hugging Face形式に変換（オプション）
+    # Convert to Hugging Face format (optional)
     hf_model = None
     if args.convert_to_hf:
         hf_output_dir = Path(args.output_dir) / "hf_model"
         hf_model, hf_config = convert_to_hf_format(model, model_args, hf_output_dir)
         if hf_model:
             results["hf_conversion"] = "success"
-            model = hf_model  # テストには変換後のモデルを使用
+            model = hf_model  # Use converted model for testing
         else:
             results["hf_conversion"] = "failed"
 
-    # トークナイザーをロード（オプション）
+    # load tokenizer (optional)
     tokenizer = None
     if args.domain:
-        print(f"\nドメイン特化トークナイザーを読み込み中: {args.domain}")
+        print(f"\nLoading domain-specific tokenizer: {args.domain}")
         tokenizer = load_domain_tokenizer(args.domain, args.vocab_path)
 
     if tokenizer is None:
-        print("シンプルなトークナイザーを作成中...")
+        print("Creating a simple tokenizer...")
         tokenizer = create_simple_tokenizer(model_args["vocab_size"])
 
-    # テストデータセットをロード
+    # load test dataset
     test_dataset = None
     if args.test_dataset_params:
         try:
             dataset_params = json.loads(args.test_dataset_params)
             test_dataset = PreparedDataset(**dataset_params, split="valid")
-            print(f"✓ テストデータセットをロード: {len(test_dataset)} サンプル")
+            print(f"✓ Load test dataset: {len(test_dataset)} sample")
         except Exception as e:
-            print(f"テストデータセットの読み込みエラー: {e}")
+            print(f"Error loading test dataset: {e}")
 
     if test_dataset is None:
-        print("デフォルトのテストデータセットを作成中...")
-        # ダミーデータセットを作成（適切なサイズ）
+        print("Creating default test dataset...")
+        # Create a dummy dataset (appropriate size)
         dummy_data = [torch.randint(0, model_args["vocab_size"], (model_args["block_size"],)) for _ in range(100)]
         test_dataset = dummy_data
 
     try:
-        # モデルパフォーマンス統計
+        # model performance statistics
         perf_stats = test_model_performance(model, model_args, args.device)
         results["performance_stats"] = perf_stats
 
-        # パープレキシティ評価
+        # Perplexity evaluation
         perplexity, avg_loss = evaluate_perplexity(model, test_dataset, tokenizer, args.max_test_samples, args.device)
         results["perplexity"] = perplexity
         results["avg_loss"] = avg_loss
 
-        # 精度メトリクス
+        # Accuracy metrics
         accuracy, top5_accuracy = calculate_accuracy_metrics(model, test_dataset, tokenizer, args.max_test_samples, args.device)
         results["accuracy"] = accuracy
         results["top5_accuracy"] = top5_accuracy
 
-        # テキスト生成サンプル
+        # Text generation sample
         generated_samples = generate_text_samples(model, tokenizer, args.device)
         results["generated_samples"] = generated_samples
 
         results["status"] = "success"
 
     except Exception as e:
-        print(f"\nテスト中にエラーが発生しました: {e}")
+        print(f"\nAn error occurred during testing: {e}")
         results["status"] = "error"
         results["error"] = str(e)
 
-    # レポート生成
+    # generate report
     os.makedirs(args.output_dir, exist_ok=True)
     generate_test_report(args.checkpoint_path, results, args.output_dir)
 
-    print("\n=== テスト完了 ===")
-    print(f"結果の詳細は {args.output_dir}/gpt2_test_report.json をご確認ください。")
+    print("\n=== Test completed ===")
+    print(f"Please check {args.output_dir}/gpt2_test_report.json for detailed results.")
 
 
 if __name__ == "__main__":

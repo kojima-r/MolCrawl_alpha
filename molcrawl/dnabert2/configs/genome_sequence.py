@@ -1,19 +1,19 @@
 """
 DNABERT-2 Configuration for Genome Sequence Data
 
-このconfigは既存のgenome_sequenceデータセット（REFSEQ）を使用して
-DNABERT-2モデルを学習するための設定です。
+This config uses the existing genome_sequence dataset (REFSEQ)
+Settings for learning the DNABERT-2 model.
 
-DNABERT-2の特徴:
-- BPE (Byte Pair Encoding) トークナイゼーション
-- より効率的なトレーニング
-- DNA配列に特化した最適化
+Features of DNABERT-2:
+- BPE (Byte Pair Encoding) Tokenization
+- More efficient training
+- Optimization specific to DNA sequences
 
-既存のBERTベースと比較した改善点:
-1. トークナイゼーション: k-mer不要、BPEで効率的
-2. 学習率: 3e-5 (BERTより高め)
-3. バッチサイズ: 16 (より大きめ)
-4. 最大長: 512 (BERTは1024だが、DNABERTは512で効率的)
+Improvements compared to the existing BERT base:
+1. Tokenization: No k-mer required, efficient with BPE
+2. Learning rate: 3e-5 (higher than BERT)
+3. Batch size: 16 (larger)
+4. Maximum length: 512 (BERT is 1024, but DNABERT is efficient at 512)
 """
 
 import os
@@ -36,24 +36,24 @@ model_path = os.path.join(
 )
 
 # DNABERT-2 optimized settings
-max_length = 1024  # データセットに合わせて1024に設定（REFSEQ dataset uses 1024）
+max_length = 1024  # datasetaccording to1024Set to (REFSEQ dataset uses 1024）
 dataset_dir = REFSEQ_DATASET_DIR
-learning_rate = 3e-5  # DNABERT-2推奨値（BERTの6e-6より高い）
-weight_decay = 0.01  # 正則化
-max_steps = 200000  # 学習ステップ数（データ量に応じて調整）
+learning_rate = 3e-5  # DNABERT-2 recommended value (higher than BERT's 6e-6)
+weight_decay = 0.01  # regularization
+max_steps = 200000  # Number of learning steps (adjusted according to data amount)
 
 log_interval = 100
-save_steps = 5000  # チェックポイント保存間隔
+save_steps = 5000  # Checkpoint save interval
 
 # Batch size settings
-# DNABERT-2はより大きいバッチサイズで効率的
+# DNABERT-2 is efficient with larger batch sizes
 batch_size = 16
 per_device_eval_batch_size = 8
 gradient_accumulation_steps = 4  # Effective batch size = 16 * 4 = 64
 
 # Tokenizer setup
-# 既存のSentencePieceトークナイザーを再利用
-# DNABERT-2はBPEベースだが、既存のSPMトークナイザーも使用可能
+# Reuse existing SentencePiece tokenizer
+# DNABERT-2 is BPE-based, but existing SPM tokenizers can also be used
 # -----------------------------------------------------------------------------
 print(f"📖 Loading SentencePiece tokenizer from: {get_refseq_tokenizer_path()}")
 sp = spm.SentencePieceProcessor(model_file=get_refseq_tokenizer_path())
@@ -89,10 +89,10 @@ print(f"📊 Meta vocab size (padded): {meta_vocab_size}")
 # Preprocessing function
 def preprocess_function(examples):
     """
-    Add attention_mask to the dataset
+        Add attention_mask to the dataset
 
-    DNABERT-2はattention_maskを明示的に必要とします。
-    既存のinput_idsからattention_maskを生成します。
+    DNABERT-2 requires attention_mask explicitly.
+    Generate attention_mask from existing input_ids.
     """
     if "input_ids" in examples:
         attention_masks = []

@@ -2,14 +2,14 @@
 """
 GuacaMol Dataset Download Script
 
-GuacaMolベンチマークデータセットをFigshareからダウンロードします。
+Download the GuacaMol benchmark dataset from Figshare.
 https://figshare.com/projects/GuacaMol/56639
 
-使用方法:
+How to use:
     python src/preparation/download_guacamol.py
 
-環境変数:
-    LEARNING_SOURCE_DIR: データセット保存先のベースディレクトリ（必須）
+environmental variables:
+    LEARNING_SOURCE_DIR: Base directory where dataset is saved (required)
 """
 
 import os
@@ -29,16 +29,16 @@ GUACAMOL_URLS = {
 
 def download_file(url, output_path, chunk_size=8192):
     """
-    URLからファイルをダウンロードして保存
+    Download and save file from URL
 
     Args:
-        url: ダウンロード元URL
-        output_path: 保存先パス
-        chunk_size: チャンクサイズ（バイト）
+        url: Download source URL
+        output_path: save the first file
+        chunk_size: Chunk size (bytes)
     """
     output_path = Path(output_path)
 
-    # 既に存在する場合はスキップ
+    # Skip if already exists
     if output_path.exists():
         print(f"✓ Already exists: {output_path.name}")
         return True
@@ -49,10 +49,10 @@ def download_file(url, output_path, chunk_size=8192):
         response = requests.get(url, stream=True, timeout=30)
         response.raise_for_status()
 
-        # ファイルサイズを取得
+        # get file size
         total_size = int(response.headers.get("content-length", 0))
 
-        # プログレスバー付きでダウンロード
+        # Download with progress bar
         with (
             open(output_path, "wb") as f,
             tqdm(
@@ -73,7 +73,7 @@ def download_file(url, output_path, chunk_size=8192):
 
     except requests.exceptions.RequestException as e:
         print(f"✗ Error downloading {output_path.name}: {e}", file=sys.stderr)
-        # 失敗したファイルを削除
+        # delete failed files
         if output_path.exists():
             output_path.unlink()
         return False
@@ -81,13 +81,13 @@ def download_file(url, output_path, chunk_size=8192):
 
 def download_guacamol(compounds_dir):
     """
-    GuacaMolデータセットをダウンロード
+    Download GuacaMol dataset
 
     Args:
-        compounds_dir: compoundsディレクトリのパス（例: learning_source_XXX/compounds）
+        compounds_dir: compounds directorypath (example: learning_source_XXX/compounds）
 
     Raises:
-        RuntimeError: ダウンロードに失敗した場合
+        RuntimeError: If download fails
     """
     import logging
 
@@ -116,9 +116,9 @@ def download_guacamol(compounds_dir):
 
 
 def main():
-    """GuacaMolデータセットをダウンロード（スタンドアロン実行用）"""
+    """Download GuacaMol dataset (for standalone execution)"""
 
-    # LEARNING_SOURCE_DIRの確認
+    # Check LEARNING_SOURCE_DIR
     learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
     if not learning_source_dir:
         print(

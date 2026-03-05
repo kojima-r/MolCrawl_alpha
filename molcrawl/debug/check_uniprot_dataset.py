@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-# 設定ファイルから定数をインポート
+# import constants from configuration file
 from molcrawl.config.paths import UNIPROT_DATASET_DIR
 
 try:

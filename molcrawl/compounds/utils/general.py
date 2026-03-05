@@ -12,17 +12,17 @@ from molcrawl.compounds.dataset.organix13.zinc.download_and_convert_to_parquet i
 
 def download_zinc20(raw_data_dir: str):
     """
-    ZINC20データセットのダウンロードと変換
+    Download and convert ZINC20 dataset
 
     Args:
-        raw_data_dir: 生データ保存ディレクトリ (COMPOUNDS_DIR)
+        raw_data_dir: raw data storage directory (COMPOUNDS_DIR)
     """
     download_zinc_files()
     # Save to data/zinc20 directory
     zinc_save_path = os.path.join(raw_data_dir, "data", "zinc20")
     convert_zinc_to_parquet(zinc_save_path)
 
-    # マーカーファイル作成
+    # Create marker file
     data_dir = os.path.join(raw_data_dir, "data")
     os.makedirs(data_dir, exist_ok=True)
     marker_file = Path(data_dir) / "zinc20_download.marker"
@@ -31,18 +31,18 @@ def download_zinc20(raw_data_dir: str):
 
 def download_opv(raw_data_dir: str):
     """
-    OPVデータセットのダウンロード
+    Download OPV dataset
 
     Args:
-        raw_data_dir: 生データ保存ディレクトリ (COMPOUNDS_DIR)
+        raw_data_dir: raw data storage directory (COMPOUNDS_DIR)
     """
-    # data/opvディレクトリに保存
+    # save to data/opv directory
     opv_dir = os.path.join(raw_data_dir, "data", "opv")
     os.makedirs(opv_dir, exist_ok=True)
 
     OPV(opv_dir)
 
-    # マーカーファイル作成
+    # Create marker file
     data_dir = os.path.join(raw_data_dir, "data")
     marker_file = Path(data_dir) / "opv_download.marker"
     marker_file.touch()
@@ -50,21 +50,21 @@ def download_opv(raw_data_dir: str):
 
 def download_llamol_datasets(raw_data_dir: str):
     """
-    LlaMolデータセット（Fraunhofer-SCAI/llamolリポジトリからのダウンロード）
+    LlaMol dataset (download from Fraunhofer-SCAI/llamol repository)
 
     Args:
-        raw_data_dir: 生データ保存ディレクトリ (COMPOUNDS_DIR)
+        raw_data_dir: raw data storage directory (COMPOUNDS_DIR)
     """
-    # data/Fraunhofer-SCAI-llamolディレクトリに保存
+    # Save in data/Fraunhofer-SCAI-llamol directory
     llamol_dir = os.path.join(raw_data_dir, "data", "Fraunhofer-SCAI-llamol")
     os.makedirs(llamol_dir, exist_ok=True)
 
-    # 既存のparquetファイルの整合性をチェック
+    # Check the integrity of existing parquet files
     _verify_llamol_parquet_files(llamol_dir)
 
     download_datasets_from_repo(llamol_dir)
 
-    # マーカーファイル作成
+    # Create marker file
     data_dir = os.path.join(raw_data_dir, "data")
     marker_file = Path(data_dir) / "llamol_download.marker"
     marker_file.touch()
@@ -72,10 +72,10 @@ def download_llamol_datasets(raw_data_dir: str):
 
 def _verify_llamol_parquet_files(llamol_dir: str):
     """
-    LlaMolディレクトリ内のparquetファイルの整合性を検証
+    Verify the integrity of parquet files in LlaMol directory
 
     Args:
-        llamol_dir: LlaMolデータディレクトリ
+        llamol_dir: LlaMol data directory
     """
     import pandas as pd
     import logging
@@ -94,7 +94,7 @@ def _verify_llamol_parquet_files(llamol_dir: str):
         filepath = os.path.join(llamol_dir, filename)
         if os.path.exists(filepath):
             try:
-                # ファイルの読み込みをテスト
+                # test file loading
                 pd.read_parquet(filepath)
                 logger.info(f"Verified: {filename} is valid")
             except Exception as e:
@@ -110,28 +110,28 @@ def _verify_llamol_parquet_files(llamol_dir: str):
 
 def combine_datasets(raw_data_dir: str, output_dir: str):
     """
-    全データセットを統合してOrganiX13を生成
+    Combine all datasets to generate OrganiX13
 
     Args:
-        raw_data_dir: 生データディレクトリ
-        output_dir: 統合データ出力ディレクトリ
+        raw_data_dir: raw data directory
+        output_dir: Integrated data output directory
     """
     combine_all(raw_data_dir, output_dir)
 
 
-# 後方互換性のためのエイリアス
+# Alias ​​for backwards compatibility
 def download_additional_datasets(raw_data_dir: str):
-    """後方互換性のためのエイリアス。download_llamol_datasetsを使用してください。"""
+    """Alias ​​for backwards compatibility. Please use download_llamol_datasets."""
     download_llamol_datasets(raw_data_dir)
 
 
 def download_datasets(raw_data_dir: str, output_dir: str):
     """
-    全データセットのダウンロードと統合（レガシー互換用）
+    Download and integrate all datasets (for legacy compatibility)
 
     Args:
-        raw_data_dir: 生データ保存ディレクトリ
-        output_dir: 統合データ出力ディレクトリ
+        raw_data_dir: raw data storage directory
+        output_dir: Integrated data output directory
     """
     download_zinc20(raw_data_dir)
     download_opv(raw_data_dir)

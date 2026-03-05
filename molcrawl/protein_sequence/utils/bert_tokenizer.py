@@ -1,6 +1,6 @@
 """
-Protein Sequence用のBERT互換トークナイザーラッパー
-ESMトークナイザーをBERT学習と互換性のある形式でラップ
+BERT-compatible tokenizer wrapper for Protein Sequence
+Wrap the ESM tokenizer in a format compatible with BERT learning
 """
 
 from molcrawl.protein_sequence.dataset.tokenizer import EsmSequenceTokenizer

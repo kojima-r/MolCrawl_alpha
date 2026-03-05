@@ -2,7 +2,7 @@
 """
 RNA Benchmark Evaluation Script
 
-RNAのベンチマークデータ（JSONL）に対して、BERT/GPT-2の評価を行います。
+We will evaluate BERT/GPT-2 against RNA benchmark data (JSONL).
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from molcrawl.utils.evaluation_output import setup_evaluation_logging
 
 @dataclass
 class EvaluationConfig:
-    """評価設定"""
+    """Evaluation settings"""
 
     model_type: str
     model_path: Path
@@ -40,14 +40,14 @@ class EvaluationConfig:
 
 @dataclass
 class DatasetSplit:
-    """データセットのトークン列"""
+    """Token column of dataset"""
 
     name: str
     tokens: List[List[int]]
 
 
 def _load_jsonl(data_path: Path, datasets: Optional[List[str]]) -> List[DatasetSplit]:
-    """JSONLからデータを読み込み、データセットごとに分ける"""
+    """Read data from JSONL and separate by dataset"""
     selected = {name.strip() for name in datasets} if datasets else None
     grouped: Dict[str, List[List[int]]] = {}
 
@@ -64,7 +64,7 @@ def _load_jsonl(data_path: Path, datasets: Optional[List[str]]) -> List[DatasetS
 
 
 def _sample_tokens(tokens: List[List[int]], max_cells: Optional[int], seed: int) -> List[List[int]]:
-    """細胞数をサンプリングする"""
+    """Sample the number of cells"""
     if max_cells is None or len(tokens) <= max_cells:
         return tokens
     random.seed(seed)
@@ -78,12 +78,12 @@ def _prepare_bert_inputs(
     cls_token_id: int,
     sep_token_id: int,
 ) -> Tuple[Tensor, Tensor]:
-    """BERT用のinput_idsとattention_maskを作成"""
+    """Create input_ids and attention_mask for BERT"""
     input_ids_list: List[List[int]] = []
     attention_list: List[List[int]] = []
 
     for tokens in tokens_batch:
-        # CLS/SEPを追加し、最大長に整形
+        # Add CLS/SEP and format to maximum length
         trimmed = tokens[: max_length - 2]
         seq = [cls_token_id] + trimmed + [sep_token_id]
         attention = [1] * len(seq)
@@ -109,11 +109,11 @@ def _mask_tokens(
     mlm_probability: float,
     seed: int,
 ) -> Tuple[Tensor, Tensor]:
-    """MLM用にトークンをマスクし、labelsを作成"""
+    """Mask tokens and create labels for MLM"""
     torch.manual_seed(seed)
     labels = input_ids.clone()
 
-    # マスク対象位置の判定
+    # Determine mask target position
     special_mask = (input_ids == pad_token_id) | (input_ids == cls_token_id) | (input_ids == sep_token_id)
     probability_matrix = torch.full(labels.shape, mlm_probability, device=labels.device)
     probability_matrix = probability_matrix.masked_fill(special_mask, 0.0)
@@ -121,18 +121,18 @@ def _mask_tokens(
 
     labels = labels.masked_fill(~masked_indices, -100)
 
-    # 80%: [MASK]に置換
+    # 80%: Replaced with [MASK]
     replace_prob = torch.full(labels.shape, 0.8, device=labels.device)
     replaced = torch.bernoulli(replace_prob).bool() & masked_indices
     input_ids[replaced] = mask_token_id
 
-    # 10%: ランダムトークンに置換
+    # 10%: Replace with random token
     random_prob = torch.full(labels.shape, 0.5, device=labels.device)
     random_indices = torch.bernoulli(random_prob).bool() & masked_indices & ~replaced
     random_tokens = torch.randint(low=0, high=vocab_size, size=labels.shape, device=labels.device)
     input_ids[random_indices] = random_tokens[random_indices]
 
-    # 10%: そのまま（残り）
+    # 10%: Leave as is (remaining)
     return input_ids, labels
 
 
@@ -141,7 +141,7 @@ def _evaluate_bert(
     dataset: DatasetSplit,
     logger,
 ) -> Dict[str, float]:
-    """BERT評価（MLM loss）"""
+    """BERT evaluation (MLM loss)"""
     model = BertForMaskedLM.from_pretrained(cfg.model_path)
     model.to(cfg.device)
     model.eval()
@@ -199,12 +199,12 @@ def _evaluate_bert(
 
 
 def _load_gpt2_from_checkpoint(model_path: Path):
-    """GPT-2（自前）チェックポイントを読み込む"""
+    """Load GPT-2 (own) checkpoint"""
     from molcrawl.gpt2.model import GPT, GPTConfig
 
     training_args_path = model_path / "training_args.json"
     if not training_args_path.exists():
-        raise FileNotFoundError(f"training_args.json が見つかりません: {training_args_path}")
+        raise FileNotFoundError(f"training_args.json not found: {training_args_path}")
 
     with training_args_path.open("r", encoding="utf-8") as f:
         training_args = json.load(f)
@@ -228,7 +228,7 @@ def _load_gpt2_from_checkpoint(model_path: Path):
 
 
 def _prepare_gpt2_batch(tokens_batch: List[List[int]], block_size: int, pad_token_id: int) -> Tuple[Tensor, Tensor]:
-    """GPT-2用のinput_idsとtargetsを作成"""
+    """Create input_ids and targets for GPT-2"""
     input_ids_list: List[List[int]] = []
     targets_list: List[List[int]] = []
 
@@ -238,7 +238,7 @@ def _prepare_gpt2_batch(tokens_batch: List[List[int]], block_size: int, pad_toke
             seq = seq + [pad_token_id] * (block_size - len(seq))
         input_seq = seq[:-1]
         target_seq = seq[1:]
-        # pad部分をignore_index(-1)にする
+        # Set pad part to ignore_index(-1)
         target_seq = [t if t != pad_token_id else -1 for t in target_seq]
         input_ids_list.append(input_seq)
         targets_list.append(target_seq)
@@ -253,7 +253,7 @@ def _evaluate_gpt2(
     dataset: DatasetSplit,
     logger,
 ) -> Dict[str, float]:
-    """GPT-2評価（次トークン損失）"""
+    """GPT-2 evaluation (next token loss)"""
     model = _load_gpt2_from_checkpoint(cfg.model_path)
     model.to(cfg.device)
     model.eval()
@@ -287,16 +287,16 @@ def _evaluate_gpt2(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="RNA Benchmark Evaluation")
-    parser.add_argument("--model_type", choices=["bert", "gpt2"], required=True, help="モデル種別")
-    parser.add_argument("--model_path", required=True, help="チェックポイントパス")
-    parser.add_argument("--data_path", required=True, help="ベンチマークJSONLのパス")
-    parser.add_argument("--output_dir", required=True, help="出力ディレクトリ")
-    parser.add_argument("--datasets", default="", help="評価対象データセット名（カンマ区切り）")
-    parser.add_argument("--batch_size", type=int, default=16, help="評価バッチサイズ")
-    parser.add_argument("--device", default="cuda", help="評価デバイス")
-    parser.add_argument("--max_cells", type=int, default=None, help="評価対象の最大細胞数")
-    parser.add_argument("--seed", type=int, default=42, help="乱数シード")
-    parser.add_argument("--mlm_probability", type=float, default=0.2, help="BERTのMLM確率")
+    parser.add_argument("--model_type", choices=["bert", "gpt2"], required=True, help="Model type")
+    parser.add_argument("--model_path", required=True, help="Checkpoint path")
+    parser.add_argument("--data_path", required=True, help="Benchmark JSONL path")
+    parser.add_argument("--output_dir", required=True, help="Output directory")
+    parser.add_argument("--datasets", default="", help="Evaluation target dataset name (comma separated)")
+    parser.add_argument("--batch_size", type=int, default=16, help="Evaluation batch size")
+    parser.add_argument("--device", default="cuda", help="evaluation device")
+    parser.add_argument("--max_cells", type=int, default=None, help="Maximum number of cells to evaluate")
+    parser.add_argument("--seed", type=int, default=42, help="Random number seed")
+    parser.add_argument("--mlm_probability", type=float, default=0.2, help="MLM probability of BERT")
     args = parser.parse_args()
 
     cfg = EvaluationConfig(
@@ -317,7 +317,7 @@ def main() -> None:
     datasets = [name for name in args.datasets.split(",") if name.strip()]
     splits = _load_jsonl(cfg.data_path, datasets if datasets else None)
     if not splits:
-        raise ValueError("評価対象のデータが見つかりませんでした。")
+        raise ValueError("No data to evaluate was found.")
 
     results: Dict[str, Dict[str, float]] = {}
     detailed_rows: List[Dict[str, Any]] = []

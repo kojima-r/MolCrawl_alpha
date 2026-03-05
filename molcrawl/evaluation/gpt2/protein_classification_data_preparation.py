@@ -2,8 +2,8 @@
 """
 Protein Classification Data Preparation
 
-タンパク質変異分類評価用のデータセット準備スクリプト
-データ準備・評価・可視化の分離原則に基づいて作成
+Dataset preparation script for protein variant classification evaluation
+Created based on the separation principle of data preparation, evaluation, and visualization
 """
 
 import argparse
@@ -15,37 +15,37 @@ from importlib import import_module
 import numpy as np
 import pandas as pd
 
-# プロジェクトルートを設定して共通モジュールをインポート
+# Set project root and import common modules
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
-# ロギング設定
+# Logging settings
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 def get_default_output_dir():
-    """デフォルトの出力ディレクトリを取得"""
+    """Get default output directory"""
     learning_source_dir = check_learning_source_dir()
     return os.path.join(learning_source_dir, "protein_sequence", "data", "protein_classification")
 
 
 def create_sample_dataset(output_path: str, num_samples: int = 100):
     """
-    タンパク質変異データセットのサンプルを作成
+    Create sample protein variation dataset
 
     Args:
-        output_path: 出力先CSVファイルパス
-        num_samples: 生成するサンプル数
+        output_path: Output destination CSV file path
+        num_samples: number of samples to generate
 
     Returns:
-        生成されたデータセットのパス
+        Generated dataset path
     """
     logger.info(f"Creating sample protein classification dataset with {num_samples} samples")
 
-    # サンプルタンパク質配列（様々な長さとタイプ）
+    # Sample protein sequences (various lengths and types)
     sample_sequences = [
         "MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG",
         "MGSSHHHHHHSSGLVPRGSHMKELKRLTCCKVQTCLRPPGQRQELAYFFKALPQCCNLCSPLVQNPKNCT",
@@ -58,25 +58,25 @@ def create_sample_dataset(output_path: str, num_samples: int = 100):
     np.random.seed(42)
 
     for i in range(num_samples):
-        # ランダムに配列を選択
+        # Randomly select an array
         sequence = np.random.choice(sample_sequences)
 
-        # ランダムに変異位置を選択（開始・終端を避ける）
+        # Randomly select mutation position (avoid start/end)
         variant_pos = np.random.randint(5, len(sequence) - 5)
         ref_aa = sequence[variant_pos]
 
-        # ランダムに代替アミノ酸を選択
+        # Randomly select alternative amino acids
         amino_acids = "ACDEFGHIKLMNPQRSTVWY"
         alt_aa = np.random.choice([aa for aa in amino_acids if aa != ref_aa])
 
-        # 病原性をルールベースで割り当て（デモ用）
-        # 実際のデータはClinVarなどのデータベースから取得
+        # Rule-based assignment of pathogenicity (for demo purposes)
+        # Actual data is obtained from a database such as ClinVar
         pathogenic = 0
 
-        # 簡易ヒューリスティック: 特定のアミノ酸変異をより病原性が高いとする
+        # Simple heuristic: certain amino acid mutations are considered more pathogenic
         if ref_aa in "CGHPWY" and alt_aa not in "ACDEFGHIKLMNPQRSTVWY"[:10]:
             pathogenic = 1
-        elif variant_pos < len(sequence) * 0.3:  # N末端領域
+        elif variant_pos < len(sequence) * 0.3:  # Ndistal region
             pathogenic = np.random.choice([0, 1], p=[0.7, 0.3])
         else:
             pathogenic = np.random.choice([0, 1], p=[0.8, 0.2])
@@ -93,13 +93,13 @@ def create_sample_dataset(output_path: str, num_samples: int = 100):
             }
         )
 
-    # DataFrameに変換
+    # convert to DataFrame
     df = pd.DataFrame(data)
 
-    # 出力ディレクトリを作成
+    # create output directory
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-    # CSVに保存
+    # Save to CSV
     df.to_csv(output_path, index=False)
     logger.info(f"✅ Sample dataset created: {output_path}")
     logger.info(f"   Total samples: {len(df)}")
@@ -111,16 +111,16 @@ def create_sample_dataset(output_path: str, num_samples: int = 100):
 
 def prepare_protein_classification_data(input_csv=None, output_dir=None, num_samples=100, create_sample=False):
     """
-    タンパク質分類データの準備メイン処理
+    Protein classification data preparation main processing
 
     Args:
-        input_csv: 入力CSVファイル（既存データを使用する場合）
-        output_dir: 出力ディレクトリ
-        num_samples: サンプルデータ生成時のサンプル数
-        create_sample: サンプルデータを生成するかどうか
+        input_csv: Input CSV file (when using existing data)
+        output_dir: Output directory
+        num_samples: Number of samples when generating sample data
+        create_sample: Whether to generate sample data
 
     Returns:
-        準備されたデータセットのパス
+        Prepared dataset path
     """
     if output_dir is None:
         output_dir = get_default_output_dir()
@@ -129,16 +129,16 @@ def prepare_protein_classification_data(input_csv=None, output_dir=None, num_sam
     logger.info(f"Output directory: {output_dir}")
 
     if create_sample:
-        # サンプルデータ生成
+        # Generate sample data
         output_path = os.path.join(output_dir, "protein_classification_sample.csv")
         return create_sample_dataset(output_path, num_samples)
 
     elif input_csv:
-        # 既存データを処理（現在は単純コピー、将来的には前処理を追加）
+        # Process existing data (currently simple copy, add preprocessing in the future)
         logger.info(f"Processing existing data: {input_csv}")
         df = pd.read_csv(input_csv)
 
-        # 基本的な検証
+        # Basic validation
         required_columns = ["variant_id", "sequence", "pathogenic"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
@@ -156,19 +156,19 @@ def prepare_protein_classification_data(input_csv=None, output_dir=None, num_sam
 
 
 def main():
-    """メイン処理"""
+    """Main processing"""
     parser = argparse.ArgumentParser(
         description="Protein Classification Data Preparation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # サンプルデータ生成（100サンプル）
+  # Generate sample data (100 samples)
   python protein_classification_data_preparation.py --create_sample
 
-  # カスタムサンプル数でデータ生成
+  # Generate data with custom number of samples
   python protein_classification_data_preparation.py --create_sample --num_samples 500
 
-  # 既存データの処理
+  # Process existing data
   python protein_classification_data_preparation.py --input_csv data.csv --output_dir ./processed
 """,
     )

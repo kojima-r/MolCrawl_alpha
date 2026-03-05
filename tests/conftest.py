@@ -40,7 +40,7 @@ def sample_smiles():
 
 @pytest.fixture
 def sample_vocab_file():
-    """テスト用のサンプルvocabファイルを作成"""
+    """Create a sample vocab file for testing."""
     vocab_content = """[PAD]
 [UNK]
 [CLS]
@@ -92,7 +92,7 @@ I
 
 @pytest.fixture
 def sample_smiles_data():
-    """テスト用のサンプルSMILESデータ"""
+    """Provide sample SMILES data for testing."""
     return {
         "valid": [
             "CCO",
@@ -117,7 +117,7 @@ def sample_smiles_data():
 
 @pytest.fixture
 def mock_compounds_dataset(tmp_path):
-    """テスト用のモックcompoundsデータセット"""
+    """Create a mock compounds dataset for testing."""
     import pandas as pd
 
     data = {
@@ -139,7 +139,7 @@ def mock_compounds_dataset(tmp_path):
 
 
 def validate_smiles_output(smiles: str) -> bool:
-    """生成されたSMILESの妥当性を検証するヘルパー関数"""
+    """Helper function to validate the validity of generated SMILES."""
     try:
         from rdkit import Chem
 
@@ -150,7 +150,7 @@ def validate_smiles_output(smiles: str) -> bool:
 
 
 def calculate_smiles_metrics(generated_smiles: list, reference_smiles: list = None) -> dict:
-    """生成されたSMILESの品質メトリクスを計算"""
+    """Calculate quality metrics for generated SMILES."""
     valid_count = sum(1 for s in generated_smiles if validate_smiles_output(s))
     total_count = len(generated_smiles)
 

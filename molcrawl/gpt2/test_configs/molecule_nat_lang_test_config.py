@@ -1,4 +1,4 @@
-# MOLECULE_NAT_LANGドメイン用GPT2テスト設定
+# GPT2 test configuration for MOLECULE_NAT_LANG domain
 
 import os
 import sys
@@ -7,16 +7,16 @@ import torch
 
 from molcrawl.config.paths import MOLECULE_NAT_LANG_DATASET_DIR
 
-# 基本設定
+# Basic settings
 domain = "molecule_nat_lang"
 max_test_samples = 1000
 convert_to_hf = True
 
-# データセット設定
+# datasetsetting
 dataset_params = {"dataset_dir": MOLECULE_NAT_LANG_DATASET_DIR}
 
-# 出力設定
+# Output settings
 output_dir = "test_results_molecule_nat_lang"
 
-# デバイス設定
+# device settings
 device = "cuda" if torch.cuda.is_available() else "cpu"

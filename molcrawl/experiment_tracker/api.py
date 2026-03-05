@@ -1,6 +1,6 @@
 """
-FastAPI ベースの実験管理API
-molcrawl-webのバックエンドとして動作
+FastAPI-based experiment management API
+Works as a backend for molcrawl-web
 """
 
 from pathlib import Path
@@ -23,23 +23,23 @@ from molcrawl.experiment_tracker import (
     ModelType,
 )
 
-# プロジェクトルートをパスに追加
+# add project root to path
 project_root = Path(__file__).parent.parent.parent
 
-# グローバルトラッカーインスタンス
+# global tracker instance
 tracker = ExperimentTracker()
 
 if FastAPI is not None:
     app = FastAPI(
         title="MolCrawl Experiment Management API",
-        description="実験管理システムのAPI",
+        description="Experiment management system API",
         version="1.0.0",
     )
 
-    # CORS設定（FastAPI標準のCORSMiddleware）
+    # CORS settings (FastAPI standard CORS Middleware)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # 本番環境では具体的なオリジンを指定すべき
+        allow_origins=["*"],  # Specific origins should be specified in production environments
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -47,7 +47,7 @@ if FastAPI is not None:
 
     @app.get("/")
     async def root():
-        """API情報"""
+        """APIinformation"""
         return {
             "name": "MolCrawl Experiment Management API",
             "version": "1.0.0",
@@ -60,16 +60,16 @@ if FastAPI is not None:
 
     @app.get("/api/experiments")
     async def list_experiments(
-        status: Optional[str] = Query(None, description="ステータスでフィルタ"),
-        experiment_type: Optional[str] = Query(None, description="実験タイプでフィルタ"),
-        model_type: Optional[str] = Query(None, description="モデルタイプでフィルタ"),
-        dataset_type: Optional[str] = Query(None, description="データセットタイプでフィルタ"),
-        limit: int = Query(100, description="取得件数"),
-        offset: int = Query(0, description="オフセット"),
+        status: Optional[str] = Query(None, description="Filter by status"),
+        experiment_type: Optional[str] = Query(None, description="Filter by experiment type"),
+        model_type: Optional[str] = Query(None, description="Filter by model type"),
+        dataset_type: Optional[str] = Query(None, description="Filter by dataset type"),
+        limit: int = Query(100, description="Number of retrieved results"),
+        offset: int = Query(0, description="offset"),
     ):
-        """実験一覧を取得"""
+        """Get experiment list"""
         try:
-            # パラメータをEnumに変換
+            # Convert parameter to Enum
             status_enum = ExperimentStatus(status) if status else None
             exp_type_enum = ExperimentType(experiment_type) if experiment_type else None
             model_type_enum = ModelType(model_type) if model_type else None
@@ -93,7 +93,7 @@ if FastAPI is not None:
 
     @app.get("/api/experiments/{experiment_id}")
     async def get_experiment(experiment_id: str):
-        """実験の詳細を取得"""
+        """Get experiment details"""
         experiment = tracker.get_experiment(experiment_id)
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
@@ -102,27 +102,27 @@ if FastAPI is not None:
 
     @app.get("/api/statistics")
     async def get_statistics():
-        """統計情報を取得"""
+        """Get statistics"""
         return tracker.get_statistics()
 
     @app.get("/api/experiments/{experiment_id}/logs")
     async def get_experiment_logs(
         experiment_id: str,
-        level: Optional[str] = Query(None, description="ログレベルでフィルタ"),
-        limit: int = Query(1000, description="取得件数"),
+        level: Optional[str] = Query(None, description="Filter by log level"),
+        limit: int = Query(1000, description="Number of retrieved results"),
     ):
-        """実験のログを取得"""
+        """Get experiment log"""
         experiment = tracker.get_experiment(experiment_id)
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
 
         logs = experiment.logs
 
-        # レベルでフィルタ
+        # filter by level
         if level:
             logs = [log for log in logs if log.level == level.upper()]
 
-        # 制限
+        # limit
         logs = logs[-limit:]
 
         return {
@@ -133,7 +133,7 @@ if FastAPI is not None:
 
     @app.get("/api/experiments/{experiment_id}/steps")
     async def get_experiment_steps(experiment_id: str):
-        """実験のステップ一覧を取得"""
+        """Get a list of experiment steps"""
         experiment = tracker.get_experiment(experiment_id)
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
@@ -146,7 +146,7 @@ if FastAPI is not None:
 
     @app.get("/api/health")
     async def health_check():
-        """ヘルスチェック"""
+        """Health Check"""
         return {"status": "healthy", "database": "connected"}
 else:
     app = None

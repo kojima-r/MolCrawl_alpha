@@ -11,8 +11,8 @@ from molcrawl.gpt2.model import GPT, GPTConfig
 
 
 def cut_after_eos(seq, bos_id, eos_id):
-    """BOSの最初の出現以降、最初のEOSまでを返す。EOSが無ければ末尾まで。"""
-    # seq は int のリスト想定
+    """Returns from the first occurrence of BOS up to the first EOS. If there is no EOS, to the end."""
+    # seq assumes a list of ints
     try:
         start = seq.index(bos_id)
     except ValueError:
@@ -75,20 +75,20 @@ model.eval()
 model.to(device)
 
 num_samples = 100000
-max_new_tokens = 128  # 1分子あたりの最大トークン長
+max_new_tokens = 128  # Maximum token length per molecule
 temperature = 1.0
 top_k = None
 
-# 1) BOS/EOS/PAD の決定（BOS と EOS は別IDにするのが鉄則）
-#    既に start_instruction/eos_token を使っているならそれを優先
+# 1) Determine BOS/EOS/PAD (The golden rule is to use separate IDs for BOS and EOS)
+# If you are already using start_instruction/eos_token, give it priority
 bos_id = start_instruction
 
-# PAD は generate に必要になることが多い。未定義なら BOS/EOS のどちらかを当てる
+# PAD is often required for generate. If undefined, assign either BOS/EOS
 pad_id = getattr(tokenizer, "pad_token_id", None)
 if pad_id is None:
     pad_id = eos_token if eos_token is not None else bos_id
 
-# 2) バッチ用の BOS だけの入力（[B, 1]）
+# 2) BOS-only input for batch ([B, 1])
 # start_ids = torch.full((batch_size, 1), bos_id, dtype=torch.long, device=device)
 
 # {'C': 942539, 'O': 213055, 'N': 80235, 'c': 13219, 'F': 9771, '[O-]': 725, 'S': 2445, 'I': 197, 'Cl': 7474, 'Br': 1825, '[H]': 302, '[C-]': 536, '[N-]': 679, 'B': 52, '[NH3+]': 16, '[Se]': 4, '[BH3-]': 9, '[F-]': 1, 'n': 2, '[N]': 1, '[S-]': 2, '[Cl-]': 1, '[CH]': 2, '[SeH]': 5, '[SeH2]': 1, '[B]': 2, '[CH2]': 1, '[Br-]': 1, '[NH2+]': 1, '[NH-]': 1}
@@ -127,14 +127,14 @@ first_token_freq = {
 
 ids = np.fromiter(first_token_freq.keys(), dtype=np.int64)
 counts = np.fromiter(first_token_freq.values(), dtype=np.float64)
-p = counts / counts.sum()  # 正規化
-p /= p.sum()  # 念のためもう一度1に
+p = counts / counts.sum()  # Normalization
+p /= p.sum()  # Set it to 1 again just to be sure
 
 
 smiles_list: list[str] = []
 while len(smiles_list) < num_samples:
-    # --- 2) 先頭トークンの一括サンプリング
-    # second_ids = rng.choice(ids, size=batch_size, p=p)  # 再現性が要るなら rng を使用
+    # --- 2) Bulk sampling of first tokens
+    # second_ids = rng.choice(ids, size=batch_size, p=p) # Use rng if reproducibility is required
     second_ids = np.random.choice(ids, size=batch_size, p=p)
 
     start_ids = torch.tensor(
@@ -152,12 +152,12 @@ while len(smiles_list) < num_samples:
             eos_token_id=eos_token,
             pad_token_id=pad_id,
         )
-        # print(out)  # デバッグ用
+        # print(out) # for debugging
 
     for seq in out.tolist():
         gen_ids = cut_after_eos(seq, bos_id, eos_token)
         s = tokenizer.decode(gen_ids, skip_special_tokens=True)  # type: ignore[attr-defined]
-        # トークナイザが空白区切りで出すなら次の行を使う
+        # If the tokenizer outputs spaces separated, use the following line
         s = s.replace(" ", "")
         smiles_list.append(s)
         if len(smiles_list) >= num_samples:

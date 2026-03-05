@@ -1,20 +1,20 @@
 """
 RNAformer Configuration for RNA Transcriptome Data
 
-このconfigは既存のRNA transcriptomeデータセット（CellXGene）を使用して
-RNAformerモデルを学習するための設定です。
+This config uses an existing RNA transcriptome dataset (CellXGene).
+Settings for learning RNAformer models.
 
-RNAformerの特徴:
-- 遺伝子発現データに特化したトークナイゼーション
-- セルタイプ特異的な学習
-- Geneformerアーキテクチャベース
-- 効率的な長文コンテキスト処理
+Features of RNAformer:
+- Tokenization specialized for gene expression data
+- Cell type specific learning
+- Geneformer architecture based
+- Efficient long text context processing
 
-既存のBERTベースと比較した改善点:
-1. トークナイゼーション: 遺伝子IDベースの語彙
-2. 学習率: 1e-4 (RNA transcriptomeに最適化)
-3. バッチサイズ: 8 (メモリ効率重視)
-4. 最大長: 1024 (長い遺伝子発現プロファイル対応)
+Improvements compared to the existing BERT base:
+1. Tokenization: Gene ID-based vocabulary
+2. Learning rate: 1e-4 (optimized for RNA transcriptome)
+3. Batch size: 8 (emphasis on memory efficiency)
+4. Maximum length: 1024 (supports long gene expression profiles)
 """
 
 import os
@@ -37,22 +37,22 @@ model_path = os.path.join(RNA_REFINED_DIR, "rna", "rnaformer-output", f"rnaforme
 # RNAformer optimized settings
 max_length = 1024  # RNA transcriptome sequences
 dataset_dir = os.path.join(RNA_DATASET_DIR, "training_ready_hf_dataset")
-learning_rate = 1e-4  # RNAformer推奨値 (Geneformerより高め)
-weight_decay = 0.1  # 正則化
-max_steps = 100000  # 学習ステップ数（データ量に応じて調整）
-warmup_steps = 10000  # ウォームアップステップ
+learning_rate = 1e-4  # RNAformer recommended value (higher than Geneformer)
+weight_decay = 0.1  # regularization
+max_steps = 100000  # Number of learning steps (adjusted according to data amount)
+warmup_steps = 10000  # warmup steps
 
 log_interval = 100
-save_steps = 1000  # チェックポイント保存間隔
+save_steps = 1000  # Checkpoint save interval
 
 # Batch size settings
-# RNA transcriptomeは大きなメモリを使用するため、小さめのバッチサイズ
+# Smaller batch size as RNA transcriptome uses large memory
 batch_size = 8
 per_device_eval_batch_size = 4
 gradient_accumulation_steps = 16  # Effective batch size = 8 * 16 = 128
 
 # Tokenizer setup
-# RNA遺伝子語彙を使用
+# Use RNA gene vocabulary
 # -----------------------------------------------------------------------------
 print(f"📖 Loading RNA gene vocabulary from: {GENE_VOCAB_PATH}")
 if not os.path.exists(GENE_VOCAB_PATH):
@@ -91,10 +91,10 @@ print(f"📊 Meta vocab size (padded): {meta_vocab_size}")
 # Preprocessing function
 def preprocess_function(examples):
     """
-    Add attention_mask to the dataset
+        Add attention_mask to the dataset
 
-    RNAformerはattention_maskを明示的に必要とします。
-    既存のinput_idsからattention_maskを生成します。
+    RNAformer requires attention_mask explicitly.
+    Generate attention_mask from existing input_ids.
     """
     if "input_ids" in examples:
         attention_masks = []

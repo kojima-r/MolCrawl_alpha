@@ -2,14 +2,14 @@
 """
 BERT Genome Sequence Model - ClinVar Pathogenicity Evaluation
 
-独立したBERT評価システム：訓練済みBERTモデルによるClinVar病原性変異の精度検証
-GPT2とは完全に独立した実装で、BERT特有の評価手法を活用します。
+Independent BERT evaluation system: Accuracy verification of ClinVar pathogenic variants with trained BERT models
+It is a completely independent implementation from GPT2 and utilizes BERT's unique evaluation method.
 
-主要な評価手法：
-1. マスク言語モデル(MLM)による変異位置の予測確率
-2. 変異前後の配列表現ベクトルの類似度分析
-3. 注意重み可視化による重要領域の特定
-4. 配列コンテキスト理解度の定量評価
+Main evaluation methods:
+1. Predicted probability of mutation location by mask language model (MLM)
+2. Similarity analysis of sequence expression vectors before and after mutation
+3. Identifying important areas by visualizing attention weights
+4. Quantitative evaluation of sequence context comprehension
 """
 
 import argparse
@@ -42,56 +42,56 @@ from molcrawl.utils.evaluation_output import (
 )
 from molcrawl.utils.model_evaluator import ModelEvaluator
 
-# プロジェクトルートを追加
+# add project root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 共通環境チェックモジュールを追加
+# Add common environment check module
 check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
-# ログ設定は後でsetup_evaluation_loggingで行う
+# Log settingslatersetup_evaluation_loggingdo it with
 logger = logging.getLogger(__name__)
 
 
 class BERTClinVarEvaluator(ModelEvaluator):
-    """ClinVarデータを使用したBERTモデル評価クラス"""
+    """BERT model evaluation class using ClinVar data"""
 
     def __init__(self, model_path, tokenizer_path, device="cuda", max_length=512):
         """
-        初期化
+        initialization
 
         Args:
-            model_path (str): 訓練済みBERTモデルのパス
-            tokenizer_path (str): SentencePieceトークナイザーのパス
-            device (str): 使用デバイス
-            max_length (int): 最大入力長
+            model_path (str): Path of trained BERT model
+            tokenizer_path (str): SentencePiece tokenizer path
+            device (str): Device used
+            max_length (int): Maximum input length
         """
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(model_path, tokenizer_path, device)
 
         self.max_length = max_length
 
-        # サブクラス固有の初期化
+        # Subclass-specific initialization
         self.tokenizer = self._init_tokenizer()
         self.vocab_size = self.tokenizer.vocab_size()
         self.model = self._init_model()
 
-        # 特殊トークンのIDを取得
+        # Get special token ID
         self.mask_token_id = self._get_mask_token_id()
         self.cls_token_id = self._get_cls_token_id()
         self.sep_token_id = self._get_sep_token_id()
 
     def _init_tokenizer(self):
-        """トークナイザーの初期化（抽象メソッドの実装）"""
+        """Tokenizer initialization (abstract method implementation)"""
         logger.info(f"Loading tokenizer from {self.tokenizer_path}")
         return spm.SentencePieceProcessor(model_file=self.tokenizer_path)
 
     def _init_model(self):
-        """モデルの初期化（抽象メソッドの実装）"""
+        """Model initialization (abstract method implementation)"""
         logger.info(f"Loading BERT model from {self.model_path}")
         return self._load_model()
 
     def _get_mask_token_id(self):
-        """MASKトークンのIDを取得"""
+        """Get the ID of the MASK token"""
         mask_candidates = ["<mask>", "[MASK]", "<unk>"]
         for candidate in mask_candidates:
             try:
@@ -102,12 +102,12 @@ class BERTClinVarEvaluator(ModelEvaluator):
             except (KeyError, IndexError, AttributeError):
                 continue
 
-        # フォールバック: unk_idを使用
+        # Fallback: use unk_id
         logger.warning("MASK token not found, using UNK token")
         return self.tokenizer.unk_id()
 
     def _get_cls_token_id(self):
-        """CLSトークンのIDを取得"""
+        """Get ID of CLS token"""
         cls_candidates = ["<cls>", "[CLS]", "<s>"]
         for candidate in cls_candidates:
             try:
@@ -118,12 +118,12 @@ class BERTClinVarEvaluator(ModelEvaluator):
             except (KeyError, IndexError, AttributeError):
                 continue
 
-        # フォールバック: 最初のトークンを使用
+        # Fallback: use first token
         logger.warning("CLS token not found, using first token")
         return 0
 
     def _get_sep_token_id(self):
-        """SEPトークンのIDを取得"""
+        """Get SEP token ID"""
         sep_candidates = ["<sep>", "[SEP]", "</s>"]
         for candidate in sep_candidates:
             try:
@@ -134,34 +134,34 @@ class BERTClinVarEvaluator(ModelEvaluator):
             except (KeyError, IndexError, AttributeError):
                 continue
 
-        # フォールバック: EOSトークンを使用
+        # Fallback: use EOS token
         logger.warning("SEP token not found, using EOS token")
         return self.tokenizer.eos_id() if hasattr(self.tokenizer, "eos_id") else 1
 
     def _load_model(self):
-        """訓練済みBERTモデルの読み込み（safetensors対応）"""
+        """Loading a trained BERT model (safetensors compatible)"""
         try:
             logger.info(f"Loading trained BERT model from: {self.model_path}")
 
-            # Hugging Face transformers形式での読み込み
+            # Load in Hugging Face transformers format
             config = BertConfig.from_pretrained(self.model_path)
             logger.info(f"Model config loaded: vocab_size={config.vocab_size}, hidden_size={config.hidden_size}")
 
-            # トークナイザーのサイズと一致するかチェック
+            # Check if it matches the tokenizer size
             if config.vocab_size != self.vocab_size:
                 logger.warning(f"Vocab size mismatch: model={config.vocab_size}, tokenizer={self.vocab_size}")
                 logger.info("Using model's original vocab size for compatibility")
-                # モデルの元のvocab_sizeを保持
+                # Keep the original vocab_size of the model
                 original_vocab_size = config.vocab_size
-                self.vocab_size = original_vocab_size  # トークナイザーのサイズを調整
+                self.vocab_size = original_vocab_size  # Adjust tokenizer size
 
-            # safetensorsファイルから訓練済みモデルを読み込み
+            # Load trained model from safetensors file
             model = BertForMaskedLM.from_pretrained(
                 self.model_path,
                 config=config,
-                local_files_only=True,  # ローカルファイルのみ使用
-                use_safetensors=True,  # safetensors形式を使用
-                ignore_mismatched_sizes=False,  # サイズ不一致を厳密にチェック
+                local_files_only=True,  # only use local files
+                use_safetensors=True,  # use safetensors format
+                ignore_mismatched_sizes=False,  # Strictly check for size mismatches
             )
 
             logger.info("✅ Successfully loaded trained BERT model with safetensors")
@@ -170,7 +170,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
             logger.error(f"❌ Failed to load trained model: {e}")
             logger.info("🔄 Creating new untrained model as fallback")
 
-            # フォールバック: 新しい未訓練モデル
+            # fallback: new untrained model
             config = BertConfig(
                 vocab_size=self.vocab_size,
                 max_position_embeddings=self.max_length,
@@ -185,7 +185,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
         model.to(self.device)
         model.eval()
 
-        # モデル統計の表示
+        # Display model statistics
         total_params = sum(p.numel() for p in model.parameters())
         logger.info("📊 Model Statistics:")
         logger.info(f"   - Total parameters: {total_params:,}")
@@ -197,22 +197,22 @@ class BERTClinVarEvaluator(ModelEvaluator):
         return model
 
     def encode_sequence(self, sequence, add_special_tokens=True):
-        """DNA配列をトークンIDにエンコード（改良版）"""
-        # 配列を適切にフォーマット（大文字変換、無効文字の除去など）
+        """Encode DNA sequence into token ID (improved version)"""
+        # Format the array properly (convert uppercase, remove invalid characters, etc.)
         original_length = len(sequence)
         sequence = sequence.upper().replace("N", "").replace("-", "")
 
-        # SentencePieceでエンコード
+        # Encode with SentencePiece
         tokens = self.tokenizer.encode(sequence)
 
-        # デバッグ情報
+        # debug information
         logger.debug(f"Sequence processing: {original_length} -> {len(sequence)} -> {len(tokens)} tokens")
 
         if add_special_tokens:
-            # [CLS] + sequence + [SEP] の形式
+            # Format [CLS] + sequence + [SEP]
             tokens = [self.cls_token_id] + tokens + [self.sep_token_id]
 
-        # 最大長に調整
+        # adjust to maximum length
         if len(tokens) > self.max_length:
             if add_special_tokens:
                 # [CLS] + sequence[:max_length-2] + [SEP]
@@ -223,7 +223,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
 
         if not tokens:
             logger.warning(f"Empty tokenization for sequence: {sequence[:50]}...")
-            # 空の場合は最低限のトークンを返す
+            # Return minimum token if empty
             if add_special_tokens:
                 tokens = [self.cls_token_id, self.sep_token_id]
             else:
@@ -232,7 +232,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
         return torch.tensor(tokens, dtype=torch.long)
 
     def find_sequence_differences(self, ref_sequence, var_sequence):
-        """参照配列と変異配列の詳細な差分分析"""
+        """Detailed differential analysis of reference and mutant sequences"""
         ref_clean = ref_sequence.upper().replace("N", "").replace("-", "")
         var_clean = var_sequence.upper().replace("N", "").replace("-", "")
 
@@ -243,7 +243,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
             if ref_clean[i] != var_clean[i]:
                 differences.append({"position": i, "ref_base": ref_clean[i], "var_base": var_clean[i]})
 
-        # 長さの差も記録
+        # Also record length differences
         if len(ref_clean) != len(var_clean):
             differences.append(
                 {
@@ -257,18 +257,18 @@ class BERTClinVarEvaluator(ModelEvaluator):
 
     def get_masked_variant_probability(self, reference_seq, variant_seq, variant_position=None):
         """
-        マスク言語モデルを使用した変異の病原性確率を計算
+        Calculate the pathogenic probability of a variant using a masked language model
 
         Args:
-            reference_seq (str): 参照配列
-            variant_seq (str): 変異配列
-            variant_position (int): 変異位置（わからない場合はNone）
+            reference_seq (str): reference sequence
+            variant_seq (str): variant sequence
+            variant_position (int): variant position (None if unknown)
 
         Returns:
-            dict: 各種スコア
+            dict: various scores
         """
         with torch.no_grad():
-            # 参照配列をエンコード
+            # encode reference array
             ref_tokens = self.encode_sequence(reference_seq, add_special_tokens=True)
             var_tokens = self.encode_sequence(variant_seq, add_special_tokens=True)
 
@@ -276,7 +276,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
                 logger.warning("Empty tokenization")
                 return {"mlm_score": 0.0, "confidence": 0.0}
 
-            # 変異位置を特定（簡単な方法）
+            # Identify mutation location (easy method)
             if variant_position is None:
                 variant_position = self._find_variant_position(ref_tokens, var_tokens)
 
@@ -284,39 +284,39 @@ class BERTClinVarEvaluator(ModelEvaluator):
                 logger.warning("Could not find variant position")
                 return {"mlm_score": 0.0, "confidence": 0.0}
 
-            # 参照配列の変異位置をマスク
+            # Mask the mutation position of the reference sequence
             masked_ref_tokens = ref_tokens.clone()
             original_token = masked_ref_tokens[variant_position].item()
             masked_ref_tokens[variant_position] = self.mask_token_id
 
-            # バッチ次元を追加してデバイスに転送
+            # Add batch dimension and transfer to device
             masked_ref_tokens = masked_ref_tokens.unsqueeze(0).to(self.device)
 
-            # アテンションマスクを作成
+            # create attention mask
             attention_mask = torch.ones_like(masked_ref_tokens)
 
-            # モデルの予測
+            # Model prediction
             outputs = self.model(
                 input_ids=masked_ref_tokens,
                 attention_mask=attention_mask,
                 output_attentions=True,
             )
 
-            # マスク位置の予測確率を取得
+            # Get the predicted probability of mask position
             logits = outputs.logits[0, variant_position]  # [vocab_size]
             probs = F.softmax(logits, dim=-1)
 
-            # 変異トークンと参照トークンの確率
+            # Probability of mutation token and reference token
             variant_token = var_tokens[variant_position].item()
 
             ref_prob = probs[original_token].item()
             var_prob = probs[variant_token].item()
 
-            # スコア計算
+            # Score calculation
             mlm_score = np.log(ref_prob + 1e-10) - np.log(var_prob + 1e-10)
             confidence = max(ref_prob, var_prob)
 
-            # 注意重みの取得（最後の層の平均）
+            # Get attention weight (average of last layer)
             attentions = outputs.attentions[-1].mean(dim=1).squeeze()  # [seq_len, seq_len]
             mask_attention = attentions[variant_position].cpu().numpy()
 
@@ -330,28 +330,28 @@ class BERTClinVarEvaluator(ModelEvaluator):
             }
 
     def _find_variant_position(self, ref_tokens, var_tokens):
-        """参照配列と変異配列の差分位置を特定（改良版）"""
+        """Identification of differential positions between reference sequence and mutant sequence (improved version)"""
         min_len = min(len(ref_tokens), len(var_tokens))
 
-        # 長さが大きく異なる場合は中央付近を変異位置とする
+        # If the lengths are significantly different, set the mutation position near the center
         if abs(len(ref_tokens) - len(var_tokens)) > 5:
             return min_len // 2
 
         differences = []
-        for i in range(1, min_len - 1):  # [CLS]と[SEP]を除く
+        for i in range(1, min_len - 1):  # exclude [CLS] and [SEP]
             if ref_tokens[i] != var_tokens[i]:
                 differences.append(i)
 
         if differences:
-            # 複数の差分がある場合は最初の位置を使用
+            # If there are multiple differences, use the first position
             return differences[0]
 
-        # 差分が見つからない場合は配列の中央を使用
+        # If no difference is found, use the center of the array
         logger.warning("No differences found between reference and variant sequences")
         return min_len // 2 if min_len > 2 else 1
 
     def get_sequence_representation(self, sequence):
-        """配列の表現ベクトルを取得"""
+        """Get the representation vector of the array"""
         with torch.no_grad():
             tokens = self.encode_sequence(sequence, add_special_tokens=True)
             tokens = tokens.unsqueeze(0).to(self.device)
@@ -364,7 +364,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
                 output_hidden_states=True,
             )
 
-            # [CLS]トークンの最終層表現を使用
+            # [CLS] Use final layer representation of token
             cls_representation = outputs.last_hidden_state[0, 0]  # [hidden_size]
 
             return cls_representation.cpu().numpy()
@@ -376,50 +376,49 @@ class BERTClinVarEvaluator(ModelEvaluator):
         sample_size=None,
     ):
         """
-        ClinVarデータセット全体の独立BERT評価
+        Independent BERT evaluation of the entire ClinVar dataset
 
         Args:
-            dataset_path (str): データセットのパス
-            output_dir (str): 出力ディレクトリ
-            sample_size (int): サンプルサイズ（None=全データ）
+            dataset_path (str): dataset path
+            output_dir (str): Output directory
+            sample_size (int): Sample size (None=all data)
         """
 
-        # 出力ディレクトリの作成（タイムスタンプは付けない - GPT-2評価と統一）
+        # Create output directory (no timestamp - unified with GPT-2 evaluation)
         os.makedirs(output_dir, exist_ok=True)
 
         logger.info("🔬 Starting Independent BERT ClinVar Evaluation")
         logger.info("=" * 60)
 
-        # データセット読み込み
+        # Load dataset
         logger.info("📚 Loading ClinVar dataset...")
         df = pd.read_csv(dataset_path)
 
-        # カラム名の標準化（GPT-2形式との互換性）
+        # Standardization of column names (compatibility with GPT-2 format)
         column_mapping = {
             "Chromosome": "chrom",
             "Start": "pos",
             "ReferenceAllele": "ref",
             "AlternateAllele": "alt",
         }
-        # 存在するカラムのみリネーム
+        # Rename only existing columns
         existing_mappings = {k: v for k, v in column_mapping.items() if k in df.columns}
         if existing_mappings:
             df = df.rename(columns=existing_mappings)
             logger.info(f"Standardized column names: {list(existing_mappings.keys())} → {list(existing_mappings.values())}")
 
-        # データの前処理とラベル変換
         logger.info("🔄 Preprocessing ClinVar data...")
         df["pathogenic"] = (df["ClinicalSignificance"] == "Pathogenic").astype(int)
 
-        # VariationIDがない場合は生成
+        # Generate VariationID if it doesn't exist
         if "VariationID" not in df.columns or df["VariationID"].isnull().any():
             df["VariationID"] = range(len(df))
 
-        # GeneSymbolの生成（chromとposが利用可能な場合）
+        # Generate GeneSymbol (if chrom and pos are available)
         if "chrom" in df.columns and "pos" in df.columns:
             df["GeneSymbol"] = df["chrom"].astype(str) + ":" + df["pos"].astype(str)
         elif "GeneSymbol" not in df.columns:
-            df["GeneSymbol"] = "UNKNOWN"  # フォールバック
+            df["GeneSymbol"] = "UNKNOWN"  # Fallback
 
         if sample_size:
             df = df.sample(n=min(sample_size, len(df)), random_state=42)
@@ -427,14 +426,14 @@ class BERTClinVarEvaluator(ModelEvaluator):
         else:
             logger.info(f"📊 Evaluating all {len(df)} variants")
 
-        # データセット統計
+        # dataset statistics
         pathogenic_count = df["pathogenic"].sum()
         benign_count = len(df) - pathogenic_count
         logger.info(f"   - Pathogenic variants: {pathogenic_count}")
         logger.info(f"   - Benign variants: {benign_count}")
         logger.info("   - Data format: chrom:pos (ref>alt)")
 
-        # データ品質チェック
+        # Data quality check
         missing_ref = df["reference_sequence"].isnull().sum()
         missing_var = df["variant_sequence"].isnull().sum()
         if missing_ref > 0 or missing_var > 0:
@@ -454,17 +453,17 @@ class BERTClinVarEvaluator(ModelEvaluator):
                 logger.info(f"   Progress: {idx}/{len(df)} variants processed, accuracy: {accuracy_so_far:.3f}")
 
             try:
-                # MLMベースの評価
+                # MLM based evaluation
                 scores = self.get_masked_variant_probability(row["reference_sequence"], row["variant_sequence"])
 
-                # 表現ベクトルベースの評価
+                # Expression vector based evaluation
                 ref_repr = self.get_sequence_representation(row["reference_sequence"])
                 var_repr = self.get_sequence_representation(row["variant_sequence"])
 
-                # 類似度計算
+                # Similarity calculation
                 cosine_sim = np.dot(ref_repr, var_repr) / (np.linalg.norm(ref_repr) * np.linalg.norm(var_repr) + 1e-10)
 
-                # BERT独自のスコア計算
+                # BERT's own score calculation
                 bert_pathogenicity_score = self._calculate_bert_pathogenicity_score(scores, cosine_sim)
 
                 result = {
@@ -489,7 +488,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
 
                 results.append(result)
 
-                # 病原性予測（複合スコア使用）
+                # Pathogenicity prediction (using composite score)
                 prediction = 1 if bert_pathogenicity_score > 0.5 else 0
                 predictions.append(prediction)
                 true_labels.append(row["pathogenic"])
@@ -503,58 +502,58 @@ class BERTClinVarEvaluator(ModelEvaluator):
         logger.info(f"   - Successfully processed: {len(results)} variants")
         logger.info(f"   - Processing errors: {processing_errors}")
 
-        # 結果の保存と分析
+        # Save resultsand analysis
         os.makedirs(output_dir, exist_ok=True)
 
-        # 詳細結果をCSVで保存
+        # Save detailed results as CSV
         results_df = pd.DataFrame(results)
         results_df.to_csv(os.path.join(output_dir, "bert_clinvar_detailed_results.csv"), index=False)
 
-        # 性能指標の計算
+        # Calculating performance indicators
         metrics = self._calculate_metrics(predictions, true_labels, results_df)
 
-        # 結果の保存
+        # Save results
         with open(os.path.join(output_dir, "bert_clinvar_evaluation_results.json"), "w") as f:
             json.dump(metrics, f, indent=2)
 
-        # 可視化
+        # visualization
         self._create_visualizations(results_df, output_dir)
 
-        # レポート生成
+        # generate report
         self._generate_report(metrics, results_df, output_dir)
 
         logger.info(f"📁 Results saved to: {output_dir}")
         return metrics, results_df
 
     def _calculate_bert_pathogenicity_score(self, mlm_scores, cosine_similarity):
-        """BERT独自の病原性スコア計算"""
-        # MLMスコアと類似度スコアを組み合わせた複合スコア
-        mlm_component = 1 / (1 + np.exp(-mlm_scores["mlm_score"]))  # シグモイド変換
-        similarity_component = 1 - cosine_similarity  # 類似度が低いほど病原性
+        """BERT's unique pathogenicity score calculation"""
+        # Composite score combining MLM score and similarity score
+        mlm_component = 1 / (1 + np.exp(-mlm_scores["mlm_score"]))  # Sigmoid transformation
+        similarity_component = 1 - cosine_similarity  # The lower the similarity, the more pathogenic
         confidence_weight = mlm_scores["confidence"]
 
-        # 重み付き平均
+        # weighted average
         composite_score = 0.6 * mlm_component + 0.3 * similarity_component + 0.1 * confidence_weight
 
         return float(composite_score)
 
     def _calculate_metrics(self, predictions, true_labels, results_df):
-        """性能指標の計算"""
+        """Calculating performance indicators"""
         predictions = np.array(predictions)
         true_labels = np.array(true_labels)
 
-        # 基本的な分類指標
+        # Basic classification metrics
         accuracy = accuracy_score(true_labels, predictions)
         precision, recall, f1, _ = precision_recall_fscore_support(true_labels, predictions, average="binary")
 
-        # ROC-AUC（MLMスコアを使用）
+        # ROC-AUC (using MLM score)
         mlm_scores = results_df["mlm_score"].values
         try:
             auc = roc_auc_score(true_labels, mlm_scores)
         except (ValueError, RuntimeError):
             auc = 0.5
 
-        # 混同行列
+        # Mix rows
         cm = confusion_matrix(true_labels, predictions)
 
         metrics = {
@@ -576,14 +575,14 @@ class BERTClinVarEvaluator(ModelEvaluator):
         return metrics
 
     def _create_visualizations(self, results_df, output_dir):
-        """結果の可視化 - clinvar_visualization.pyに移行推奨"""
+        """Visualization of results - recommended to migrate to clinvar_visualization.py"""
         logger.warning("⚠️  Visualization code in evaluation script. Please use clinvar_visualization.py instead.")
         logger.info(
             "Skipping inline visualization. Use: python scripts/evaluation/bert/clinvar_visualization.py --result-dir <output_dir>"
         )
 
     def _generate_report(self, metrics, results_df, output_dir):
-        """独立BERT評価レポートの生成"""
+        """Generate independent BERT evaluation report"""
         report_path = os.path.join(output_dir, "bert_clinvar_evaluation_report.txt")
 
         with open(report_path, "w") as f:
@@ -613,14 +612,14 @@ class BERTClinVarEvaluator(ModelEvaluator):
             f.write(f"   • Sequence Similarity (Pathogenic): {metrics['mean_cosine_similarity_pathogenic']:.3f}\n")
             f.write(f"   • Sequence Similarity (Benign): {metrics['mean_cosine_similarity_benign']:.3f}\n\n")
 
-            # BERT独自の解釈
+            # BERT's own interpretation
             f.write("🔍 BERT Model Interpretation:\n")
             f.write("   • MLM Scores: Higher values indicate reference sequence is more probable\n")
             f.write("   • Cosine Similarity: Lower values suggest greater sequence disruption\n")
             f.write("   • BERT Pathogenicity Score: Composite score combining MLM and similarity\n")
             f.write("   • Bidirectional Context: BERT considers both upstream and downstream context\n\n")
 
-            # パフォーマンス解釈
+            # performance interpretation
             performance_interpretation = ""
             if metrics["accuracy"] > 0.8:
                 performance_interpretation = "🟢 Excellent performance"
@@ -642,7 +641,7 @@ class BERTClinVarEvaluator(ModelEvaluator):
 
 
 def main():
-    # 環境変数からデフォルトのトークナイザーパスを構築
+    # Build default tokenizer path from environment variables
     try:
         learning_source_dir = check_learning_source_dir()
         default_tokenizer_path = f"{learning_source_dir}/genome_sequence/spm_tokenizer.model"
@@ -680,7 +679,7 @@ def main():
 
     args = parser.parse_args()
 
-    # トークナイザーパスのチェック
+    # Check tokenizer path
     if not args.tokenizer_path:
         print("❌ ERROR: No tokenizer path specified!")
         print("")
@@ -693,7 +692,7 @@ def main():
         print("     python scripts/evaluation/bert/clinvar_evaluation.py --model_path <path> --tokenizer_path <path>")
         sys.exit(1)
 
-    # 出力ディレクトリを自動生成または指定されたものを使用
+    # Automatically generate output directory or use specified one
     if args.output_dir is None:
         model_type = get_model_type_from_path(args.model_path)
         model_name = get_model_name_from_path(args.model_path)
@@ -701,7 +700,7 @@ def main():
     else:
         os.makedirs(args.output_dir, exist_ok=True)
 
-    # ログ設定
+    # Log settings
     logger = setup_evaluation_logging(Path(args.output_dir), "bert_clinvar_evaluation")
 
     logger.info("Starting BERT ClinVar evaluation...")
@@ -711,7 +710,7 @@ def main():
     logger.info(f"Output directory: {args.output_dir}")
 
     try:
-        # 評価器の初期化
+        # Initialize the evaluator
         evaluator = BERTClinVarEvaluator(
             model_path=args.model_path,
             tokenizer_path=args.tokenizer_path,
@@ -719,14 +718,14 @@ def main():
             max_length=args.max_length,
         )
 
-        # 評価の実行
+        # Run evaluation
         metrics, results_df = evaluator.evaluate_dataset(
             dataset_path=args.dataset_path,
             output_dir=args.output_dir,
             sample_size=args.sample_size,
         )
 
-        # 結果の表示
+        # Display results
         logger.info("Evaluation completed successfully!")
         logger.info(f"Accuracy: {metrics['accuracy']:.3f}")
         logger.info(f"F1-score: {metrics['f1_score']:.3f}")

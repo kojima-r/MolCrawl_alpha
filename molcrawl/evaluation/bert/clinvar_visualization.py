@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-BERT ClinVar評価結果可視化スクリプト
+BERT ClinVar evaluation result visualization script
 
-BERT ClinVar評価の結果を可視化し、詳細な分析を行います。
+Visualize BERT ClinVar evaluation results for detailed analysis.
 """
 
 import logging
@@ -13,42 +13,42 @@ import pandas as pd
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, roc_auc_score
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
-# ログ設定
+# Log settings
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
-    """BERT ClinVar評価結果の可視化クラス"""
+    """BERT ClinVar evaluation result visualization class"""
 
     def __init__(self, results_file, output_dir="./bert_clinvar_visualization_results"):
         """
-        初期化
+        initialization
 
         Args:
-            results_file (str): 評価結果JSONファイルまたはCSVファイルのパス
-            output_dir (str): 可視化結果の出力ディレクトリ
+            results_file (str): Path of evaluation result JSON file or CSV file
+            output_dir (str): Output directory of visualization results
         """
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(results_file, output_dir, logger)
 
-        # BERT ClinVar固有の検証
+        # BERT ClinVar specific validation
         if self.results_file.endswith(".csv"):
-            # CSVファイルの場合はDataFrameとして読み込み
+            # If it is a CSV file, read it as a DataFrame
             self.results_df = pd.read_csv(results_file)
             self._validate_csv_results()
         else:
-            # JSONファイルの場合は従来通り
+            # For JSON files, as usual
             required_keys = ["accuracy", "precision", "recall", "f1_score", "auc"]
             self._validate_results(required_keys)
             self.results_df = None
 
     def _validate_csv_results(self):
-        """CSV結果データの検証"""
+        """Verification of CSV result data"""
         required_columns = [
             "pathogenic",
             "mlm_score",
@@ -62,11 +62,11 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         self.logger.info(f"Loaded BERT ClinVar results: {len(self.results_df)} variants")
 
     def plot_confusion_matrix(self):
-        """混同行列をプロット"""
+        """Plot confusion matrix"""
         self.logger.info("Creating BERT confusion matrix plot")
 
         if self.results_df is not None:
-            # CSVデータから混同行列を計算
+            # Calculate confusion matrix from CSV data
             predictions = (self.results_df["mlm_score"] > 0).astype(int)
             cm = confusion_matrix(self.results_df["pathogenic"], predictions)
 
@@ -83,7 +83,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
             accuracy = (cm[0, 0] + cm[1, 1]) / cm.sum()
             plt.title(f"BERT Confusion Matrix - ClinVar Pathogenicity Prediction\nAccuracy: {accuracy:.3f}")
         else:
-            # JSONデータから混同行列をプロット
+            # Plot confusion matrix from JSON data
             cm_data = self.results["confusion_matrix"]
             cm = np.array(cm_data)
 
@@ -105,11 +105,11 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("bert_confusion_matrix")
 
     def plot_performance_metrics(self):
-        """性能指標の棒グラフをプロット"""
+        """Plot bar graph of performance indicators"""
         self.logger.info("Creating BERT performance metrics plot")
 
         if self.results_df is not None:
-            # CSVデータから指標を計算
+            # Calculate metrics from CSV data
             predictions = (self.results_df["mlm_score"] > 0).astype(int)
             from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
@@ -130,7 +130,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
                 "AUC-ROC": auc,
             }
         else:
-            # JSONデータから指標を取得
+            # Get metrics from JSON data
             metrics = {
                 "Accuracy": self.results["accuracy"],
                 "Precision": self.results["precision"],
@@ -150,7 +150,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         plt.ylabel("Score")
         plt.ylim(0, 1)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars, metrics.values()):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -165,7 +165,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("bert_performance_metrics")
 
     def plot_mlm_score_distribution(self):
-        """MLMスコアの分布をプロット"""
+        """Plot the distribution of MLM scores"""
         self.logger.info("Creating MLM score distribution plot")
 
         if self.results_df is None:
@@ -185,13 +185,13 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         plt.title("BERT MLM Score Distribution by Pathogenicity")
         plt.legend()
 
-        # 統計情報を追加
+        # Add statistics
         path_mean = pathogenic_scores.mean()
         benign_mean = benign_scores.mean()
         plt.axvline(path_mean, color="red", linestyle="--", alpha=0.7)
         plt.axvline(benign_mean, color="blue", linestyle="--", alpha=0.7)
 
-        # 統計情報をテキストで表示
+        # Display statistics as text
         plt.text(
             0.02,
             0.98,
@@ -205,7 +205,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("bert_mlm_score_distribution")
 
     def plot_similarity_distribution(self):
-        """コサイン類似度の分布をプロット"""
+        """Plot the distribution of cosine similarity"""
         self.logger.info("Creating cosine similarity distribution plot")
 
         if self.results_df is None:
@@ -225,13 +225,13 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         plt.title("Reference-Variant Sequence Similarity Distribution")
         plt.legend()
 
-        # 統計情報を追加
+        # Add statistics
         path_mean = pathogenic_sim.mean()
         benign_mean = benign_sim.mean()
         plt.axvline(path_mean, color="red", linestyle="--", alpha=0.7)
         plt.axvline(benign_mean, color="blue", linestyle="--", alpha=0.7)
 
-        # 統計情報をテキストで表示
+        # Display statistics as text
         plt.text(
             0.02,
             0.98,
@@ -245,14 +245,14 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("bert_similarity_distribution")
 
     def create_summary_dashboard(self):
-        """全体的なサマリーダッシュボードを作成"""
+        """Create a global summary dashboard"""
         self.logger.info("Creating BERT summary dashboard")
 
         fig = plt.figure(figsize=(16, 12))
         gs = fig.add_gridspec(2, 3, hspace=0.3, wspace=0.3)
 
         if self.results_df is not None:
-            # CSVデータを使用
+            # Use CSV data
             predictions = (self.results_df["mlm_score"] > 0).astype(int)
             cm = confusion_matrix(self.results_df["pathogenic"], predictions)
 
@@ -267,7 +267,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
             except (ValueError, RuntimeError):
                 auc = 0.5
 
-            # 1. 混同行列
+            # 1. Mix rows
             ax1 = fig.add_subplot(gs[0, 0])
             sns.heatmap(
                 cm,
@@ -280,7 +280,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
             )
             ax1.set_title("Confusion Matrix")
 
-            # 2. 性能指標
+            # 2. Performance indicators
             ax2 = fig.add_subplot(gs[0, 1])
             metrics = ["Accuracy", "Precision", "Recall", "F1-Score"]
             values = [accuracy, precision, recall, f1]
@@ -297,7 +297,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
                     fontsize=9,
                 )
 
-            # 3. MLMスコア分布
+            # 3. MLM score distribution
             ax3 = fig.add_subplot(gs[0, 2])
             pathogenic_scores = self.results_df[self.results_df["pathogenic"] == 1]["mlm_score"]
             benign_scores = self.results_df[self.results_df["pathogenic"] == 0]["mlm_score"]
@@ -306,7 +306,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
             ax3.set_title("MLM Score Distribution")
             ax3.legend()
 
-            # 4. 類似度分布
+            # 4. Similarity distribution
             ax4 = fig.add_subplot(gs[1, 0])
             pathogenic_sim = self.results_df[self.results_df["pathogenic"] == 1]["cosine_similarity"]
             benign_sim = self.results_df[self.results_df["pathogenic"] == 0]["cosine_similarity"]
@@ -315,7 +315,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
             ax4.set_title("Similarity Distribution")
             ax4.legend()
 
-            # 5. 散布図
+            # 5. Scatter plot
             ax5 = fig.add_subplot(gs[1, 1])
             pathogenic_data = self.results_df[self.results_df["pathogenic"] == 1]
             benign_data = self.results_df[self.results_df["pathogenic"] == 0]
@@ -340,7 +340,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
             ax5.set_title("MLM vs Similarity")
             ax5.legend()
 
-            # 6. 統計情報
+            # 6. Statistics information
             ax6 = fig.add_subplot(gs[1, 2])
             ax6.axis("off")
 
@@ -377,13 +377,13 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("bert_summary_dashboard")
 
     def generate_all_visualizations(self):
-        """全ての可視化を生成"""
+        """Generate all visualizations"""
         self.logger.info("Generating all BERT visualizations")
 
         self.plot_confusion_matrix()
         self.plot_performance_metrics()
 
-        # CSV固有の可視化
+        # CSV specific visualization
         if self.results_df is not None:
             self.plot_mlm_score_distribution()
             self.plot_similarity_distribution()
@@ -394,7 +394,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
         self.logger.info(f"Generated {len(self.generated_files)} files")
 
     def create_html_report(self):
-        """HTML形式の総合レポートを作成"""
+        """Create comprehensive report in HTML format"""
         self.logger.info("Creating BERT HTML report")
 
         html_content = self._create_html_header("BERT ClinVar Pathogenicity Prediction Evaluation")
@@ -461,7 +461,7 @@ class BERTClinVarVisualizationGenerator(BaseVisualizationGenerator):
             </div>
         """
 
-        # CSV固有の可視化を追加
+        # CSV specific visualizationadd
         if self.results_df is not None:
             html_content += """
             <h3>MLM Score Distribution</h3>
@@ -508,16 +508,16 @@ def main():
     try:
         visualizer = BERTClinVarVisualizationGenerator(args.results_file, args.output_dir)
 
-        # 全ての可視化を生成
+        # generate all visualizations
         visualizer.generate_all_visualizations()
 
-        # HTMLレポートを生成
+        # generate HTML report
         if args.html_report:
             visualizer.create_html_report()
 
         logger.info("BERT visualization completed successfully")
 
-        # 生成されたファイル一覧をログ出力
+        # generateOutput the list of files that were
         generated_files = visualizer.get_generated_files()
         logger.info(f"Generated {len(generated_files)} visualization files:")
         for file_path in generated_files:

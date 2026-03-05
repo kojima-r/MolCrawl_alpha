@@ -6,10 +6,10 @@ from importlib import import_module
 from pathlib import Path
 from typing import Dict, List, TYPE_CHECKING
 
-# プロジェクトルートをパスに追加（utils等を解決するため）
+# add project root to path（utilsetc.)
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
-# データセットキャッシュ設定を読み込み（assets/configs/cache.yamlから）
+# datasetLoad cache settings (assets/configs/cache.yamlfrom)
 try:
     from molcrawl.utils.cache_config import setup_cache_env
 except ModuleNotFoundError:
@@ -18,7 +18,7 @@ except ModuleNotFoundError:
 if setup_cache_env is not None:
     setup_cache_env()
 else:
-    # cache_configが無い環境でも動作は可能
+    # Can operate even in an environment without cache_config
     print("WARNING: utils.cache_config not found. Continuing without cache setup.")
 
 ProteinSequenceConfig = import_module("protein_sequence.utils.configs").ProteinSequenceConfig
@@ -73,7 +73,7 @@ def tokenize_batch_dataset(path_output: Path, context_length: int, number_sample
             "Expected *.raw or *.txt files. Check symlinks or rerun the preparation step."
         )
 
-    # 明示的にファイル一覧を渡して拡張子判定の影響を避ける
+    # Avoid the effect of extension determination by explicitly passing the file list
     data = (
         load_dataset(
             "text",

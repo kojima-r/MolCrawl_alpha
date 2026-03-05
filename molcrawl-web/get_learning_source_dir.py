@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-LEARNING_SOURCE_DIRを環境変数から取得してJSONで出力するスクリプト。
-外部パッケージに依存せず自己完結している。
-環境変数LEARNING_SOURCE_DIRが必要です。
+Script to retrieve LEARNING_SOURCE_DIR from environment variable and output as JSON.
+Self-contained with no external package dependencies.
+Requires the LEARNING_SOURCE_DIR environment variable.
 """
 
 import json
@@ -18,7 +18,7 @@ try:
         )
         sys.exit(1)
 
-    # このスクリプトは molcrawl-web/ 直下にあるので、1つ上がプロジェクトルート
+    # This script is located directly under molcrawl-web/, so one level up is the project root
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     absolute_path = os.path.join(project_root, learning_source_dir)
 

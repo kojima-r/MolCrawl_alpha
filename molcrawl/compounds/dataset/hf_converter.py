@@ -1,7 +1,7 @@
 """
-HuggingFace Dataset形式への変換
+Conversion to HuggingFace Dataset format
 
-トークナイズ済みデータをHuggingFace Dataset形式に変換します。
+Convert tokenized data to HuggingFace Dataset format.
 """
 
 import logging
@@ -18,16 +18,16 @@ logger = logging.getLogger(__name__)
 
 class HFDatasetConverter:
     """
-    HuggingFace Dataset変換クラス
+    HuggingFace Dataset transformation class
 
-    トークナイズ済みデータをHuggingFace Dataset形式に変換します。
+    Convert tokenized data to HuggingFace Dataset format.
     """
 
     def __init__(self, dataset_info: DatasetInfo, compounds_dir: Path):
         """
-        Args:
-            dataset_info: データセット情報
-            compounds_dir: compoundsディレクトリのパス
+                Args:
+        dataset_info: Dataset information
+        compounds_dir: Path to the compounds directory
         """
         self.dataset_info = dataset_info
         self.compounds_dir = Path(compounds_dir)
@@ -41,25 +41,25 @@ class HFDatasetConverter:
         random_seed: int = 42,
     ) -> Optional[DatasetDict]:
         """
-        HuggingFace Dataset形式に変換
+        Convert to HuggingFace Dataset format
 
-        Args:
-            train_ratio: 訓練データの割合
-            valid_ratio: 検証データの割合
-            test_ratio: テストデータの割合
-            force: 強制再変換フラグ
-            random_seed: ランダムシード
+                Args:
+        train_ratio: Ratio of training data
+        valid_ratio: Ratio of valid data
+        test_ratio: Ratio of test data
+        force: forced reconversion flag
+        random_seed: random seed
 
-        Returns:
-            DatasetDict（エラー時はNone）
+                Returns:
+        DatasetDict (None in case of error)
         """
         hf_path = self.dataset_info.get_hf_dataset_path(self.compounds_dir)
 
-        # 既に変換済みの場合はスキップ
+        # Skip if already converted
         if not force and hf_path.exists():
             try:
                 logger.info(f"✓ {self.dataset_info.name}: Already converted, loading from {hf_path}")
-                # train/valid/testの全てが存在するか確認
+                # Check if train/valid/test all exist
                 train_path = hf_path / "train"
                 valid_path = hf_path / "valid"
                 test_path = hf_path / "test"
@@ -75,7 +75,7 @@ class HFDatasetConverter:
             except Exception as e:
                 logger.warning(f"Failed to load existing dataset: {e}, will reconvert")
 
-        # トークナイズ済みデータを読み込み
+        # Load tokenized data
         tokenized_path = self.dataset_info.get_tokenized_path(self.compounds_dir)
         if not tokenized_path.exists():
             logger.warning(
@@ -86,11 +86,11 @@ class HFDatasetConverter:
         logger.info(f"🔄 {self.dataset_info.name}: Converting to HuggingFace Dataset format...")
 
         try:
-            # データ読み込み
+            # Load data
             table = pq.read_table(tokenized_path)
             df = table.to_pandas()
 
-            # データ分割
+            # data split
             df = df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
             total_samples = len(df)
 
@@ -103,7 +103,7 @@ class HFDatasetConverter:
 
             logger.info(f"  Split: train={len(train_df)}, valid={len(valid_df)}, test={len(test_df)}")
 
-            # HuggingFace Dataset形式に変換
+            # Convert to HuggingFace Dataset format
             dataset_dict = DatasetDict(
                 {
                     "train": Dataset.from_pandas(train_df, preserve_index=False),
@@ -112,10 +112,10 @@ class HFDatasetConverter:
                 }
             )
 
-            # 保存
+            # keep
             hf_path.mkdir(parents=True, exist_ok=True)
 
-            # 各splitを個別に保存
+            # Save each split separately
             for split_name, split_dataset in dataset_dict.items():
                 split_path = hf_path / split_name
                 split_dataset.save_to_disk(str(split_path))
@@ -139,25 +139,25 @@ def convert_all_tokenized_datasets(
     random_seed: int = 42,
 ) -> dict:
     """
-    トークナイズ済みの全データセットをHuggingFace形式に変換
+    Convert all tokenized datasets to HuggingFace format
 
-    Args:
-        compounds_dir: compoundsディレクトリのパス
-        dataset_types: 変換するデータセット種別のリスト（Noneの場合はトークナイズ済みの全て）
-        train_ratio: 訓練データの割合
-        valid_ratio: 検証データの割合
-        test_ratio: テストデータの割合
-        force: 強制再変換フラグ
-        random_seed: ランダムシード
+        Args:
+    compounds_dir: compounds directorypath of
+    dataset_types: List of dataset types to convert (if None, all tokenized)
+    train_ratio: Ratio of training data
+    valid_ratio: Ratio of valid data
+    test_ratio: Ratio of test data
+    force: forced reconversion flag
+    random_seed: random seed
 
-    Returns:
-        {dataset_type: dataset_dict} の辞書
+        Returns:
+    Dictionary of {dataset_type: dataset_dict}
     """
     from molcrawl.compounds.dataset.dataset_config import get_dataset_info, DATASET_DEFINITIONS
 
-    # 処理対象のデータセットを決定
+    # Determine the dataset to be processed
     if dataset_types is None:
-        # トークナイズ済みデータが存在するデータセットを取得
+        # Get the dataset with tokenized data
         dataset_types = []
         for dt, info in DATASET_DEFINITIONS.items():
             tokenized_path = info.get_tokenized_path(compounds_dir)
@@ -168,7 +168,7 @@ def convert_all_tokenized_datasets(
             logger.warning("No tokenized datasets available for conversion")
             return {}
     else:
-        # 指定されたデータセットが文字列の場合はEnumに変換
+        # If the specified dataset is a string, convert it to an Enum
         if isinstance(dataset_types[0], str):
             dataset_types = [CompoundDatasetType(dt) for dt in dataset_types]
 

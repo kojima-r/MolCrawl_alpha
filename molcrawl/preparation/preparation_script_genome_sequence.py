@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datasets import load_dataset
 
-# プロジェクトルートのsrcディレクトリをパスに追加
+# Add project root src directory to path
 
 from molcrawl.config.paths import GENOME_SEQUENCE_DIR
 from molcrawl.core.base import setup_logging
@@ -47,18 +47,18 @@ def check_progress_status(base_dir):
     Returns:
         bool: True if all steps are completed, False otherwise
     """
-    # 各処理段階のマーカーファイルパス
+    # Marker file path for each processing stage
     download_marker = Path(base_dir) / "download_complete.marker"
     fasta_to_raw_marker = Path(base_dir) / "fasta_to_raw_complete.marker"
     train_tokenizer_marker = Path(base_dir) / "train_tokenizer_complete.marker"
     raw_to_parquet_marker = Path(base_dir) / "raw_to_parquet_complete.marker"
 
-    # 出力ディレクトリとファイルの存在確認用パス
+    # Output directory and path to check file existence
     raw_files_dir = Path(base_dir) / "raw_files"
     tokenizer_model = Path(base_dir) / "spm_tokenizer.model"
     parquet_dir = Path(base_dir) / "parquet_files"
 
-    # 進捗状況の確認
+    # Check progress
     logger.info("=== Genome Sequence Dataset Preparation Progress ===")
     steps_completed = 0
     total_steps = 4
@@ -226,7 +226,7 @@ def process4_raw_to_parquet(base_dir, num_proc=None, batch_size=None, force=Fals
         if batch_size is not None:
             logger.info(f" - batch_size for map : {batch_size}")
 
-        # raw_to_parquet 側が num_proc / batch_size を受け取る実装になっている前提
+        # Assuming that the raw_to_parquet side is an implementation that receives num_proc / batch_size
         raw_to_parquet(base_dir, num_proc=num_proc, batch_size=batch_size)
 
         raw_to_parquet_marker.touch()
@@ -301,11 +301,11 @@ def main():
     cfg = GenomeSequenceConfig.from_file(args.config).data_preparation
     setup_logging(GENOME_SEQUENCE_DIR)
 
-    # 重い処理用 base_dir（ローカルSSDなどに逃がしたい場合は config で指定）
+    # base_dir for heavy processing (specify in config if you want to release to local SSD etc.)
     base_dir = GENOME_SEQUENCE_DIR + getattr(cfg, "local_base_dir", "scratch")
     logger.info(f"Using base_dir: {base_dir}")
 
-    # 進捗状況の確認
+    # Check progress
     all_completed = check_progress_status(base_dir)
 
     if all_completed and not args.force:
@@ -341,7 +341,7 @@ def main():
         logger.error("Process 3 failed. Stopping execution.")
         exit(1)
 
-    # Process 4: Convert raw to Parquet（並列＆バッチ設定）
+    # Process 4: Convert raw to Parquet (parallel & batch settings)
     num_proc_parquet = getattr(cfg, "num_proc_parquet", cfg.num_worker)
     batch_size_parquet = getattr(cfg, "parquet_batch_size", 512)
 

@@ -1,17 +1,17 @@
 """
-実験管理システムの基本テスト
+Basic test of experiment management system
 """
 
 import sys
 import time
 from pathlib import Path
 
-# プロジェクトルートをパスに追加
+# add project root to path
 project_root = Path(__file__).parent.parent
 
 
 def test_imports():
-    """モジュールのインポートテスト"""
+    """Module import test"""
     print("Testing imports...")
     try:
         from molcrawl.experiment_tracker import (  # noqa: F401
@@ -30,7 +30,7 @@ def test_imports():
 
 
 def test_database():
-    """データベース接続テスト"""
+    """Database connection test"""
     print("\nTesting database...")
     try:
         import os
@@ -38,7 +38,7 @@ def test_database():
 
         from molcrawl.experiment_tracker.database import ExperimentDatabase
 
-        # 一時ファイルを使用
+        # use temporary files
         temp_dir = tempfile.mkdtemp()
         db_path = os.path.join(temp_dir, "test.db")
 
@@ -46,7 +46,7 @@ def test_database():
         stats = db.get_statistics()
         assert stats["total_experiments"] == 0
 
-        # クリーンアップ
+        # cleanup
         import shutil
 
         shutil.rmtree(temp_dir)
@@ -62,12 +62,12 @@ def test_database():
 
 
 def test_tracker():
-    """トラッカーの基本機能テスト"""
+    """Tracker basic functionality test"""
     print("\nTesting tracker...")
     try:
         import os
 
-        # テスト用の一時データベース
+        # Temporary database for testing
         import tempfile
 
         from molcrawl.experiment_tracker import (
@@ -82,7 +82,7 @@ def test_tracker():
 
         tracker = ExperimentTracker(db_path)
 
-        # 実験作成
+        # Create experiment
         exp_id = tracker.start_experiment(
             name="Test Experiment",
             experiment_type=ExperimentType.TRAINING,
@@ -91,21 +91,21 @@ def test_tracker():
         )
         print(f"    Created experiment: {exp_id}")
 
-        # ステップ追加
+        # add step
         tracker.start_step(exp_id, "test_step", "Test Step")
         time.sleep(0.1)
         tracker.complete_step(exp_id, "test_step")
         print("    Added and completed step")
 
-        # ログ追加
+        # add log
         tracker.log(exp_id, "INFO", "Test log message")
         print("    Added log entry")
 
-        # 実験完了
+        # Experiment completed
         tracker.complete_experiment(exp_id, metrics={"accuracy": 0.95})
         print("    Completed experiment")
 
-        # 取得テスト
+        # Acquisition test
         experiment = tracker.get_experiment(exp_id)
         assert experiment is not None
         assert len(experiment.steps) == 1
@@ -113,7 +113,7 @@ def test_tracker():
         assert experiment.metrics["accuracy"] == 0.95
         print("    Retrieved and verified experiment")
 
-        # クリーンアップ
+        # cleanup
         import shutil
 
         shutil.rmtree(temp_dir)
@@ -129,7 +129,7 @@ def test_tracker():
 
 
 def test_helpers():
-    """ヘルパー関数テスト"""
+    """Helper function test"""
     print("\nTesting helpers...")
     try:
         import tempfile
@@ -143,7 +143,7 @@ def test_helpers():
 
         temp_dir = tempfile.mkdtemp()
 
-        # コンテキストマネージャーテスト
+        # Context manager test
         with experiment_context(
             name="Test Context Experiment",
             experiment_type=ExperimentType.EVALUATION,
@@ -157,7 +157,7 @@ def test_helpers():
 
         print("    Context manager test passed")
 
-        # クリーンアップ
+        # cleanup
         import shutil
 
         shutil.rmtree(temp_dir)
@@ -173,7 +173,7 @@ def test_helpers():
 
 
 def main():
-    """すべてのテストを実行"""
+    """Run all tests"""
     print("=" * 60)
     print("🧪 Experiment Tracking System - Basic Tests")
     print("=" * 60)

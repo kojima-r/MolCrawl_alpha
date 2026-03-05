@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from datasets import load_dataset
 from datasets.utils.logging import enable_progress_bar
 
-# プロジェクトルートのsrcディレクトリをパスに追加
+# Add project root src directory to path
 from molcrawl.config.paths import RNA_DATASET_DIR
 from molcrawl.core.base import setup_logging
 from molcrawl.rna.dataset.cellxgene.script.build_list import build_list
@@ -36,7 +36,7 @@ enable_progress_bar()
 
 
 def create_distribution_plot(data):
-    """トークン長の分布をヒストグラムとして保存"""
+    """Save token length distribution as a histogram"""
     from molcrawl.utils.image_manager import get_image_path
 
     plt.hist(data["num_tokens"], bins=200)
@@ -50,11 +50,11 @@ def create_distribution_plot(data):
     logger.info(f"Saved distribution of tokenized dataset lengths to {image_path}")
 
 
-# より詳細な遺伝子情報を含むTSVファイルの生成
+# Generate a TSV file containing more detailed genetic information
 def create_enhanced_gene_list(vocab, data, out_dir):
-    """遺伝子の使用頻度や統計情報を含むTSVを作成"""
+    """Create a TSV containing gene usage frequency and statistical information"""
 
-    # 各遺伝子の出現頻度を計算
+    # Calculate the frequency of each gene
     n = 0
     gene_counts = {}
     for info in data:
@@ -67,7 +67,7 @@ def create_enhanced_gene_list(vocab, data, out_dir):
             else:
                 gene_counts[token_id] = 1
 
-    # 遺伝子名でソート（またはIDでソート）
+    # Sort by gene name (or sort by ID)
     inv_vocab = {v: k for k, v in vocab.items()}
 
     with open(out_dir / "gene_list_with_stats.tsv", "w") as f:
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     setup_logging(str(RNA_DATASET_DIR))
 
-    # 各処理段階のマーカー（完了印）ファイル
+    # Marker (completion mark) file for each processing stage
     build_list_marker = Path(RNA_DATASET_DIR) / "build_list_complete.marker"
     download_marker = Path(RNA_DATASET_DIR) / "download_complete.marker"
     h5ad_to_loom_marker = Path(RNA_DATASET_DIR) / "h5ad_to_loom_complete.marker"
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     vocab_marker = Path(RNA_DATASET_DIR) / "gene_vocab.json"
     parquet_dir = Path(RNA_DATASET_DIR) / "parquet_files"
 
-    # 進捗状況を表示
+    # show progress
     logger.info("=== RNA Dataset Preparation Progress ===")
     steps_completed = 0
     total_steps = 5
@@ -223,11 +223,11 @@ if __name__ == "__main__":
         vocab.save_json(Path(RNA_DATASET_DIR) / "gene_vocab.json")
         logger.info("Gene vocabulary generation completed.")
 
-    # 6. 統計情報の生成と保存
+    # 6. Generating and saving statistics
     logger.info("Generating statistics and final report...")
 
     try:
-        # parquet データセットをロード（train split）
+        # Load parquet dataset (train split)
         data = load_dataset(
             "parquet",
             data_dir=str(Path(RNA_DATASET_DIR) / "parquet_files"),
@@ -244,7 +244,7 @@ if __name__ == "__main__":
 
         logger.info(f"Number of tokens: {sum(data['token_count'])}")
 
-        # 分布プロット（必要に応じて再生成）
+        # Distribution plot (regenerate if necessary)
         from molcrawl.utils.image_manager import get_image_path
 
         plot_file = Path(get_image_path("rna", "rna_tokenized_lengths_dist.png"))
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         else:
             logger.info("Distribution plot already exists. Skipping plot generation.")
 
-        # === 追加: 統計と遺伝子リストを保存 ===
+        # === Added: Save statistics and gene list ===
         out_dir = Path(RNA_DATASET_DIR)
 
         stats = {
@@ -267,7 +267,6 @@ if __name__ == "__main__":
         with open(out_dir / "rna_stats.json", "w") as f:
             json.dump(stats, f, indent=2)
 
-        # token_id 順で並べた遺伝子リストを TSV で保存
         inv_vocab = sorted(vocab.items(), key=lambda x: x[1])  # (gene, id)
         with open(out_dir / "gene_list_with_id.tsv", "w") as f:
             for g, i in inv_vocab:
@@ -275,7 +274,7 @@ if __name__ == "__main__":
 
         logger.info(f"Saved dataset stats and gene list (with IDs) in {out_dir}")
 
-        # より詳細な遺伝子情報を含むTSVファイルの生成
+        # Generate a TSV file containing more detailed genetic information
         create_enhanced_gene_list(vocab, data, out_dir)
 
         logger.info("RNA dataset preparation completed successfully!")

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-指定されたモデルタイプとファイル名の画像パスを取得するスクリプト
-Web API から呼び出される画像パス取得用のユーティリティ
+Script to get image path for specified model type and file name
+Utility for obtaining image path called from Web API
 """
 
 import json
 import sys
 import os
 
-# プロジェクトルートのsrcディレクトリをパスに追加
+# Add project root src directory to path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(script_dir)
 
@@ -23,10 +23,10 @@ if __name__ == "__main__":
         model_type = sys.argv[1]
         filename = sys.argv[2]
 
-        # 画像パスを取得
+        # get image path
         image_path = get_image_path(model_type, filename)
 
-        # JSON形式で出力
+        # Output in JSON format
         result = {"model_type": model_type, "filename": filename, "path": image_path}
         print(json.dumps(result))
 

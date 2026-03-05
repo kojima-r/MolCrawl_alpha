@@ -31,12 +31,12 @@ eval_iters = 200
 log_interval = 10
 
 # init from checkpoint
-init_from = "resume"  # 'scratch' or 'resume' - デフォルトでチェックポイントから再開
+init_from = "resume"  # 'scratch' or 'resume' - resume from checkpoint by default
 
 # checkpoint management
-always_save_checkpoint = True  # 検証ロスに関係なく定期的に保存
-save_checkpoint_steps = 5000  # 5000ステップごとにチェックポイント保存（eval_intervalより優先）
-max_checkpoints = 5  # 最大5個のチェックポイントを保持
+always_save_checkpoint = True  # Save regularly regardless of validation loss
+save_checkpoint_steps = 5000  # Save checkpoint every 5000 steps (prioritizes eval_interval)
+max_checkpoints = 5  # Keep up to 5 checkpoints
 
 # weight decay
 weight_decay = 1e-1

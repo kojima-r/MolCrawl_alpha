@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-モデルタイプの画像一覧を取得するスクリプト
-Web API から呼び出される画像一覧取得用のユーティリティ
+Script to get a list of model type images
+Utility for obtaining a list of images called from Web API
 """
 
 import json
 import sys
 import os
 
-# プロジェクトルートのsrcディレクトリをパスに追加
+# Add project root src directory to path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(script_dir)
 
@@ -22,10 +22,10 @@ if __name__ == "__main__":
 
         model_type = sys.argv[1]
 
-        # 画像一覧を取得
+        # Get image list
         images = list_images_in_model_dir(model_type)
 
-        # JSON形式で出力
+        # Output in JSON format
         print(json.dumps(images))
 
     except Exception as e:

@@ -3,22 +3,22 @@
 OMIM Evaluation Script
 ======================
 
-OMIM (Online Mendelian Inheritance in Man) データベースを使用して
-ゲノム配列モデルの遺伝性疾患予測性能を評価するスクリプト
+Using the OMIM (Online Mendelian Inheritance in Man) database
+Script to evaluate genetic disease prediction performance of genome sequence models
 
-主な機能:
-- OMIM遺伝性疾患データでのモデル評価
-- 病原性変異予測精度の測定
-- 遺伝形式別の詳細分析
-- 包括的な評価レポート生成
+Main features:
+- Model evaluation with OMIM genetic disease data
+- Measurement of pathogenic variant prediction accuracy
+- Detailed analysis by genetic type
+- Comprehensive evaluation report generation
 
-評価指標:
-- 精度 (Accuracy)
-- 適合率 (Precision)
-- 再現率 (Recall)
-- F1スコア
+Evaluation metrics:
+- Accuracy
+- Precision rate (Precision)
+- Recall rate (Recall)
+- F1 score
 - ROC-AUC, PR-AUC
-- 感度・特異度
+- Sensitivity/specificity
 """
 
 import argparse
@@ -47,7 +47,7 @@ from sklearn.metrics import (
 
 warnings.filterwarnings("ignore")
 
-# プロジェクトルートを追加
+# add project root
 
 try:
     from molcrawl.gpt2.model import GPT, GPTConfig
@@ -64,11 +64,11 @@ except ImportError as e:
     print("Please ensure you're running from the project root directory")
     sys.exit(1)
 
-# setup_logging関数は utils.evaluation_output.setup_evaluation_logging を使用
+# setup_logging function uses utils.evaluation_output.setup_evaluation_logging
 
 
 class OMIMEvaluator(ModelEvaluator):
-    """OMIM遺伝性疾患予測評価クラス"""
+    """OMIM Genetic Disease Prediction Evaluation Class"""
 
     def __init__(
         self,
@@ -79,21 +79,21 @@ class OMIMEvaluator(ModelEvaluator):
     ):
         self.logger = logger or logging.getLogger(__name__)
 
-        # 親クラスの初期化（トークナイザーとモデルを自動初期化）
+        # Initialize parent class(Auto-initialize tokenizer and model)
         super().__init__(
             model_path,
             tokenizer_path,
             device or ("cuda" if torch.cuda.is_available() else "cpu"),
         )
 
-        # 評価結果保存用
+        # For saving evaluation results
         self.results: Dict[str, Any] = {}
         self.predictions: List[int] = []
         self.true_labels: List[int] = []
         self.prediction_scores: List[float] = []
 
     def _init_tokenizer(self):
-        """トークナイザーの初期化（抽象メソッドの実装）"""
+        """Tokenizer initialization (abstract method implementation)"""
         self.logger.info(f"Loading tokenizer from {self.tokenizer_path}")
         tokenizer = spm.SentencePieceProcessor(model_file=self.tokenizer_path)
         self.vocab_size = tokenizer.vocab_size()
@@ -101,37 +101,36 @@ class OMIMEvaluator(ModelEvaluator):
         return tokenizer
 
     def _init_model(self):
-        """モデルの初期化（抽象メソッドの実装）"""
+        """Model initialization (abstract method implementation)"""
         self.logger.info(f"Loading model from {self.model_path}")
         return self.load_model_and_tokenizer()
 
     def encode_sequence(self, sequence: str, **kwargs) -> List[int]:
         """
-        配列をトークンIDにエンコード（抽象メソッドの実装）
+        Encode array to token ID (implementation of abstract method)
 
         Args:
-            sequence: ゲノム配列
-            **kwargs: 追加の引数
+            sequence: genome sequence
 
         Returns:
-            トークンIDのリスト
+            List of token IDs
         """
         return self.tokenizer.encode(sequence)
 
     def load_model_and_tokenizer(self):
-        """モデルとトークナイザーをロード"""
+        """Load model and tokenizer"""
         try:
-            # トークナイザーをロード
+            # load tokenizer
             self.logger.info(f"Loading tokenizer from {self.tokenizer_path}")
             self.tokenizer = spm.SentencePieceProcessor()
             self.tokenizer.load(self.tokenizer_path)
             self.logger.info("Tokenizer loaded successfully")
 
-            # モデルをロード（ファイルが存在しない場合はダミーモデル作成）
+            # Load model (create dummy model if file does not exist)
             self.logger.info(f"Loading model from {self.model_path}")
 
             if os.path.exists(self.model_path):
-                # 実際のモデルファイルが存在する場合
+                # If the actual model file exists
                 checkpoint = torch.load(self.model_path, map_location=self.device)
 
                 model_args = checkpoint["model_args"]
@@ -146,11 +145,11 @@ class OMIMEvaluator(ModelEvaluator):
 
                 self.logger.info(f"Model loaded successfully from {self.model_path}")
             else:
-                # ダミーモデルを作成（テスト用）
+                # Create a dummy model (for testing)
                 self.logger.warning(f"Model file not found: {self.model_path}")
                 self.logger.info("Creating dummy model for testing purposes")
 
-                # ダミー設定でGPTConfigを作成
+                # Create GPTConfig with dummy settings
                 vocab_size = self.tokenizer.vocab_size()
                 gptconf = GPTConfig(
                     block_size=512,
@@ -173,37 +172,37 @@ class OMIMEvaluator(ModelEvaluator):
             raise
 
     def tokenize_sequence(self, sequence: str, max_length: int = 512) -> torch.Tensor:
-        """配列をトークン化"""
-        # スペース区切りでトークン化
+        """Tokenize an array"""
+        # Tokenize with spaces
         spaced_sequence = " ".join(list(sequence.upper()))
         tokens = self.tokenizer.encode(spaced_sequence, out_type=int)
 
-        # 長さ調整
+        # Length adjustment
         if len(tokens) > max_length:
             tokens = tokens[:max_length]
 
         return torch.tensor(tokens, dtype=torch.long).unsqueeze(0).to(self.device)
 
     def calculate_sequence_likelihood(self, sequence: str) -> float:
-        """配列の尤度を計算"""
+        """Calculate the likelihood of an array"""
         try:
             tokens = self.tokenize_sequence(sequence)
 
             with torch.no_grad():
-                # モデル予測
+                # model prediction
                 logits, _ = self.model(tokens)
 
-                # 対数尤度計算
+                # Log likelihood calculation
                 log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
 
-                # 各位置での対数尤度を合計
+                # sum the log-likelihood at each position
                 total_log_likelihood = 0.0
                 for i in range(tokens.size(1) - 1):
                     target_token = tokens[0, i + 1]
                     token_log_prob = log_probs[0, i, target_token]
                     total_log_likelihood += token_log_prob.item()
 
-                # 平均対数尤度
+                # Average log-likelihood
                 avg_log_likelihood = total_log_likelihood / (tokens.size(1) - 1)
 
                 return avg_log_likelihood
@@ -213,13 +212,12 @@ class OMIMEvaluator(ModelEvaluator):
             return -np.inf
 
     def load_omim_data(self, data_path: str) -> pd.DataFrame:
-        """OMIMデータをロード"""
+        """Load OMIM data"""
         self.logger.info(f"Loading OMIM data from {data_path}")
 
         df = pd.read_csv(data_path)
         self.logger.info(f"Loaded {len(df)} OMIM variants")
 
-        # データの前処理
         if "is_disease_causing" in df.columns:
             df = df.dropna(subset=["sequence", "is_disease_causing"])
             df["is_disease_causing"] = df["is_disease_causing"].astype(int)
@@ -227,28 +225,27 @@ class OMIMEvaluator(ModelEvaluator):
             self.logger.error("Required column 'is_disease_causing' not found in data")
             raise ValueError("Missing required column")
 
-        # 遺伝形式分布を表示
+        # Display genetic type distribution
         if "inheritance_pattern" in df.columns:
             self.logger.info("Inheritance pattern distribution:")
             self.logger.info(df["inheritance_pattern"].value_counts())
 
-        # 病原性分布を表示
+        # Show pathogenicity distribution
         self.logger.info("Disease causality distribution:")
         self.logger.info(df["is_disease_causing"].value_counts())
 
         return df
 
     def evaluate_variants(self, df: pd.DataFrame, batch_size: int = 16) -> Dict[str, Any]:
-        """バリアントを評価"""
+        """Evaluate variant"""
         self.logger.info("Starting model evaluation on OMIM data")
 
-        # リスト初期化
+        # initialize list
         predictions = []
         true_labels = []
         prediction_scores = []
         inheritance_patterns = []
 
-        # バッチ処理
         total_variants = len(df)
         for i in range(0, total_variants, batch_size):
             batch_end = min(i + batch_size, total_variants)
@@ -260,32 +257,32 @@ class OMIMEvaluator(ModelEvaluator):
                 likelihood = self.calculate_sequence_likelihood(sequence)
                 batch_scores.append(likelihood)
 
-            # バッチ結果を追加
+            # add batch results
             prediction_scores.extend(batch_scores)
             true_labels.extend(batch_df["is_disease_causing"].tolist())
 
             if "inheritance_pattern" in batch_df.columns:
                 inheritance_patterns.extend(batch_df["inheritance_pattern"].tolist())
 
-            # 進捗表示
+            # Progress display
             if (batch_end) % 50 == 0 or batch_end == total_variants:
                 self.logger.info(f"Processed {batch_end}/{total_variants} variants")
 
-        # 予測閾値の最適化
+        # Optimize prediction threshold
         optimal_threshold = self.find_optimal_threshold(true_labels, prediction_scores)
 
-        # 予測ラベル生成
+        # Predictive label generation
         predictions = [1 if score > optimal_threshold else 0 for score in prediction_scores]
 
-        # 結果保存
+        # Save results
         self.true_labels = true_labels
         self.predictions = predictions
         self.prediction_scores = prediction_scores
 
-        # 評価指標計算
+        # Evaluation index calculation
         results = self.calculate_metrics(true_labels, predictions, prediction_scores, optimal_threshold)
 
-        # 遺伝形式別分析
+        # Analysis by genetic type
         if inheritance_patterns:
             results["inheritance_analysis"] = self.analyze_by_inheritance_pattern(
                 true_labels, predictions, inheritance_patterns
@@ -297,7 +294,7 @@ class OMIMEvaluator(ModelEvaluator):
         return results
 
     def find_optimal_threshold(self, true_labels: List[int], scores: List[float]) -> float:
-        """最適な閾値を見つける"""
+        """Find the optimal threshold"""
         try:
             fpr, tpr, thresholds = roc_curve(true_labels, scores)
             optimal_idx = np.argmax(tpr - fpr)
@@ -312,9 +309,9 @@ class OMIMEvaluator(ModelEvaluator):
         scores: List[float],
         threshold: float,
     ) -> Dict[str, Any]:
-        """評価指標を計算"""
+        """Calculate evaluation metrics"""
 
-        # 基本指標
+        # Basic indicators
         accuracy = accuracy_score(true_labels, predictions)
         precision = precision_score(true_labels, predictions, zero_division=0)
         recall = recall_score(true_labels, predictions, zero_division=0)
@@ -331,7 +328,7 @@ class OMIMEvaluator(ModelEvaluator):
         except (ValueError, RuntimeError):
             pr_auc = 0.0
 
-        # 感度・特異度
+        # Sensitivity/specificity
         tn, fp, fn, tp = confusion_matrix(true_labels, predictions).ravel()
         sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
         specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
@@ -357,7 +354,7 @@ class OMIMEvaluator(ModelEvaluator):
             "negative_samples": len(true_labels) - sum(true_labels),
         }
 
-        # 結果をログ出力
+        # log the results
         self.logger.info("=== Evaluation Results ===")
         self.logger.info(f"Accuracy: {accuracy:.4f}")
         self.logger.info(f"Precision: {precision:.4f}")
@@ -376,18 +373,18 @@ class OMIMEvaluator(ModelEvaluator):
         predictions: List[int],
         inheritance_patterns: List[str],
     ) -> Dict[str, Dict]:
-        """遺伝形式別分析"""
+        """Analysis by genetic type"""
         analysis = {}
         unique_patterns = set(inheritance_patterns)
 
         for pattern in unique_patterns:
-            # パターン別データ抽出
+            # Extract data by pattern
             pattern_indices = [i for i, p in enumerate(inheritance_patterns) if p == pattern]
             pattern_true = [true_labels[i] for i in pattern_indices]
             pattern_pred = [predictions[i] for i in pattern_indices]
 
             if len(pattern_true) > 0:
-                # パターン別指標計算
+                # Indicator calculation by pattern
                 accuracy = accuracy_score(pattern_true, pattern_pred)
                 precision = precision_score(pattern_true, pattern_pred, zero_division=0)
                 recall = recall_score(pattern_true, pattern_pred, zero_division=0)
@@ -405,19 +402,19 @@ class OMIMEvaluator(ModelEvaluator):
         return analysis
 
     def save_results(self, output_dir: str):
-        """結果を保存"""
+        """Save results"""
         os.makedirs(output_dir, exist_ok=True)
 
-        # JSON形式で保存
+        # Save in JSON format
         results_file = os.path.join(output_dir, "omim_evaluation_results.json")
         with open(results_file, "w") as f:
             json.dump(self.results, f, indent=2)
 
-        # 詳細レポート保存
+        # Save detailed report
         report_file = os.path.join(output_dir, "omim_evaluation_report.txt")
         self.generate_detailed_report(report_file)
 
-        # 予測結果保存
+        # Save prediction results
         predictions_file = os.path.join(output_dir, "omim_predictions.csv")
         pred_df = pd.DataFrame(
             {
@@ -431,17 +428,17 @@ class OMIMEvaluator(ModelEvaluator):
         self.logger.info(f"Results saved to {output_dir}")
 
     def generate_detailed_report(self, report_file: str):
-        """詳細レポートを生成"""
+        """Generate detailed report"""
         with open(report_file, "w") as f:
             f.write("OMIM Hereditary Disease Prediction Evaluation Report\n")
             f.write("=" * 55 + "\n\n")
 
-            # 基本統計
+            # Basic statistics
             f.write(f"Total samples: {self.results['total_samples']}\n")
             f.write(f"Disease-causing samples: {self.results['positive_samples']}\n")
             f.write(f"Benign samples: {self.results['negative_samples']}\n\n")
 
-            # 性能指標
+            # Performance indicators
             f.write("Performance Metrics:\n")
             f.write(f"  Accuracy: {self.results['accuracy']:.4f}\n")
             f.write(f"  Precision: {self.results['precision']:.4f}\n")
@@ -453,7 +450,7 @@ class OMIMEvaluator(ModelEvaluator):
             f.write(f"  Specificity: {self.results['specificity']:.4f}\n")
             f.write(f"  Optimal threshold: {self.results['optimal_threshold']:.4f}\n\n")
 
-            # 混同行列
+            # Mix rows
             cm = self.results["confusion_matrix"]
             f.write("Confusion Matrix:\n")
             f.write(f"  True Positives: {cm['tp']}\n")
@@ -461,7 +458,7 @@ class OMIMEvaluator(ModelEvaluator):
             f.write(f"  True Negatives: {cm['tn']}\n")
             f.write(f"  False Negatives: {cm['fn']}\n\n")
 
-            # 遺伝形式別分析
+            # Analysis by genetic type
             if "inheritance_analysis" in self.results:
                 f.write("Analysis by Inheritance Pattern:\n")
                 for pattern, metrics in self.results["inheritance_analysis"].items():
@@ -475,7 +472,7 @@ class OMIMEvaluator(ModelEvaluator):
 
 
 def main():
-    """メイン関数"""
+    """Main function"""
     parser = argparse.ArgumentParser(description="OMIM Evaluation for Genome Sequence Model")
     parser.add_argument(
         "--model_path",
@@ -512,7 +509,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        # 出力ディレクトリを自動生成または指定されたものを使用
+        # Automatically generate output directory or use specified one
         if args.output_dir is None:
             model_type = get_model_type_from_path(args.model_path)
             model_name = get_model_name_from_path(args.model_path)
@@ -520,10 +517,10 @@ def main():
         else:
             os.makedirs(args.output_dir, exist_ok=True)
 
-        # ログ設定
+        # Log settings
         logger = setup_evaluation_logging(Path(args.output_dir), "omim_evaluation")
 
-        # トークナイザーパス取得
+        # Get tokenizer pass
         if args.tokenizer_path:
             tokenizer_path = args.tokenizer_path
             logger.info(f"Using specified tokenizer: {tokenizer_path}")
@@ -531,7 +528,7 @@ def main():
             tokenizer_path = get_genome_tokenizer_path()
             logger.info(f"Using auto-detected tokenizer: {tokenizer_path}")
 
-        # 評価実行
+        # run evaluation
         evaluator = OMIMEvaluator(
             model_path=args.model_path,
             tokenizer_path=tokenizer_path,
@@ -539,11 +536,11 @@ def main():
             logger=logger,
         )
 
-        # データロードと評価
+        # Data loading and evaluation
         df = evaluator.load_omim_data(args.data_path)
         evaluator.evaluate_variants(df, batch_size=args.batch_size)
 
-        # 結果保存
+        # Save results
         evaluator.save_results(args.output_dir)
 
         logger.info(f"Evaluation completed. Results saved to {args.output_dir}")

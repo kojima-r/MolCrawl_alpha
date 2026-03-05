@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ClinVarデータダウンロード・前処理スクリプト
+ClinVar data download/preprocessing script
 
-ClinVarデータベースから病原性変異データをダウンロードし、
-genome sequenceモデルの評価に適した形式に前処理します。
+Download pathogenic variant data from the ClinVar database,
+Preprocess the genome sequence model into a format suitable for evaluation.
 """
 
 import argparse
@@ -17,7 +17,7 @@ import pandas as pd
 import requests
 
 
-# ログ設定
+# Log settings
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -30,19 +30,19 @@ logger = logging.getLogger(__name__)
 
 
 class ClinVarProcessor:
-    """ClinVarデータの取得・前処理クラス"""
+    """ClinVar data acquisition/preprocessing class"""
 
     def __init__(self, output_dir="./clinvar_data"):
         """
-        初期化
+        initialization
 
         Args:
-            output_dir (str): 出力ディレクトリ
+            output_dir (str): Output directory
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # ClinVarダウンロードURL
+        # ClinVar download URL
         self.clinvar_urls = {
             "variant_summary": "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz",
             "submission_summary": "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/submission_summary.txt.gz",
@@ -50,13 +50,13 @@ class ClinVarProcessor:
 
     def download_clinvar_data(self, data_type="variant_summary"):
         """
-        ClinVarデータをダウンロード
+        Download ClinVar data
 
         Args:
-            data_type (str): ダウンロードするデータタイプ
+            data_type (str): Data type to download
 
         Returns:
-            str: ダウンロードしたファイルのパス
+            str: path of the downloaded file
         """
         if data_type not in self.clinvar_urls:
             raise ValueError(f"Unknown data type: {data_type}")
@@ -78,13 +78,13 @@ class ClinVarProcessor:
 
     def extract_and_load_data(self, gzip_file):
         """
-        圧縮ファイルを展開してDataFrameとして読み込み
+        Unzip the compressed file and read it as a DataFrame
 
         Args:
-            gzip_file (str): gzipファイルのパス
+            gzip_file (str): gzip file path
 
         Returns:
-            pd.DataFrame: 読み込まれたデータ
+            pd.DataFrame: Loaded data
         """
         logger.info(f"Extracting and loading {gzip_file}")
 
@@ -96,39 +96,38 @@ class ClinVarProcessor:
 
     def filter_single_nucleotide_variants(self, df):
         """
-        単一ヌクレオチド変異（SNV）のみをフィルタリング
+        Filter only single nucleotide variations (SNVs)
 
         Args:
-            df (pd.DataFrame): ClinVarデータ
+            df (pd.DataFrame): ClinVar data
 
         Returns:
-            pd.DataFrame: フィルタリングされたデータ
+            pd.DataFrame: Filtered data
         """
         logger.info(f"Starting with {len(df)} total variants")
 
-        # 利用可能な変異タイプを確認
+        # Check available mutation types
         logger.info(f"Available variant types: {df['Type'].value_counts().head(10)}")
 
-        # 変異タイプでフィルタリング
+        # Filter by mutation type
         snv_types = ["single nucleotide variant", "SNV"]
         df_snv = df[df["Type"].isin(snv_types)].copy()
         logger.info(f"After type filtering: {len(df_snv)} variants")
 
-        # カラム名を確認してデバッグ情報を出力
         if len(df_snv) > 0:
             logger.info(f"Available columns: {df_snv.columns.tolist()}")
 
-            # ReferenceAlleleVCFとAlternateAlleleVCFフィールドを使用
+            # Use ReferenceAlleleVCF and AlternateAlleleVCF fields
             if "ReferenceAlleleVCF" in df_snv.columns and "AlternateAlleleVCF" in df_snv.columns:
                 logger.info("Using VCF allele fields (ReferenceAlleleVCF, AlternateAlleleVCF)")
-                # VCFフィールドを標準フィールドにコピー
+                # copy VCF field to standard field
                 df_snv["ReferenceAllele"] = df_snv["ReferenceAlleleVCF"]
                 df_snv["AlternateAllele"] = df_snv["AlternateAlleleVCF"]
 
             logger.info(f"First few ReferenceAllele values: {df_snv['ReferenceAllele'].head(10).tolist()}")
             logger.info(f"First few AlternateAllele values: {df_snv['AlternateAllele'].head(10).tolist()}")
 
-        # "na"値を除外して有効なアリル情報のみをフィルタリング
+        # Filter only valid allele information by excluding "na" value
         valid_alleles = (
             (df_snv["ReferenceAllele"].notna())
             & (df_snv["AlternateAllele"].notna())
@@ -141,9 +140,9 @@ class ClinVarProcessor:
         df_snv = df_snv[valid_alleles].copy()
         logger.info(f"After removing null/na alleles: {len(df_snv)} variants")
 
-        # 単一塩基のみをフィルタリング
+        # Filter only single bases
         if len(df_snv) > 0:
-            # 大文字に変換して処理
+            # Convert to uppercase and process
             df_snv["ReferenceAllele"] = df_snv["ReferenceAllele"].astype(str).str.upper()
             df_snv["AlternateAllele"] = df_snv["AlternateAllele"].astype(str).str.upper()
 
@@ -160,7 +159,7 @@ class ClinVarProcessor:
             df_snv = df_snv[valid_ref_len & valid_alt_len & valid_ref_base & valid_alt_base].copy()
             logger.info(f"After allele filtering: {len(df_snv)} variants")
 
-            # フィルタリング後のサンプル値を確認
+            # Check the sample value after filtering
             if len(df_snv) > 0:
                 logger.info(f"Final dataset: {len(df_snv)} variants")
                 logger.info(f"Final ReferenceAllele sample: {df_snv['ReferenceAllele'].value_counts().head()}")
@@ -170,17 +169,17 @@ class ClinVarProcessor:
 
     def filter_by_clinical_significance(self, df):
         """
-        臨床的意義でフィルタリング
+        Filter by clinical significance
 
         Args:
-            df (pd.DataFrame): ClinVarデータ
+            df (pd.DataFrame): ClinVar data
 
         Returns:
-            pd.DataFrame: フィルタリングされたデータ
+            pd.DataFrame: Filtered data
         """
         logger.info(f"Starting clinical significance filtering with {len(df)} variants")
 
-        # 実際のClinicalSignificance値を確認
+        # Check the actual ClinicalSignificance value
         logger.info("Available clinical significance values:")
         for value, count in df["ClinicalSignificance"].value_counts().head(20).items():
             logger.info(f"  {value}: {count}")
@@ -199,31 +198,31 @@ class ClinVarProcessor:
 
     def get_reference_sequences(self, df, sequence_length=50):
         """
-        参照配列を取得（簡略版 - 実際の実装では外部APIを使用）
+        Get reference array (simplified version - actual implementation uses external API)
 
         Args:
-            df (pd.DataFrame): ClinVarデータ
-            sequence_length (int): 取得する配列長
+            df (pd.DataFrame): ClinVar data
+            sequence_length (int): array length to obtain
 
         Returns:
-            pd.DataFrame: 参照配列が追加されたデータ
+            pd.DataFrame: Data with reference array added
         """
         logger.info("Generating reference sequences (mock implementation)")
 
-        # 実際の実装では、Ensembl REST APIやNCBI APIを使用して
-        # 実際の参照配列を取得する必要があります
-        # ここではサンプル実装として、ランダムな配列を生成します
+        # In actual implementation, use Ensembl REST API or NCBI API
+        # you need to get the actual reference array
+        # Here we will generate a random array as a sample implementation
 
         import random
 
         def generate_mock_sequence(length):
-            """モック用のDNA配列を生成"""
+            """Generate DNA sequence for mock"""
             bases = ["A", "T", "G", "C"]
             return "".join(random.choices(bases, k=length))
 
         def create_variant_sequence(ref_seq, position, ref_allele, alt_allele):
-            """変異配列を作成"""
-            # 配列の中央付近に変異を配置
+            """Create mutant array"""
+            # Place mutation near the center of the array
             mid_pos = len(ref_seq) // 2
             variant_seq = ref_seq[:mid_pos] + alt_allele + ref_seq[mid_pos + 1 :]
             return variant_seq
@@ -232,13 +231,13 @@ class ClinVarProcessor:
         variant_sequences = []
 
         for _, row in df.iterrows():
-            # モック参照配列を生成
+            # Generate mock reference array
             ref_seq = generate_mock_sequence(sequence_length)
 
-            # 変異配列を作成
+            # create mutant array
             var_seq = create_variant_sequence(
                 ref_seq,
-                sequence_length // 2,  # 中央位置
+                sequence_length // 2,  # central position
                 row["ReferenceAllele"],
                 row["AlternateAllele"],
             )
@@ -255,38 +254,38 @@ class ClinVarProcessor:
 
     def prepare_evaluation_dataset(self, df, max_samples_per_class=1000):
         """
-        評価用データセットを準備
+        Prepare dataset for evaluation
 
         Args:
-            df (pd.DataFrame): 前処理されたClinVarデータ
-            max_samples_per_class (int): クラスごとの最大サンプル数
+            df (pd.DataFrame): Preprocessed ClinVar data
+            max_samples_per_class (int): Maximum number of samples per class
 
         Returns:
-            pd.DataFrame: 評価用データセット
+            pd.DataFrame: Evaluation dataset
         """
         logger.info("Preparing evaluation dataset")
 
-        # 病原性/非病原性の二値分類に変換
+        # Convert to binary classification of pathogenic/non-pathogenic
         pathogenic_terms = ["Pathogenic", "Likely pathogenic"]
         benign_terms = ["Benign", "Likely benign"]
 
         df_pathogenic = df[df["ClinicalSignificance"].isin(pathogenic_terms)].copy()
         df_benign = df[df["ClinicalSignificance"].isin(benign_terms)].copy()
 
-        # サンプル数を制限
+        # Number of sampleslimit
         if len(df_pathogenic) > max_samples_per_class:
             df_pathogenic = df_pathogenic.sample(n=max_samples_per_class, random_state=42)
 
         if len(df_benign) > max_samples_per_class:
             df_benign = df_benign.sample(n=max_samples_per_class, random_state=42)
 
-        # 結合
+        # join
         df_eval = pd.concat([df_pathogenic, df_benign], ignore_index=True)
 
-        # 標準化されたラベルを追加
+        # add standardized labels
         df_eval["pathogenic"] = df_eval["ClinicalSignificance"].apply(lambda x: 1 if x in pathogenic_terms else 0)
 
-        # 必要なカラムのみを保持
+        # keep only necessary columns
         columns_to_keep = [
             "VariationID",
             "GeneSymbol",
@@ -302,7 +301,7 @@ class ClinVarProcessor:
 
         df_eval = df_eval[columns_to_keep].copy()
 
-        # データをシャッフル
+        # shuffle data
         df_eval = df_eval.sample(frac=1, random_state=42).reset_index(drop=True)
 
         logger.info(f"Prepared evaluation dataset with {len(df_eval)} variants")
@@ -312,15 +311,15 @@ class ClinVarProcessor:
 
     def save_dataset(self, df, filename):
         """
-        データセットを保存
+        Save dataset
 
         Args:
-            df (pd.DataFrame): 保存するデータセット
-            filename (str): ファイル名
+            df (pd.DataFrame): Data set to save
+            filename (str): file name
         """
         filepath = self.output_dir / filename
 
-        # 複数の形式で保存
+        # Save in multiple formats
         df.to_csv(str(filepath).replace(".csv", ".csv"), index=False)
         df.to_json(str(filepath).replace(".csv", ".json"), orient="records", indent=2)
 
@@ -328,10 +327,10 @@ class ClinVarProcessor:
 
     def create_statistics_report(self, df):
         """
-        データセットの統計レポートを作成
+        Create statistical reports for datasets
 
         Args:
-            df (pd.DataFrame): 評価用データセット
+            df (pd.DataFrame): Evaluation dataset
         """
         report_file = self.output_dir / "dataset_statistics.txt"
 
@@ -389,13 +388,12 @@ def main():
 
     args = parser.parse_args()
 
-    # ログディレクトリを作成
+    # create log directory
     os.makedirs("logs", exist_ok=True)
 
     processor = ClinVarProcessor(args.output_dir)
 
     try:
-        # データの取得
         if args.download:
             logger.info("Downloading ClinVar data")
             gzip_file = processor.download_clinvar_data("variant_summary")
@@ -411,25 +409,24 @@ def main():
 
         logger.info(f"Initial dataset size: {len(df)}")
 
-        # データの前処理
         logger.info("Starting data preprocessing")
 
-        # 単一ヌクレオチド変異のフィルタリング
+        # Filtering for single nucleotide variations
         df_snv = processor.filter_single_nucleotide_variants(df)
 
-        # 臨床的意義でフィルタリング
+        # Filter by clinical significance
         df_filtered = processor.filter_by_clinical_significance(df_snv)
 
-        # 参照配列の取得（モック実装）
+        # Get reference array (mock implementation)
         df_with_sequences = processor.get_reference_sequences(df_filtered, sequence_length=args.sequence_length)
 
-        # 評価用データセットの準備
+        # Prepare dataset for evaluation
         df_eval = processor.prepare_evaluation_dataset(df_with_sequences, max_samples_per_class=args.max_samples)
 
-        # データセットの保存
+        # Save dataset
         processor.save_dataset(df_eval, "clinvar_evaluation_dataset.csv")
 
-        # 統計レポートの作成
+        # Create statistics report
         processor.create_statistics_report(df_eval)
 
         logger.info("Data preprocessing completed successfully")

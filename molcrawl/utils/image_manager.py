@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-画像管理ユーティリティ
+Image management utility
 
-データセット準備・検証の結果画像を統一的に管理するためのユーティリティ
+Utility for unified management of images resulting from dataset preparation and verification
 """
 
 import os
@@ -13,13 +13,13 @@ from molcrawl.utils.environment_check import check_learning_source_dir
 
 def get_image_output_dir(model_type: str) -> str:
     """
-    指定されたモデルタイプの画像出力ディレクトリを取得
+    Get image output directory for specified model type
 
-    Args:
-        model_type (str): モデルタイプ ('protein_sequence', 'genome_sequence', 'compounds', 'rna', 'molecule_nat_lang')
+        Args:
+    model_type (str): Model type ('protein_sequence', 'genome_sequence', 'compounds', 'rna', 'molecule_nat_lang')
 
-    Returns:
-        str: 画像出力ディレクトリのパス
+        Returns:
+    str: path of image output directory
     """
     learning_source_dir = check_learning_source_dir()
     image_dir = os.path.join(learning_source_dir, model_type, "image")
@@ -29,14 +29,14 @@ def get_image_output_dir(model_type: str) -> str:
 
 def get_image_path(model_type: str, filename: str) -> str:
     """
-    指定されたモデルタイプとファイル名の画像パスを取得
+    Get image path for specified model type and file name
 
-    Args:
-        model_type (str): モデルタイプ
-        filename (str): ファイル名（拡張子含む）
+        Args:
+    model_type (str): Model type
+    filename (str): File name (including extension)
 
-    Returns:
-        str: 完全な画像ファイルパス
+        Returns:
+    str: complete image file path
     """
     image_dir = get_image_output_dir(model_type)
     return os.path.join(image_dir, filename)
@@ -51,13 +51,13 @@ class ImageInfo(TypedDict):
 
 def list_images_in_model_dir(model_type: str) -> list[ImageInfo]:
     """
-    指定されたモデルタイプディレクトリ内の画像ファイル一覧を取得
+    Get a list of image files in the specified model type directory
 
-    Args:
-        model_type (str): モデルタイプ
+        Args:
+    model_type (str): Model type
 
-    Returns:
-        list: 画像ファイル情報のリスト [{'filename': str, 'path': str, 'size': int, 'modified': float}]
+        Returns:
+    list: List of image file information [{'filename': str, 'path': str, 'size': int, 'modified': float}]
     """
     image_dir = get_image_output_dir(model_type)
 
@@ -76,21 +76,21 @@ def list_images_in_model_dir(model_type: str) -> list[ImageInfo]:
             except OSError:
                 continue
 
-    # 更新日時でソート（新しい順）
+    # Sort by update date (newest first)
     images.sort(key=lambda x: float(x["modified"]), reverse=True)
     return images
 
 
 def migrate_legacy_images():
     """
-    既存のassets/imgディレクトリから新しい構造に画像を移行
+    Migrate images from existing assets/img directory to new structure
     """
     legacy_dir = os.path.join("assets", "img")
 
     if not os.path.exists(legacy_dir):
         return
 
-    # 画像ファイルのマッピング（ファイル名パターンからモデルタイプを判定）
+    # Image file mapping (determine model type from file name pattern)
     model_mappings = {
         "protein_sequence": ["protein_sequence_"],
         "genome_sequence": ["genome_sequence_"],
@@ -103,7 +103,7 @@ def migrate_legacy_images():
         if not any(filename.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg"]):
             continue
 
-        # ファイル名からモデルタイプを判定
+        # Determine model type from file name
         model_type = None
         for mt, patterns in model_mappings.items():
             if any(pattern in filename for pattern in patterns):
@@ -114,7 +114,7 @@ def migrate_legacy_images():
             source_path = os.path.join(legacy_dir, filename)
             dest_path = get_image_path(model_type, filename)
 
-            # ファイルをコピー（既存ファイルがない場合のみ）
+            # Copy file (only if there is no existing file)
             if not os.path.exists(dest_path):
                 try:
                     import shutil
@@ -126,19 +126,19 @@ def migrate_legacy_images():
 
 
 if __name__ == "__main__":
-    # テスト実行
+    # test execution
     print("Testing image manager...")
 
-    # 各モデルタイプのディレクトリ作成テスト
+    # Directory creation test for each model type
     model_types = ["protein_sequence", "genome_sequence", "compounds", "rna", "molecule_nat_lang"]
 
     for model_type in model_types:
         image_dir = get_image_output_dir(model_type)
         print(f"Image directory for {model_type}: {image_dir}")
 
-        # 画像一覧取得テスト
+        # Image list acquisition test
         images = list_images_in_model_dir(model_type)
         print(f"Images in {model_type}: {len(images)} files")
 
-    # レガシー画像の移行テスト
+    # Legacy image migration test
     migrate_legacy_images()

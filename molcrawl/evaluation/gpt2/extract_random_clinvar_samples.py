@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-ClinVarデータからランダムサンプリングを行うスクリプト
+Script to perform random sampling from ClinVar data
 
-使用例:
-1. 既存CSVファイルからランダム抽出:
+Usage example:
+1. Random extraction from existing CSV files:
    python extract_random_clinvar_samples.py --input_csv clinvar_sequences.csv --output_csv random_2000.csv --num_samples 2000
 
-2. データセットから直接ランダム抽出して配列生成:
+2. Sequence generation by random sampling directly from the dataset:
    python extract_random_clinvar_samples.py --ref_fasta GCA_000001405.28_GRCh38.p13_genomic.fna --output_csv random_2000.csv --num_samples 2000 --flank 64
 """
 
@@ -23,22 +23,22 @@ from pyfaidx import Fasta
 
 
 def classify_clinical_significance(clin_sig):
-    """Clinical Significanceを陰性/陽性に分類"""
+    """Classify Clinical Significance as negative/positive"""
     if pd.isna(clin_sig) or clin_sig is None:
         return None
 
     clin_sig_str = str(clin_sig).lower()
 
-    # 陰性（良性）パターン
+    # Negative (benign) pattern
     benign_patterns = [
         "benign",
         "likely_benign",
         "likely benign",
         "protective",
-        "not provided",  # not providedは中性として陰性扱い
+        "not provided",  # not provided is treated as negative as neutral
     ]
 
-    # 陽性（病原性）パターン
+    # Positive (pathogenic) pattern
     pathogenic_patterns = [
         "pathogenic",
         "likely_pathogenic",
@@ -58,34 +58,34 @@ def classify_clinical_significance(clin_sig):
         if pattern in clin_sig_str:
             return "benign"
 
-    # その他（uncertain significanceなど）は中性として陰性扱い
+    # Others (uncertain significance, etc.) are treated as negative as neutral.
     return "benign"
 
 
 def balanced_sampling(df, num_samples, clin_sig_col="ClinicalSignificance", seed=42):
-    """陰性・陽性が半々になるようにバランスサンプリング"""
+    """Balanced sampling with half negative and half positive"""
     np.random.seed(seed)
 
-    # Clinical significanceを分類
+    # Classify clinical significance
     df = df.copy()
     df["classification"] = df[clin_sig_col].apply(classify_clinical_significance)
 
-    # 分類結果の確認
+    # Check the classification results
     print("Original classification distribution:")
     class_counts = df["classification"].value_counts()
     for cls, count in class_counts.items():
         print(f"  {cls}: {count}")
 
-    # 陰性・陽性のデータを分離
+    # Separate negative and positive data
     benign_df = df[df["classification"] == "benign"].copy()
     pathogenic_df = df[df["classification"] == "pathogenic"].copy()
 
     print(f"\nAvailable samples: Benign={len(benign_df)}, Pathogenic={len(pathogenic_df)}")
 
-    # 各クラスから半分ずつサンプリング
+    # Sample half from each class
     samples_per_class = num_samples // 2
 
-    # 利用可能なサンプル数をチェック
+    # Check number of available samples
     if len(benign_df) < samples_per_class:
         print(f"Warning: Not enough benign samples ({len(benign_df)} < {samples_per_class})")
         samples_per_class = min(len(benign_df), len(pathogenic_df))
@@ -96,11 +96,11 @@ def balanced_sampling(df, num_samples, clin_sig_col="ClinicalSignificance", seed
         samples_per_class = min(len(benign_df), len(pathogenic_df))
         print(f"Adjusting to {samples_per_class} samples per class")
 
-    # サンプリング実行
+    # Execute sampling
     sampled_benign = benign_df.sample(n=samples_per_class, random_state=seed)
     sampled_pathogenic = pathogenic_df.sample(n=samples_per_class, random_state=seed + 1)
 
-    # 結合してシャッフル
+    # combine and shuffle
     balanced_df = pd.concat([sampled_benign, sampled_pathogenic], ignore_index=True)
     balanced_df = balanced_df.sample(frac=1, random_state=seed + 2).reset_index(drop=True)
 
@@ -113,7 +113,7 @@ def balanced_sampling(df, num_samples, clin_sig_col="ClinicalSignificance", seed
 
 
 def build_chrom_mapping(ref_genome):
-    """染色体マッピングを構築"""
+    """Build chromosome mapping"""
     headers = [ref_genome[seq].long_name for seq in ref_genome.keys()]
     mapping = {}
     for h in headers:
@@ -128,7 +128,7 @@ def build_chrom_mapping(ref_genome):
 
 
 def get_sequences(ref_genome, mapping, chrom, pos, ref, alt, flank=64):
-    """参照配列と変異配列を取得"""
+    """Get reference and variant sequences"""
     seq_id = mapping[str(chrom)]
     start = pos - flank
     end = pos + flank
@@ -146,21 +146,21 @@ def get_sequences(ref_genome, mapping, chrom, pos, ref, alt, flank=64):
 
 
 def extract_from_csv(csv_path, num_samples, output_path, seed=42):
-    """CSVファイルからバランスサンプルを抽出（陰性・陽性が半々）"""
+    """Extract a balanced sample from the CSV file (half negative and half positive)"""
     print(f"Reading CSV file: {csv_path}")
 
-    # CSVファイルを読み込み（区切り文字を自動検出）
+    # Read CSV file (auto detect delimiter)
     if csv_path.endswith(".gz"):
-        # まずタブ区切りを試す
+        # Try tab delimiter first
         try:
             df = pd.read_csv(csv_path, compression="gzip", sep="\t", low_memory=False)
         except (ValueError, pd.errors.ParserError):
             df = pd.read_csv(csv_path, compression="gzip", sep=",", low_memory=False)
     else:
-        # まずタブ区切りを試す
+        # Try tab delimiter first
         try:
             df = pd.read_csv(csv_path, sep="\t", low_memory=False)
-            # 1つの列しかない場合はカンマ区切りを試す
+            # If there is only one column, try comma separation
             if len(df.columns) == 1:
                 df = pd.read_csv(csv_path, sep=",", low_memory=False)
         except (ValueError, pd.errors.ParserError):
@@ -168,7 +168,7 @@ def extract_from_csv(csv_path, num_samples, output_path, seed=42):
 
     print(f"Total records: {len(df)}")
 
-    # Clinical Significanceカラムを検索
+    # Search the Clinical Significance column
     clin_sig_col = None
     for col in [
         "ClinicalSignificance",
@@ -186,7 +186,7 @@ def extract_from_csv(csv_path, num_samples, output_path, seed=42):
         for sig, count in clin_sig_counts.head(10).items():
             print(f"  {sig}: {count}")
 
-    # バランスサンプリング実行
+    # Execute balanced sampling
     if num_samples > len(df):
         print(f"Requested samples ({num_samples}) > available records ({len(df)})")
         sampled_df = df.copy()
@@ -200,7 +200,7 @@ def extract_from_csv(csv_path, num_samples, output_path, seed=42):
 
     print(f"Sampled {len(sampled_df)} records")
 
-    # 出力（元ファイルがカンマ区切りなのでカンマ区切りで出力）
+    # Output (The original file is comma-separated, so output in comma-separated format)
     sampled_df.to_csv(output_path, index=False)
     print(f"Saved to: {output_path}")
 
@@ -208,7 +208,7 @@ def extract_from_csv(csv_path, num_samples, output_path, seed=42):
 
 
 def extract_from_dataset(ref_fasta, output_csv, num_samples, flank=64, seed=42):
-    """データセットから直接バランスサンプリングして配列生成（陰性・陽性が半々）"""
+    """Sequence generation by balanced sampling directly from the dataset (half negative, half positive)"""
     print("Loading ClinVar dataset from HuggingFace...")
     dataset = load_dataset("gonzalobenegas/clinvar")
     df = dataset["test"].to_pandas()
@@ -219,7 +219,7 @@ def extract_from_dataset(ref_fasta, output_csv, num_samples, flank=64, seed=42):
         print(f"Warning: Dataset has only {len(df)} samples, less than requested {num_samples}")
         num_samples = len(df)
 
-    # バランスサンプリング実行
+    # Execute balanced sampling
     if "clin_sig" in df.columns:
         sampled_df = balanced_sampling(df, num_samples, "clin_sig", seed=seed)
     else:
@@ -229,14 +229,14 @@ def extract_from_dataset(ref_fasta, output_csv, num_samples, flank=64, seed=42):
 
     print(f"Sampled {len(sampled_df)} variants")
 
-    # Clinical Significanceの分布を確認
+    # Check the distribution of clinical significance
     if "clin_sig" in sampled_df.columns:
         print("\nClinical Significance distribution in sample:")
         clin_sig_counts = sampled_df["clin_sig"].value_counts()
         for sig, count in clin_sig_counts.items():
             print(f"  {sig}: {count}")
 
-    # ファイル形式の自動対応
+    # Automatic file format support
     ref_fasta_path = ref_fasta
     if ref_fasta_path.endswith(".gz"):
         uncompressed_path = ref_fasta_path.replace(".gz", "")
@@ -251,12 +251,12 @@ def extract_from_dataset(ref_fasta, output_csv, num_samples, flank=64, seed=42):
             ref_fasta_path = uncompressed_path
             print(f"Uncompressed to: {ref_fasta_path}")
 
-    # 参照ゲノムの読み込み
+    # Load reference genome
     print("Loading reference genome...")
     ref_genome = Fasta(ref_fasta_path)
     mapping = build_chrom_mapping(ref_genome)
 
-    # 配列生成
+    # create array
     print("Generating sequences...")
     records = []
     for i, row in sampled_df.iterrows():
@@ -280,7 +280,7 @@ def extract_from_dataset(ref_fasta, output_csv, num_samples, flank=64, seed=42):
                 "variant_sequence": var_seq,
             }
 
-            # ClinicalSignificanceを追加
+            # Add ClinicalSignificance
             if "clin_sig" in row:
                 record["ClinicalSignificance"] = row["clin_sig"]
             else:
@@ -295,13 +295,13 @@ def extract_from_dataset(ref_fasta, output_csv, num_samples, flank=64, seed=42):
             print(f"Error at {row['chrom']}:{row['pos']} - {e}")
             continue
 
-    # CSVに保存
+    # Save to CSV
     df_out = pd.DataFrame(records)
     df_out.to_csv(output_csv, index=False)
 
     print(f"Saved {len(df_out)} variants with sequences to {output_csv}")
 
-    # 最終統計
+    # final statistics
     if "ClinicalSignificance" in df_out.columns:
         print("\nFinal Clinical Significance distribution:")
         final_counts = df_out["ClinicalSignificance"].value_counts()
@@ -345,7 +345,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 入力モードの確認
+    # Check input mode
     if args.input_csv and args.ref_fasta:
         print("Error: Specify either --input_csv OR --ref_fasta, not both")
         return

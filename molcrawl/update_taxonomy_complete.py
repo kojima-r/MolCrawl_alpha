@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
 NCBI Taxonomy Complete Updater
-全生物群の最新分類リストを取得・更新
+Obtain and update the latest classification list of all biological groups
 
-対応分類群:
-- Bacteria (細菌)
-- Archaea (古細菌)
-- Fungi (真菌)
-- Viridiplantae (植物)
-- Metazoa (動物)
-  - Vertebrata (脊椎動物)
-    - Mammalia (哺乳類)
-    - Other Vertebrates (他の脊椎動物)
-  - Invertebrates (無脊椎動物)
-- Protists (原生生物) - 旧 protozoa
-- Viruses (ウイルス)
+Corresponding taxonomic groups:
+- Bacteria (bacteria)
+- Archaea (Archaea)
+- Fungi
+- Viridiplantae (plants)
+- Metazoa (animal)
+  - Vertebrata (vertebrate)
+    - Mammalia (mammalian)
+    - Other Vertebrates
+  - Invertebrates (invertebrates)
+- Protists - old protozoa
+- Viruses
 """
 
 import json
@@ -31,78 +31,78 @@ class NCBITaxonomyCompleteUpdater:
         self.base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
         self.output_dir = Path("assets/genome_species_list/species")
         self.backup_dir = Path("assets/genome_species_list/backups")
-        self.email = "research@riken.jp"  # RIKEN用メールアドレス
+        self.email = "research@riken.jp"  # RIKEN email address
 
-        # 現代的なNCBI分類マッピング
+        # Modern NCBI classification mapping
         self.taxonomy_groups = {
-            # 主要ドメイン
+            # Main domain
             "bacteria": {
                 "taxon_id": "2",
                 "search_term": "bacteria[organism]",
                 "filename": "bacteria.txt",
-                "description": "Bacteria (細菌)",
+                "description": "Bacteria (bacteria)",
             },
             "archaea": {
                 "taxon_id": "2157",
                 "search_term": "archaea[organism]",
                 "filename": "archaea.txt",
-                "description": "Archaea (古細菌)",
+                "description": "Archaea (Archaea)",
             },
-            # 真核生物の主要群
+            # Major groups of eukaryotes
             "fungi": {
                 "taxon_id": "4751",
                 "search_term": "fungi[organism]",
                 "filename": "fungi.txt",
-                "description": "Fungi (真菌)",
+                "description": "Fungi",
             },
             "viridiplantae": {
                 "taxon_id": "33090",
                 "search_term": "viridiplantae[organism]",
                 "filename": "plants.txt",
-                "description": "Viridiplantae (植物)",
+                "description": "Viridiplantae (plant)",
             },
-            # 動物群
+            # animal group
             "vertebrata": {
                 "taxon_id": "7742",
                 "search_term": "vertebrata[organism]",
                 "filename": "vertebrates.txt",
-                "description": "Vertebrata (脊椎動物)",
+                "description": "Vertebrata (vertebrate)",
             },
             "mammalia": {
                 "taxon_id": "40674",
                 "search_term": "mammalia[organism]",
                 "filename": "vertebrate_mammalian.txt",
-                "description": "Mammalia (哺乳類)",
+                "description": "Mammalia (mammalian)",
             },
             "vertebrate_other": {
                 "taxon_id": "7742",
                 "search_term": "vertebrata[organism] NOT mammalia[organism]",
                 "filename": "vertebrate_other.txt",
-                "description": "Other Vertebrates (哺乳類以外の脊椎動物)",
+                "description": "Other Vertebrates",
             },
             "invertebrata": {
                 "taxon_id": "6656",  # Arthropoda + others
                 "search_term": "metazoa[organism] NOT vertebrata[organism]",
                 "filename": "invertebrate.txt",
-                "description": "Invertebrates (無脊椎動物)",
+                "description": "Invertebrates (invertebrates)",
             },
-            # 原生生物 (旧protozoa)
+            # protist (old protozoa)
             "protists": {
                 "taxon_id": "2759",  # Eukaryota
                 "search_term": "eukaryota[organism] NOT metazoa[organism] NOT fungi[organism] NOT viridiplantae[organism]",
                 "filename": "protists.txt",
-                "description": "Protists (原生生物)",
+                "description": "Protists",
             },
-            # ウイルス
+            # virus
             "viruses": {
                 "taxon_id": "10239",
                 "search_term": "viruses[organism]",
                 "filename": "viruses.txt",
-                "description": "Viruses (ウイルス)",
+                "description": "Viruses",
             },
         }
 
-        # 後方互換性のためのマッピング
+        # Mapping for backwards compatibility
         self.legacy_mapping = {
             "protozoa.txt": "protists.txt",
         }
@@ -110,10 +110,10 @@ class NCBITaxonomyCompleteUpdater:
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
     def check_ncbi_taxonomy_updates(self):
-        """NCBI分類体系の最新情報をチェック"""
+        """Check out the latest information on the NCBI classification system"""
         print("🔍 Checking NCBI Taxonomy structure...")
 
-        # メジャー分類群の統計を取得
+        # Get statistics for major taxa
         stats = {}
 
         for group_name, group_info in self.taxonomy_groups.items():
@@ -123,7 +123,7 @@ class NCBITaxonomyCompleteUpdater:
                 params = {
                     "db": "taxonomy",
                     "term": f"{group_info['search_term']} AND genus[rank]",
-                    "retmode": "json",  # JSONモードに変更
+                    "retmode": "json",  # change to JSON mode
                     "email": self.email,
                 }
 
@@ -135,7 +135,7 @@ class NCBITaxonomyCompleteUpdater:
 
                 print(f"    Response status: {response.status_code}")
 
-                # JSONレスポンスを解析
+                # Parse JSON response
                 try:
                     data = response.json()
                     print(f"    Response data: {data}")
@@ -153,7 +153,7 @@ class NCBITaxonomyCompleteUpdater:
                     print(f"    Raw response: {response.text[:200]}...")
                     stats[group_name] = 0
 
-                time.sleep(0.5)  # API制限対応
+                time.sleep(0.5)  # Compatible with API restrictions
 
             except Exception as e:
                 print(f"  ⚠️ Error checking {group_name}: {e}")
@@ -167,7 +167,7 @@ class NCBITaxonomyCompleteUpdater:
         return stats
 
     def search_taxonomy_by_group(self, group_name, retmax=5000):
-        """指定された分類群の属レベル分類を取得"""
+        """Get the genus-level classification for the specified taxon"""
         group_info = self.taxonomy_groups[group_name]
         print(f"🔍 Searching {group_info['description']}...")
 
@@ -199,7 +199,7 @@ class NCBITaxonomyCompleteUpdater:
             return []
 
     def fetch_taxonomy_names_batch(self, tax_ids, batch_size=200):
-        """分類IDから分類名をバッチ取得"""
+        """Batch acquisition of classification name from classification ID"""
         if not tax_ids:
             return []
 
@@ -229,7 +229,7 @@ class NCBITaxonomyCompleteUpdater:
                 names = self.parse_taxonomy_xml(response.text)
                 genera.update(names)
 
-                time.sleep(0.3)  # NCBI API制限対応
+                time.sleep(0.3)  # Compatible with NCBI API restrictions
 
             except Exception as e:
                 print(f"    ⚠️ Error in batch {batch_num}: {e}")
@@ -239,19 +239,19 @@ class NCBITaxonomyCompleteUpdater:
         return sorted(list(genera))
 
     def parse_taxonomy_xml(self, xml_content):
-        """Taxonomy XMLから属名を抽出"""
+        """Extract genus name from Taxonomy XML"""
         genera = set()
 
         try:
             root = ET.fromstring(xml_content)
 
             for taxon in root.findall(".//Taxon"):
-                # ScientificNameを取得
+                # get ScientificName
                 sci_name = taxon.find(".//ScientificName")
                 if sci_name is not None and sci_name.text:
                     name = sci_name.text.strip()
 
-                    # 属レベルの名前を検証
+                    # Validate genus level name
                     if self.is_valid_genus_name(name):
                         genera.add(name)
 
@@ -261,15 +261,15 @@ class NCBITaxonomyCompleteUpdater:
         return genera
 
     def is_valid_genus_name(self, name):
-        """属名として有効かどうかを判定"""
+        """Determine whether it is valid as a genus name"""
         if not name or len(name) < 2:
             return False
 
-        # スペースが含まれていたら種名レベルなのでスキップ
+        # If there is a space, it is at the species name level, so skip it
         if " " in name:
             return False
 
-        # 明らかに属名でない文字列を除外
+        # Exclude strings that are clearly not genus names
         invalid_patterns = [
             "sp.",
             "strain",
@@ -286,14 +286,14 @@ class NCBITaxonomyCompleteUpdater:
             if pattern in name_lower:
                 return False
 
-        # 数字のみ、または記号のみは除外
+        # Exclude only numbers or only symbols
         if name.replace("-", "").replace("_", "").isdigit():
             return False
 
         return True
 
     def backup_existing_files(self):
-        """既存ファイルのバックアップ"""
+        """Backing up existing files"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backed_up_files = []
 
@@ -306,7 +306,7 @@ class NCBITaxonomyCompleteUpdater:
                 backup_path.write_text(file_path.read_text())
                 backed_up_files.append(str(backup_path))
 
-        # レガシーファイルもバックアップ
+        # Back up legacy files too
         for legacy_file in self.legacy_mapping.keys():
             legacy_path = self.output_dir / legacy_file
             if legacy_path.exists():
@@ -320,7 +320,7 @@ class NCBITaxonomyCompleteUpdater:
         return backed_up_files
 
     def compare_with_existing(self, new_genera, filename):
-        """既存リストとの比較"""
+        """Comparison with existing list"""
         file_path = self.output_dir / filename
 
         current_genera = set()
@@ -345,15 +345,15 @@ class NCBITaxonomyCompleteUpdater:
         }
 
     def save_taxonomy_file(self, genera_list, group_name):
-        """分類リストをファイルに保存"""
+        """Save classification list to file"""
         group_info = self.taxonomy_groups[group_name]
         filename = group_info["filename"]
         file_path = self.output_dir / filename
 
-        # 既存リストとの比較
+        # Compare with existing list
         comparison = self.compare_with_existing(genera_list, filename)
 
-        # ファイル保存
+        # save file
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         with open(file_path, "w", encoding="utf-8") as f:
@@ -371,7 +371,7 @@ class NCBITaxonomyCompleteUpdater:
         return comparison
 
     def generate_summary_report(self, all_results):
-        """全体の更新結果レポートを生成"""
+        """Generate entire update results report"""
         report_path = self.output_dir.parent / "taxonomy_update_report.md"
 
         with open(report_path, "w", encoding="utf-8") as f:
@@ -400,7 +400,7 @@ class NCBITaxonomyCompleteUpdater:
 
             f.write(f"| **Total** | | **{total_genera:,}** | **+{total_added}** | **-{total_removed}** |\n\n")
 
-            # 詳細変更
+            # change details
             f.write("## Detailed Changes\n\n")
             for group_name, (_genera_list, comparison) in all_results.items():
                 if comparison["added"] or comparison["removed"]:
@@ -409,7 +409,7 @@ class NCBITaxonomyCompleteUpdater:
 
                     if comparison["added"]:
                         f.write(f"**Added ({len(comparison['added'])}):**\n")
-                        for genus in comparison["added"][:20]:  # 最初の20個
+                        for genus in comparison["added"][:20]:  # first 20
                             f.write(f"- {genus}\n")
                         if len(comparison["added"]) > 20:
                             f.write(f"- ... and {len(comparison['added']) - 20} more\n")
@@ -426,7 +426,7 @@ class NCBITaxonomyCompleteUpdater:
         print(f"📊 Summary report saved: {report_path}")
 
     def migrate_legacy_files(self):
-        """レガシーファイルの移行"""
+        """Migration of legacy files"""
         print("🔄 Checking legacy file migration...")
 
         for legacy_file, new_file in self.legacy_mapping.items():
@@ -435,27 +435,27 @@ class NCBITaxonomyCompleteUpdater:
 
             if legacy_path.exists() and not new_path.exists():
                 print(f"  📁 Migrating {legacy_file} → {new_file}")
-                # レガシーファイルをバックアップしてから削除
+                # Back up legacy files and delete them
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_path = self.backup_dir / f"{legacy_file}.migrated_{timestamp}"
                 backup_path.write_text(legacy_path.read_text())
                 legacy_path.unlink()
 
     def update_all_taxonomy(self, groups=None):
-        """全分類群の更新"""
+        """Update all taxa"""
         print("🧬 NCBI Complete Taxonomy Updater")
         print("=" * 50)
 
-        # 現在の分類統計をチェック
+        # Check current classification statistics
         self.check_ncbi_taxonomy_updates()
 
-        # バックアップ作成
+        # backupcreate
         backed_up = self.backup_existing_files()
 
-        # レガシーファイル移行
+        # Legacy file migration
         self.migrate_legacy_files()
 
-        # 更新する分類群を決定
+        # Decide which taxon to update
         if groups is None:
             groups = list(self.taxonomy_groups.keys())
 
@@ -466,28 +466,28 @@ class NCBITaxonomyCompleteUpdater:
         for i, group_name in enumerate(groups, 1):
             print(f"\n[{i}/{len(groups)}] Processing {group_name}...")
 
-            # 分類ID取得
+            # classificationIDacquisition
             tax_ids = self.search_taxonomy_by_group(group_name)
 
             if not tax_ids:
                 print(f"  ⚠️ Skipping {group_name} - no data found")
                 continue
 
-            # 分類名取得
+            # Get classification name
             genera_list = self.fetch_taxonomy_names_batch(tax_ids)
 
             if not genera_list:
                 print(f"  ⚠️ Skipping {group_name} - no genera extracted")
                 continue
 
-            # ファイル保存と比較
+            # Save and compare files
             comparison = self.save_taxonomy_file(genera_list, group_name)
             all_results[group_name] = (genera_list, comparison)
 
-            # 進捗表示
+            # Progress display
             print(f"  ✅ {group_name}: {len(genera_list)} genera (+{len(comparison['added'])} -{len(comparison['removed'])})")
 
-        # 全体レポート生成
+        # Generate overall report
         if all_results:
             self.generate_summary_report(all_results)
 
@@ -499,7 +499,7 @@ class NCBITaxonomyCompleteUpdater:
         return all_results
 
     def test_simple_query(self):
-        """シンプルなクエリでNCBI接続をテスト"""
+        """Test your NCBI connection with a simple query"""
         print("🔬 Testing simple NCBI connection...")
 
         test_url = f"{self.base_url}/esearch.fcgi"

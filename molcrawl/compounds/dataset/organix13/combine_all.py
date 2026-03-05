@@ -125,15 +125,15 @@ def calculateProperties(df):
 
 def combine_all(raw_data_path: str, save_path: str):
     """
-    全データセットを統合してOrganiX13を生成
+    Combine all datasets to generate OrganiX13
 
-    Args:
-        raw_data_path: COMPOUNDS_DIR (例: learning_20251104/compounds)
-        save_path: 出力先ディレクトリ (例: learning_20251104/compounds/organix13)
+        Args:
+    raw_data_path: COMPOUNDS_DIR (example: learning_20251104/compounds)
+    save_path: Output directory (e.g. learning_20251104/compounds/organix13)
     """
     import pandas as pd
 
-    # データディレクトリのパス
+    # data directory path
     data_dir = os.path.join(raw_data_path, "data")
     llamol_dir = os.path.join(data_dir, "Fraunhofer-SCAI-llamol")
 

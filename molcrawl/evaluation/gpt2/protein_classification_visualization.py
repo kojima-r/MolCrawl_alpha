@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Protein Classification評価結果可視化スクリプト
+Protein Classification evaluation result visualization script
 
-GPT-2モデルによるタンパク質バリアント分類評価の結果を可視化し、詳細な分析を行います。
+Visualize the results of protein variant classification evaluation using the GPT-2 model and perform detailed analysis.
 """
 
 import argparse
@@ -16,11 +16,11 @@ import numpy as np
 import seaborn as sns
 from sklearn.metrics import auc, confusion_matrix, precision_recall_curve, roc_curve
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
-# 日本語フォント設定
+# Japanese font settings
 plt.rcParams["font.family"] = [
     "DejaVu Sans",
     "Hiragino Sans",
@@ -33,30 +33,30 @@ plt.rcParams["font.family"] = [
     "Noto Sans CJK JP",
 ]
 
-# ログ設定
+# Log settings
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 class ProteinClassificationVisualizer(BaseVisualizationGenerator):
-    """Protein Classification評価結果の可視化クラス"""
+    """Protein Classification evaluation result visualization class"""
 
     def __init__(self, results_file, output_dir="./visualization_results"):
         """
-        初期化
+        initialization
 
         Args:
-            results_file (str): 評価結果JSONファイルのパス
-            output_dir (str): 可視化結果の出力ディレクトリ
+            results_file (str): Path of evaluation result JSON file
+            output_dir (str): Output directory of visualization results
         """
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(results_file, output_dir, logger)
 
-        # Protein Classification固有の検証
+        # Protein Classification specific validation
         required_keys = ["metrics", "true_labels", "predictions", "fitness_scores"]
         self._validate_results(required_keys)
 
-        # データ抽出
+        # data extraction
         self.metrics = self.results["metrics"]
         self.true_labels = np.array(self.results["true_labels"])
         self.predictions = np.array(self.results["predictions"])
@@ -64,7 +64,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self.threshold = self.results.get("threshold", 0.0)
 
     def plot_confusion_matrix(self):
-        """混同行列をプロット"""
+        """Plot confusion matrix"""
         self.logger.info("Creating confusion matrix plot")
 
         cm = confusion_matrix(self.true_labels, self.predictions)
@@ -83,7 +83,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         plt.ylabel("Actual")
         plt.xlabel("Predicted")
 
-        # 正確度を追加
+        # add accuracy
         accuracy = self.metrics["Accuracy"]
         plt.figtext(0.02, 0.02, f"Accuracy: {accuracy:.3f}", fontsize=12)
 
@@ -91,7 +91,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("confusion_matrix")
 
     def plot_performance_metrics(self):
-        """性能指標の棒グラフをプロット"""
+        """Plot bar graph of performance indicators"""
         self.logger.info("Creating performance metrics plot")
 
         metrics_to_plot = {
@@ -114,7 +114,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         plt.ylabel("Score")
         plt.ylim(0, 1)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars, metrics_to_plot.values()):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -129,7 +129,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("performance_metrics")
 
     def plot_auc_comparison(self):
-        """AUC指標の比較プロット"""
+        """AUC Metric Comparison Plot"""
         self.logger.info("Creating AUC comparison plot")
 
         auc_metrics = {
@@ -144,7 +144,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         plt.ylabel("AUC Score")
         plt.ylim(0, 1)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars, auc_metrics.values()):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -154,7 +154,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
                 va="bottom",
             )
 
-        # ランダム予測の基準線を追加
+        # Add baseline for random prediction
         plt.axhline(y=0.5, color="red", linestyle="--", alpha=0.7, label="Random Prediction")
         plt.legend()
 
@@ -162,7 +162,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("auc_metrics")
 
     def plot_roc_curve(self):
-        """ROC曲線をプロット"""
+        """Plot ROC curve"""
         self.logger.info("Creating ROC curve plot")
 
         # Calculate pathogenic probabilities (using negative fitness scores)
@@ -195,7 +195,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("roc_curve")
 
     def plot_precision_recall_curve(self):
-        """Precision-Recall曲線をプロット"""
+        """Plot Precision-Recall curve"""
         self.logger.info("Creating Precision-Recall curve plot")
 
         # Calculate pathogenic probabilities
@@ -237,7 +237,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("precision_recall_curve")
 
     def plot_fitness_score_distribution(self):
-        """Fitness scoreの分布をプロット"""
+        """Plot the distribution of Fitness score"""
         self.logger.info("Creating fitness score distribution plot")
 
         benign_scores = self.fitness_scores[self.true_labels == 0]
@@ -245,7 +245,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
 
         plt.figure(figsize=(10, 6))
 
-        # ヒストグラム
+        # Histogram
         plt.hist(
             benign_scores,
             bins=30,
@@ -263,7 +263,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
             edgecolor="black",
         )
 
-        # 閾値線
+        # threshold line
         plt.axvline(
             x=self.threshold,
             color="green",
@@ -278,7 +278,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         plt.legend()
         plt.grid(alpha=0.3, axis="y")
 
-        # 統計情報を追加
+        # Add statistics
         stats_text = (
             f"Benign: μ={np.mean(benign_scores):.3f}, σ={np.std(benign_scores):.3f}\n"
             f"Pathogenic: μ={np.mean(pathogenic_scores):.3f}, σ={np.std(pathogenic_scores):.3f}"
@@ -296,7 +296,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("fitness_score_distribution")
 
     def plot_performance_radar_chart(self):
-        """性能指標のレーダーチャートを作成"""
+        """Create a radar chart of performance indicators"""
         self.logger.info("Creating performance radar chart")
 
         metrics = [
@@ -316,9 +316,9 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
             self.metrics["Specificity"],
         ]
 
-        # レーダーチャートの角度を計算
+        # Radar chart anglecalculate
         angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
-        values += values[:1]  # 閉じるために最初の値を追加
+        values += values[:1]  # add first value to close
         angles += angles[:1]
 
         fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(projection="polar"))
@@ -338,13 +338,13 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("performance_radar")
 
     def create_summary_dashboard(self):
-        """サマリーダッシュボードを生成（複数プロットを統合）"""
+        """Generate summary dashboard (combine multiple plots)"""
         self.logger.info("Creating summary dashboard")
 
         fig = plt.figure(figsize=(16, 12))
         gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
 
-        # 1. 混同行列（左上）
+        # 1. Mix rows(Top left)
         ax1 = fig.add_subplot(gs[0, 0])
         cm = confusion_matrix(self.true_labels, self.predictions)
         sns.heatmap(
@@ -360,7 +360,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         ax1.set_ylabel("Actual")
         ax1.set_xlabel("Predicted")
 
-        # 2. 性能指標バー（中央上）
+        # 2. Performance indicator bar (top center)
         ax2 = fig.add_subplot(gs[0, 1])
         metrics_subset = ["Accuracy", "Precision", "Recall", "F1-score"]
         values = [self.metrics[m] for m in metrics_subset]
@@ -371,7 +371,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         ax2.set_title("Performance Metrics")
         ax2.grid(axis="y", alpha=0.3)
 
-        # 3. AUC比較（右上）
+        # 3. AUCComparison (top right)
         ax3 = fig.add_subplot(gs[0, 2])
         auc_names = ["ROC-AUC", "PR-AUC"]
         auc_values = [self.metrics["ROC-AUC"], self.metrics["PR-AUC"]]
@@ -381,7 +381,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         ax3.axhline(y=0.5, color="red", linestyle="--", alpha=0.5)
         ax3.grid(axis="y", alpha=0.3)
 
-        # 4. ROC曲線（左中）
+        # 4. ROCCurve (middle left)
         ax4 = fig.add_subplot(gs[1, 0])
         pathogenic_probs = 1 / (1 + np.exp(self.fitness_scores))
         fpr, tpr, _ = roc_curve(self.true_labels, pathogenic_probs)
@@ -399,7 +399,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         ax4.legend()
         ax4.grid(alpha=0.3)
 
-        # 5. PR曲線（中央中）
+        # 5. PRCurve (middle)
         ax5 = fig.add_subplot(gs[1, 1])
         precision, recall, _ = precision_recall_curve(self.true_labels, pathogenic_probs)
         ax5.plot(
@@ -423,7 +423,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         ax5.legend()
         ax5.grid(alpha=0.3)
 
-        # 6. Fitness Score分布（右中）
+        # 6. Fitness Score distribution (middle right)
         ax6 = fig.add_subplot(gs[1, 2])
         benign_scores = self.fitness_scores[self.true_labels == 0]
         pathogenic_scores = self.fitness_scores[self.true_labels == 1]
@@ -435,7 +435,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         ax6.set_title("Score Distribution")
         ax6.legend()
 
-        # 7-9. 統計情報テキスト（下段）
+        # 7-9. Statistical information text (lower row)
         ax7 = fig.add_subplot(gs[2, :])
         ax7.axis("off")
 
@@ -466,10 +466,10 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self._save_plot("summary_dashboard")
 
     def create_html_report(self):
-        """HTMLレポートを生成"""
+        """Generate HTML report"""
         self.logger.info("Creating HTML report")
 
-        # 簡易HTMLレポートを生成
+        # Generate a simple HTML report
         html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -610,7 +610,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         self.logger.info(f"HTML report saved to {html_file}")
 
     def create_summary_report(self):
-        """サマリーレポートを生成（テキスト形式）"""
+        """Generate summary report (text format)"""
         self.logger.info("Creating summary report")
 
         report = []
@@ -621,7 +621,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         report.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         report.append("")
 
-        # データセット情報
+        # Dataset information
         report.append("Dataset Information:")
         report.append(f"  Total variants: {len(self.true_labels)}")
         report.append(f"  Benign variants: {np.sum(self.true_labels == 0)} ({np.mean(self.true_labels == 0) * 100:.1f}%)")
@@ -629,14 +629,14 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         report.append(f"  Classification threshold: {self.threshold}")
         report.append("")
 
-        # 性能指標
+        # Performance indicators
         report.append("Performance Metrics:")
         report.append("-" * 40)
         for metric, value in self.metrics.items():
             report.append(f"  {metric:20s}: {value:.4f}")
         report.append("")
 
-        # 混同行列
+        # Mix rows
         cm = confusion_matrix(self.true_labels, self.predictions)
         tn, fp, fn, tp = cm.ravel()
         report.append("Confusion Matrix:")
@@ -647,7 +647,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         report.append(f"  True Positive (TP):  {tp:4d}")
         report.append("")
 
-        # Fitness score統計
+        # Fitness scorestatistics
         report.append("Fitness Score Statistics:")
         report.append("-" * 40)
         benign_scores = self.fitness_scores[self.true_labels == 0]
@@ -667,7 +667,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         report.append(f"    Max:    {np.max(pathogenic_scores):7.4f}")
         report.append("")
 
-        # モデル解釈
+        # model interpretation
         report.append("Model Interpretation:")
         report.append("-" * 40)
         if self.metrics["Accuracy"] >= 0.8:
@@ -691,7 +691,7 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
         report.append("")
         report.append("=" * 80)
 
-        # レポートを保存
+        # save report
         report_text = "\n".join(report)
         report_file = self.output_dir / "evaluation_summary.txt"
         with open(report_file, "w") as f:
@@ -699,11 +699,11 @@ class ProteinClassificationVisualizer(BaseVisualizationGenerator):
 
         self.logger.info(f"Summary report saved to {report_file}")
 
-        # コンソールにも出力
+        # Also output to console
         print("\n" + report_text)
 
     def generate_all_visualizations(self):
-        """全ての可視化を生成"""
+        """Generate all visualizations"""
         self.logger.info("Generating all visualizations")
 
         try:
@@ -743,12 +743,12 @@ def main():
 
     args = parser.parse_args()
 
-    # 結果ファイルの確認
+    # Check the result file
     if not os.path.exists(args.results_file):
         logger.error(f"Results file not found: {args.results_file}")
         sys.exit(1)
 
-    # 可視化実行
+    # Visualize execution
     try:
         visualizer = ProteinClassificationVisualizer(results_file=args.results_file, output_dir=args.output_dir)
 

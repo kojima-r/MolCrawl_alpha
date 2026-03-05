@@ -1,4 +1,4 @@
-# COMPOUNDSドメイン用GPT2テスト設定
+# GPT2 test configuration for COMPOUNDS domain
 
 import os
 import sys
@@ -7,19 +7,19 @@ import torch
 
 from molcrawl.config.paths import COMPOUNDS_DATASET_DIR
 
-# 基本設定
+# Basic settings
 domain = "compounds"
 max_test_samples = 1000
 convert_to_hf = True
 
-# データセット設定
+# datasetsetting
 dataset_params = {"dataset_dir": COMPOUNDS_DATASET_DIR}
 
-# 語彙ファイル
+# vocabulary file
 vocab_path = "assets/molecules/vocab.txt"
 
-# 出力設定
+# Output settings
 output_dir = "test_results_compounds"
 
-# デバイス設定
+# device settings
 device = "cuda" if torch.cuda.is_available() else "cpu"

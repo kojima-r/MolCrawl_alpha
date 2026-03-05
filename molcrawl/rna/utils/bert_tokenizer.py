@@ -1,6 +1,6 @@
 """
-RNA用のBERT互換トークナイザーラッパー
-TranscriptomeTokenizerをBERT学習と互換性のある形式でラップ
+BERT-compatible tokenizer wrapper for RNA
+Wrap TranscriptomeTokenizer in a format compatible with BERT learning
 """
 
 from __future__ import annotations

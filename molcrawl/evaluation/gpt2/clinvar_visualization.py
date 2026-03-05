@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-ClinVar評価結果可視化スクリプト
+ClinVar evaluation result visualization script
 
-ClinVar評価の結果を可視化し、詳細な分析を行います。
+Visualize ClinVar evaluation results and perform detailed analysis.
 """
 
 import argparse
@@ -13,11 +13,11 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
-# 日本語フォント設定
+# Japanese font settings
 plt.rcParams["font.family"] = [
     "DejaVu Sans",
     "Hiragino Sans",
@@ -30,26 +30,26 @@ plt.rcParams["font.family"] = [
     "Noto Sans CJK JP",
 ]
 
-# ログ設定
+# Log settings
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 class ClinVarResultsVisualizer(BaseVisualizationGenerator):
-    """ClinVar評価結果の可視化クラス"""
+    """Visualization class for ClinVar evaluation results"""
 
     def __init__(self, results_file, output_dir="./visualization_results"):
         """
-        初期化
+        initialization
 
         Args:
-            results_file (str): 評価結果JSONファイルのパス
-            output_dir (str): 可視化結果の出力ディレクトリ
+            results_file (str): Path of evaluation result JSON file
+            output_dir (str): Output directory of visualization results
         """
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(results_file, output_dir, logger)
 
-        # ClinVar固有の検証
+        # ClinVar specific validation
         required_keys = [
             "accuracy",
             "precision",
@@ -60,7 +60,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self._validate_results(required_keys)
 
     def plot_confusion_matrix(self):
-        """混同行列をプロット"""
+        """Plot confusion matrix"""
         self.logger.info("Creating confusion matrix plot")
 
         cm = self.results["confusion_matrix"]
@@ -85,7 +85,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         plt.ylabel("Actual")
         plt.xlabel("Predicted")
 
-        # 正確度を追加
+        # add accuracy
         accuracy = self.results["accuracy"]
         plt.figtext(0.02, 0.02, f"Accuracy: {accuracy:.3f}", fontsize=12)
 
@@ -93,7 +93,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self._save_plot("confusion_matrix")
 
     def plot_performance_metrics(self):
-        """性能指標の棒グラフをプロット"""
+        """Plot bar graph of performance indicators"""
         self.logger.info("Creating performance metrics plot")
 
         metrics = {
@@ -116,7 +116,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         plt.ylabel("Score")
         plt.ylim(0, 1)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars, metrics.values()):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -131,7 +131,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self._save_plot("performance_metrics")
 
     def plot_auc_comparison(self):
-        """AUC指標の比較プロット"""
+        """AUC Metric Comparison Plot"""
         self.logger.info("Creating AUC comparison plot")
 
         auc_metrics = {
@@ -146,7 +146,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         plt.ylabel("AUC Score")
         plt.ylim(0, 1)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars, auc_metrics.values()):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -156,7 +156,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
                 va="bottom",
             )
 
-        # ランダム予測の基準線を追加
+        # Add baseline for random prediction
         plt.axhline(y=0.5, color="red", linestyle="--", alpha=0.7, label="Random Prediction")
         plt.legend()
 
@@ -164,7 +164,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self._save_plot("auc_metrics")
 
     def create_performance_radar_chart(self):
-        """性能指標のレーダーチャートを作成"""
+        """Create a radar chart of performance indicators"""
         self.logger.info("Creating performance radar chart")
 
         metrics = [
@@ -184,23 +184,22 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
             self.results["specificity"],
         ]
 
-        # レーダーチャート用の角度計算
+        # Angle calculation for radar chart
         angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
-        values += values[:1]  # 円を閉じるために最初の値を追加
+        values += values[:1]  # to close the circleadd the first value to
         angles += angles[:1]
 
         fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(projection="polar"))
 
-        # データをプロット
         ax.plot(angles, values, "o-", linewidth=2, color="#1f77b4")
         ax.fill(angles, values, alpha=0.25, color="#1f77b4")
 
-        # ラベルを設定
+        # set label
         ax.set_xticks(angles[:-1])
         ax.set_xticklabels(metrics)
         ax.set_ylim(0, 1)
 
-        # グリッドの設定
+        # Grid settings
         ax.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
         ax.set_yticklabels(["0.2", "0.4", "0.6", "0.8", "1.0"])
         ax.grid(True)
@@ -210,13 +209,13 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self._save_plot("performance_radar")
 
     def create_classification_report_table(self):
-        """分類レポートテーブルを作成"""
+        """Create classification report table"""
         self.logger.info("Creating classification report table")
 
-        # 分類レポート用データを準備
+        # Prepare data for classification report
         cm = self.results["confusion_matrix"]
 
-        # クラス別の統計を計算
+        # Calculate statistics by class
         benign_precision = (
             cm["true_negative"] / (cm["true_negative"] + cm["false_negative"])
             if (cm["true_negative"] + cm["false_negative"]) > 0
@@ -237,7 +236,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         pathogenic_recall = self.results["recall"]
         pathogenic_f1 = self.results["f1_score"]
 
-        # テーブルデータを作成
+        # create table data
         report_data = {
             "Class": ["Benign", "Pathogenic", "Macro Avg", "Weighted Avg"],
             "Precision": [
@@ -280,7 +279,6 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
 
         df_report = pd.DataFrame(report_data)
 
-        # テーブルをプロット
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.axis("tight")
         ax.axis("off")
@@ -296,7 +294,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         table.set_fontsize(12)
         table.scale(1.2, 1.5)
 
-        # ヘッダーのスタイル設定
+        # Styling the header
         for i in range(len(df_report.columns)):
             table[(0, i)].set_facecolor("#4CAF50")
             table[(0, i)].set_text_props(weight="bold", color="white")
@@ -304,21 +302,21 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         plt.title("Classification Report", size=16, pad=20)
         self._save_plot("classification_report")
 
-        # CSVとしても保存
+        # Save as CSV
         csv_path = self.output_dir / "classification_report.csv"
         df_report.to_csv(csv_path, index=False)
         self.generated_files.append(csv_path)
 
     def create_summary_dashboard(self):
-        """全体的なサマリーダッシュボードを作成"""
+        """Create a global summary dashboard"""
         self.logger.info("Creating summary dashboard")
 
         fig = plt.figure(figsize=(16, 12))
 
-        # 2x2のグリッドを作成
+        # create a 2x2 grid
         gs = fig.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
 
-        # 1. 混同行列
+        # 1. Mix rows
         ax1 = fig.add_subplot(gs[0, 0])
         cm = self.results["confusion_matrix"]
         matrix = np.array(
@@ -338,7 +336,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         )
         ax1.set_title("Confusion Matrix")
 
-        # 2. 性能指標バーチャート
+        # 2. Performance indicator bar chart
         ax2 = fig.add_subplot(gs[0, 1])
         metrics = ["Accuracy", "Precision", "Recall", "F1-Score"]
         values = [
@@ -360,7 +358,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
                 fontsize=9,
             )
 
-        # 3. AUC指標
+        # 3. AUCindex
         ax3 = fig.add_subplot(gs[1, 0])
         auc_metrics = ["ROC-AUC", "PR-AUC"]
         auc_values = [self.results["roc_auc"], self.results["pr_auc"]]
@@ -378,7 +376,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
                 fontsize=9,
             )
 
-        # 4. 主要統計情報
+        # 4. Key statistics
         ax4 = fig.add_subplot(gs[1, 1])
         ax4.axis("off")
 
@@ -414,7 +412,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self._save_plot("summary_dashboard")
 
     def generate_all_visualizations(self):
-        """全ての可視化を生成"""
+        """Generate all visualizations"""
         self.logger.info("Generating all visualizations")
 
         self.plot_confusion_matrix()
@@ -424,7 +422,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self.create_classification_report_table()
         self.create_summary_dashboard()
 
-        # 汎用ダッシュボードも生成（結果データがあれば）
+        # Also generate a generic dashboard(If result data is available)
         try:
             self._create_comprehensive_evaluation_dashboard()
         except Exception as e:
@@ -434,36 +432,36 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         self.logger.info(f"Generated {len(self.generated_files)} files")
 
     def _create_comprehensive_evaluation_dashboard(self):
-        """ClinVar用の包括的評価ダッシュボードを作成"""
+        """Create a comprehensive assessment dashboard for ClinVar"""
         self.logger.info("Creating comprehensive evaluation dashboard")
 
-        # ClinVarの結果から仮想的なDataFrameを作成
-        # 実際の実装では、結果ファイルからDataFrameを読み込むか、
-        # 評価時に保存されたDataFrameを使用する
+        # Create a virtual DataFrame from ClinVar results
+        # In the actual implementation, either read the DataFrame from the result file or
+        # Use the saved DataFrame during evaluation
         cm = self.results["confusion_matrix"]
 
-        # 仮想的な結果データを作成
+        # Create virtual result data
         import numpy as np
 
         np.random.seed(42)
 
-        # ラベルを生成
+        # generate label
         labels = []
         scores = []
 
-        # Positiveサンプル
+        # Positive sample
         for _ in range(cm["true_positive"] + cm["false_negative"]):
             labels.append(1)
-            # Positiveクラスは高いスコアを持つ傾向
+            # Positive class tends to have high scores
             scores.append(np.random.beta(2, 1))
 
-        # Negativeサンプル
+        # Negative sample
         for _ in range(cm["true_negative"] + cm["false_positive"]):
             labels.append(0)
-            # Negativeクラスは低いスコアを持つ傾向
+            # Negative classes tend to have low scores
             scores.append(np.random.beta(1, 2))
 
-        # DataFrameを作成
+        # create a DataFrame
         results_df = pd.DataFrame(
             {
                 "label": labels,
@@ -472,7 +470,7 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
             }
         )
 
-        # 汎用ダッシュボードを作成
+        # Create a generic dashboard
         self._create_comprehensive_dashboard(
             results_df=results_df,
             prediction_score_col="score",
@@ -482,10 +480,10 @@ class ClinVarResultsVisualizer(BaseVisualizationGenerator):
         )
 
     def create_html_report(self):
-        """HTML形式の総合レポートを作成"""
+        """Create comprehensive report in HTML format"""
         self.logger.info("Creating HTML report")
 
-        # 基底クラスのヘルパーメソッドを使用
+        # Use helper methods of base class
         html_content = self._create_html_header("ClinVar Pathogenicity Prediction Evaluation")
 
         html_content += f"""
@@ -576,16 +574,16 @@ def main():
     try:
         visualizer = ClinVarResultsVisualizer(args.results_file, args.output_dir)
 
-        # 全ての可視化を生成
+        # generate all visualizations
         visualizer.generate_all_visualizations()
 
-        # HTMLレポートを生成
+        # generate HTML report
         if args.html_report:
             visualizer.create_html_report()
 
         logger.info("Visualization completed successfully")
 
-        # 生成されたファイル一覧をログ出力
+        # generateOutput the list of files that were
         generated_files = visualizer.get_generated_files()
         logger.info(f"Generated {len(generated_files)} visualization files:")
         for file_path in generated_files:

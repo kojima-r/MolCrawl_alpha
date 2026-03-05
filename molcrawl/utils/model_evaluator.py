@@ -67,7 +67,7 @@ class ModelEvaluator(ABC):
         if not os.path.exists(self.model_path):
             raise FileNotFoundError(f"Model path not found: {self.model_path}")
 
-        # tokenizer_pathがNoneの場合はスキップ（protein_sequenceなど、組み込みトークナイザーを使用する場合）
+        # Skip if tokenizer_path is None (if using a built-in tokenizer, such as protein_sequence)
         if self.tokenizer_path is not None and not os.path.exists(self.tokenizer_path):
             raise FileNotFoundError(f"Tokenizer path not found: {self.tokenizer_path}")
 

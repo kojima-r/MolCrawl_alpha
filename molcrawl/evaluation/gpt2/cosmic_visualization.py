@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-COSMIC評価結果可視化スクリプト
+COSMIC evaluation result visualization script
 
-COSMIC評価の結果を様々なグラフとチャートで可視化し、
-包括的な評価レポートを生成します。
+Visualize COSMIC evaluation results with various graphs and charts,
+Generate a comprehensive assessment report.
 """
 
 import argparse
@@ -15,35 +15,35 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
-# 日本語フォント設定
+# Japanese font settings
 plt.rcParams["font.family"] = "DejaVu Sans"
 sns.set_style("whitegrid")
 sns.set_palette("husl")
 
-# ログ設定
+# Log settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class COSMICVisualizationGenerator(BaseVisualizationGenerator):
-    """COSMIC評価結果の可視化クラス"""
+    """COSMIC evaluation result visualization class"""
 
     def __init__(self, results_file, output_dir):
         """
-        初期化
+        initialization
 
         Args:
-            results_file (str): 評価結果JSONファイルのパス
-            output_dir (str): 出力ディレクトリ
+            results_file (str): Path of evaluation result JSON file
+            output_dir (str): Output directory
         """
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(results_file, output_dir, logger)
 
-        # COSMIC固有の検証
+        # COSMIC specific validation
         required_keys = ["accuracy", "precision", "recall", "f1_score"]
         try:
             self._validate_results(required_keys)
@@ -51,7 +51,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             self.logger.warning(f"Missing keys in results: {e}. Using available data.")
 
     def generate_confusion_matrix_plot(self):
-        """混同行列のプロット生成"""
+        """Plot generation of confusion matrix"""
         logger.info("Generating confusion matrix plot")
 
         cm = np.array(self.results["confusion_matrix"])
@@ -69,7 +69,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         plt.xlabel("Predicted Label")
         plt.ylabel("True Label")
 
-        # 統計情報を追加
+        # Add statistics
         accuracy = self.results["accuracy"]
         plt.figtext(0.02, 0.02, f"Accuracy: {accuracy:.3f}", fontsize=10)
 
@@ -81,7 +81,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_performance_metrics_chart(self):
-        """性能指標のバーチャート生成"""
+        """Performance index bar chart generation"""
         logger.info("Generating performance metrics chart")
 
         metrics = {
@@ -100,7 +100,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"],
         )
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars, metrics.values()):
             plt.text(
                 bar.get_x() + bar.get_width() / 2,
@@ -116,7 +116,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         plt.ylim(0, 1.1)
         plt.xticks(rotation=45)
 
-        # ROC-AUCとPR-AUCを追加情報として表示
+        # Display ROC-AUC and PR-AUC as additional information
         plt.figtext(
             0.02,
             0.02,
@@ -132,13 +132,13 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_class_distribution_plot(self):
-        """クラス分布のプロット生成"""
+        """Generating a plot of class distribution"""
         logger.info("Generating class distribution plot")
 
         oncogenic_count = self.results["oncogenic_samples"]
         non_oncogenic_count = self.results["non_oncogenic_samples"]
 
-        # 円グラフ
+        # pie chart
         plt.figure(figsize=(12, 5))
 
         plt.subplot(1, 2, 1)
@@ -149,13 +149,13 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         plt.pie(sizes, labels=labels, colors=colors, autopct="%1.1f%%", startangle=90)
         plt.title("Class Distribution in COSMIC Dataset")
 
-        # バーチャート
+        # Bar chart
         plt.subplot(1, 2, 2)
         plt.bar(labels, sizes, color=colors)
         plt.title("Sample Counts by Class")
         plt.ylabel("Number of Samples")
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for i, v in enumerate(sizes):
             plt.text(
                 i,
@@ -174,10 +174,10 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_performance_radar_chart(self):
-        """性能指標のレーダーチャート生成"""
+        """Radar chart generation for performance indicators"""
         logger.info("Generating performance radar chart")
 
-        # 指標とその値
+        # Indicators and their values
         metrics = [
             "Accuracy",
             "Precision",
@@ -195,19 +195,19 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             self.results["specificity"],
         ]
 
-        # レーダーチャートの角度
+        # Radar chart angle
         angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
-        values += values[:1]  # 円を閉じるため
+        values += values[:1]  # to close the circle
         angles += angles[:1]
 
         plt.figure(figsize=(8, 8))
         ax = plt.subplot(111, projection="polar")
 
-        # プロット
+        # plot
         ax.plot(angles, values, "o-", linewidth=2, label="COSMIC Model Performance")
         ax.fill(angles, values, alpha=0.25)
 
-        # ラベル設定
+        # Label settings
         ax.set_xticks(angles[:-1])
         ax.set_xticklabels(metrics)
         ax.set_ylim(0, 1)
@@ -231,10 +231,10 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_comparison_chart(self):
-        """ベースライン比較チャート生成"""
+        """Baseline comparison chart generation"""
         logger.info("Generating comparison chart")
 
-        # 仮想的なベースライン（ランダム予測、常に多数クラス予測など）
+        # Hypothetical baseline (random prediction, always majority class prediction, etc.)
         model_metrics = {
             "Accuracy": self.results["accuracy"],
             "Precision": self.results["precision"],
@@ -242,7 +242,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             "F1-score": self.results["f1_score"],
         }
 
-        # ベースライン（ランダム予測）
+        # Baseline (random prediction)
         random_baseline = {
             "Accuracy": 0.5,
             "Precision": 0.5,
@@ -250,7 +250,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             "F1-score": 0.5,
         }
 
-        # 多数クラス予測（すべて非癌原性と予測）
+        # Multi-class prediction (all predicted as non-cancerous)
         majority_class_acc = self.results["non_oncogenic_samples"] / self.results["total_samples"]
         majority_baseline = {
             "Accuracy": majority_class_acc,
@@ -259,7 +259,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             "F1-score": 0.0,
         }
 
-        # データ準備
+        # data preparation
         metrics_names = list(model_metrics.keys())
         model_values = list(model_metrics.values())
         random_values = list(random_baseline.values())
@@ -281,7 +281,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         plt.legend()
         plt.ylim(0, 1.1)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for i, v in enumerate(model_values):
             plt.text(i - width, v + 0.02, f"{v:.3f}", ha="center", va="bottom", fontsize=9)
         for i, v in enumerate(random_values):
@@ -297,7 +297,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         return output_file
 
     def generate_html_report(self, image_files):
-        """HTMLレポート生成"""
+        """HTML report generation"""
         logger.info("Generating HTML report")
 
         html_content = f"""
@@ -520,25 +520,25 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         return html_file
 
     def generate_all_visualizations(self):
-        """すべての可視化を生成"""
+        """Generate all visualizations"""
         logger.info("Generating all COSMIC evaluation visualizations")
 
         image_files = []
 
-        # 各種グラフの生成
+        # Generate various graphs
         image_files.append(self.generate_confusion_matrix_plot())
         image_files.append(self.generate_performance_metrics_chart())
         image_files.append(self.generate_class_distribution_plot())
         image_files.append(self.generate_performance_radar_chart())
         image_files.append(self.generate_comparison_chart())
 
-        # 汎用ダッシュボードも生成
+        # Also generate a generic dashboard
         try:
             self._create_comprehensive_evaluation_dashboard()
         except Exception as e:
             logger.warning(f"Could not create comprehensive dashboard: {e}")
 
-        # HTMLレポートの生成
+        # Generate HTML report
         html_file = self.generate_html_report(image_files)
 
         logger.info(f"All visualizations completed. Files saved to {self.output_dir}")
@@ -550,29 +550,28 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         }
 
     def _create_comprehensive_evaluation_dashboard(self):
-        """COSMIC用の包括的評価ダッシュボードを作成"""
+        """Create a comprehensive assessment dashboard for COSMIC"""
         logger.info("Creating comprehensive COSMIC evaluation dashboard")
 
-        # COSMICの結果から仮想的なDataFrameを作成
+        # Create a virtual DataFrame from COSMIC results
         import numpy as np
 
         np.random.seed(42)
 
-        # サンプルデータを作成（実際の実装では実データを使用）
+        # Create sample data (actual data will be used in actual implementation)
         n_samples = 1200
 
-        # がん変異の予測スコアを生成
-        # COSMICでは多クラス分類の可能性があるが、ここでは二値分類として扱う
-        labels = np.random.binomial(1, 0.35, n_samples)  # 35%がoncogenic
+        # COSMIC has the possibility of multi-class classification, but here it is treated as binary classification
+        labels = np.random.binomial(1, 0.35, n_samples)  # 35%butoncogenic
         scores = []
 
         for label in labels:
             if label == 1:  # oncogenic
-                scores.append(np.random.beta(3, 1))  # 高いスコア
+                scores.append(np.random.beta(3, 1))  # high score
             else:  # non-oncogenic
-                scores.append(np.random.beta(1, 3))  # 低いスコア
+                scores.append(np.random.beta(1, 3))  # low score
 
-        # DataFrameを作成
+        # create a DataFrame
         results_df = pd.DataFrame(
             {
                 "label": labels,
@@ -582,7 +581,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             }
         )
 
-        # 汎用ダッシュボードを作成
+        # Create a generic dashboard
         self._create_comprehensive_dashboard(
             results_df=results_df,
             prediction_score_col="score",
@@ -592,9 +591,9 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
             custom_title="COSMIC Comprehensive Evaluation Dashboard",
         )
 
-    # 抽象メソッドの実装
+    # Implementing abstract methods
     def plot_confusion_matrix(self):
-        """混同行列プロット"""
+        """Confusion matrix plot"""
         self.logger.info("Creating COSMIC confusion matrix plot")
         plt.figure(figsize=(8, 6))
         plt.text(0.5, 0.5, "COSMIC Confusion Matrix\n(Placeholder)", ha="center", va="center")
@@ -602,10 +601,10 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("cosmic_confusion_matrix")
 
     def plot_performance_metrics(self):
-        """性能指標プロット"""
+        """Performance index plot"""
         self.logger.info("Creating COSMIC performance metrics plot")
         metrics = ["accuracy", "precision", "recall", "f1_score"]
-        values = [self.results.get(m, 0.75) for m in metrics]  # デフォルト値
+        values = [self.results.get(m, 0.75) for m in metrics]  # Default value
 
         plt.figure(figsize=(10, 6))
         plt.bar(metrics, values)
@@ -615,7 +614,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("cosmic_performance_metrics")
 
     def create_summary_dashboard(self):
-        """サマリーダッシュボード"""
+        """Summary Dashboard"""
         self.logger.info("Creating COSMIC summary dashboard")
         plt.figure(figsize=(12, 8))
         plt.text(
@@ -629,12 +628,12 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
         self._save_plot("cosmic_summary_dashboard")
 
     def create_html_report(self):
-        """HTMLレポートの生成（抽象メソッドの実装）"""
+        """HTML report generation (abstract method implementation)"""
         self.logger.info("Creating COSMIC HTML report")
 
         html_path = self.output_dir / "cosmic_evaluation_report.html"
 
-        # HTMLレポートの生成
+        # Generate HTML report
         html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -702,7 +701,7 @@ class COSMICVisualizationGenerator(BaseVisualizationGenerator):
 
 
 def main():
-    """メイン処理"""
+    """Main processing"""
     parser = argparse.ArgumentParser(description="Generate COSMIC evaluation visualizations")
     parser.add_argument(
         "--results_file",
@@ -719,10 +718,10 @@ def main():
     args = parser.parse_args()
 
     try:
-        # 可視化ジェネレーターの初期化
+        # Initializing the visualization generator
         visualizer = COSMICVisualizationGenerator(args.results_file, args.output_dir)
 
-        # すべての可視化を生成
+        # generate all visualizations
         results = visualizer.generate_all_visualizations()
 
         logger.info("=== Visualization Generation Completed ===")

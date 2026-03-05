@@ -1,6 +1,6 @@
 """
-実験トラッカー - メインインターフェース
-各スクリプトから実験を管理するための簡易API
+Experiment Tracker - Main Interface
+Simple API to manage experiments from each script
 """
 
 import os
@@ -23,7 +23,7 @@ from .models import (
 
 class ExperimentTracker:
     """
-    実験トラッカー
+    experiment tracker
 
     Usage:
         tracker = ExperimentTracker()
@@ -35,7 +35,7 @@ class ExperimentTracker:
         )
 
         step_id = tracker.start_step(exp_id, "data_loading", "Load dataset")
-        # ... 処理 ...
+        # ... process ...
         tracker.complete_step(exp_id, step_id)
 
         tracker.complete_experiment(exp_id, results={"accuracy": 0.95})
@@ -44,10 +44,10 @@ class ExperimentTracker:
     def __init__(self, db_path: Optional[str] = None):
         """
         Args:
-            db_path: データベースファイルのパス。指定しない場合は環境変数から取得
+            db_path: Database file path. If not specified, get from environment variable
         """
         if db_path is None:
-            # デフォルトのデータベースパス
+            # defaultdatabase path of
             project_root = Path(__file__).parent.parent.parent
             db_dir = project_root / "experiment_data"
             db_dir.mkdir(exist_ok=True)
@@ -68,26 +68,26 @@ class ExperimentTracker:
         notes: str = "",
     ) -> str:
         """
-        実験を開始
+        Start experiment
 
         Args:
-            name: 実験名
-            experiment_type: 実験タイプ
-            model_type: モデルタイプ
-            dataset_type: データセットタイプ
-            config: 設定情報
-            config_path: 設定ファイルのパス
-            tags: タグリスト
-            notes: メモ
+            name: Experiment name
+            experiment_type: Experiment type
+            model_type: Model type
+            dataset_type: Dataset type
+            config: configuration information
+            config_path: configuration file path
+            tags: tag list
+            notes: notes
 
         Returns:
-            実験ID
+            Experiment ID
         """
         experiment_id = (
             f"{model_type.value}_{dataset_type.value}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
         )
 
-        # 環境情報を取得
+        # Get environment information
         environment = {
             "hostname": os.environ.get("HOSTNAME", "unknown"),
             "user": os.environ.get("USER", "unknown"),
@@ -129,17 +129,17 @@ class ExperimentTracker:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
-        ステップを開始
+        start step
 
         Args:
-            experiment_id: 実験ID
-            step_id: ステップID
-            step_name: ステップ名
-            command: 実行コマンド
-            metadata: メタデータ
+            experiment_id: Experiment ID
+            step_id: Step ID
+            step_name: Step name
+            command: execution command
+            metadata: metadata
 
         Returns:
-            ステップID
+            Step ID
         """
         experiment = self.db.get_experiment(experiment_id)
         if not experiment:
@@ -169,13 +169,13 @@ class ExperimentTracker:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        ステップを完了
+        complete the step
 
         Args:
-            experiment_id: 実験ID
-            step_id: ステップID
-            output_path: 出力パス
-            metadata: 追加メタデータ
+            experiment_id: Experiment ID
+            step_id: Step ID
+            output_path: output path
+            metadata: additional metadata
         """
         experiment = self.db.get_experiment(experiment_id)
         if not experiment:
@@ -197,12 +197,12 @@ class ExperimentTracker:
 
     def fail_step(self, experiment_id: str, step_id: str, error_message: str) -> None:
         """
-        ステップを失敗状態にする
+        put a step in a failed state
 
         Args:
-            experiment_id: 実験ID
-            step_id: ステップID
-            error_message: エラーメッセージ
+            experiment_id: Experiment ID
+            step_id: Step ID
+            error_message: Error message
         """
         experiment = self.db.get_experiment(experiment_id)
         if not experiment:
@@ -228,13 +228,13 @@ class ExperimentTracker:
         results_dir: Optional[str] = None,
     ) -> None:
         """
-        実験を完了
+        Complete the experiment
 
         Args:
-            experiment_id: 実験ID
-            results: 結果情報
-            metrics: メトリクス
-            results_dir: 結果ディレクトリ
+            experiment_id: Experiment ID
+            results: Results information
+            metrics: metrics
+            results_dir: results directory
         """
         experiment = self.db.get_experiment(experiment_id)
         if not experiment:
@@ -257,11 +257,11 @@ class ExperimentTracker:
 
     def fail_experiment(self, experiment_id: str, error_message: str) -> None:
         """
-        実験を失敗状態にする
+        put the experiment into a failed state
 
         Args:
-            experiment_id: 実験ID
-            error_message: エラーメッセージ
+            experiment_id: Experiment ID
+            error_message: Error message
         """
         experiment = self.db.get_experiment(experiment_id)
         if not experiment:
@@ -277,19 +277,19 @@ class ExperimentTracker:
 
     def log(self, experiment_id: str, level: str, message: str, source: Optional[str] = None) -> None:
         """
-        ログを追加
+        add log
 
         Args:
-            experiment_id: 実験ID
-            level: ログレベル (INFO, WARNING, ERROR, DEBUG)
-            message: メッセージ
-            source: ソース
+            experiment_id: Experiment ID
+            level: Log level (INFO, WARNING, ERROR, DEBUG)
+            message: message
+            source: source
         """
         log = ExperimentLog(timestamp=datetime.now(), level=level, message=message, source=source)
         self.db.add_log(experiment_id, log)
 
     def get_experiment(self, experiment_id: str) -> Optional[Experiment]:
-        """実験を取得"""
+        """Get the experiment"""
         return self.db.get_experiment(experiment_id)
 
     def list_experiments(
@@ -301,7 +301,7 @@ class ExperimentTracker:
         limit: int = 100,
         offset: int = 0,
     ) -> List[Experiment]:
-        """実験一覧を取得"""
+        """Get experiment list"""
         return self.db.list_experiments(
             status=status,
             experiment_type=experiment_type,
@@ -312,11 +312,11 @@ class ExperimentTracker:
         )
 
     def get_statistics(self) -> Dict[str, Any]:
-        """統計情報を取得"""
+        """Get statistics"""
         return self.db.get_statistics()
 
     def export_experiment_json(self, experiment_id: str, output_path: str) -> None:
-        """実験をJSON形式でエクスポート"""
+        """Export experiment in JSON format"""
         experiment = self.db.get_experiment(experiment_id)
         if not experiment:
             raise ValueError(f"Experiment {experiment_id} not found")

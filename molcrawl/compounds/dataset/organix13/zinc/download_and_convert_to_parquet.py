@@ -161,7 +161,7 @@ def download_zinc_files(delay_between_downloads: float = 1.0):
 
     csv_header = ["relative_path", "filename", "size_bytes", "num_lines", "md5"]
     csv_path = os.path.join(directory, "download_results.csv")
-    # ヘッダーがなければ書く
+    # write if there is no header
     if not os.path.exists(csv_path):
         with open(csv_path, "w", newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=csv_header)
@@ -182,9 +182,9 @@ def download_zinc_files(delay_between_downloads: float = 1.0):
             target_path = os.path.join(directory, file_info["directory"], file_info["filename"])
             if success and os.path.exists(target_path):
                 successful_downloads += 1
-                # ファイルサイズ
+                # file size
                 file_result["size_bytes"] = os.path.getsize(target_path)
-                # データ数（行数）
+                # Number of data (number of rows)
                 try:
                     with open(target_path, "rb") as f:
                         file_result["num_lines"] = sum(1 for _ in f)
@@ -204,7 +204,7 @@ def download_zinc_files(delay_between_downloads: float = 1.0):
         except Exception as e:
             logger.error(f"Error processing {file_info['filename']}: {e}")
             failed_downloads += 1
-        # 成功・失敗問わず追記
+        # Add regardless of success or failure
         try:
             with open(csv_path, "a", newline="") as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=csv_header)
