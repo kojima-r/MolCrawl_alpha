@@ -2,8 +2,8 @@
 """
 RNA Benchmark Data Preparation Script
 
-scRNA-seq (.h5ad) から BERT/GPT-2 で評価可能な
-トークン列データ（JSONL）を生成します。
+scRNA-seq (.h5ad) can be evaluated with BERT/GPT-2
+Generate token column data (JSONL).
 """
 
 from __future__ import annotations
@@ -26,14 +26,14 @@ from molcrawl.utils.evaluation_output import setup_evaluation_logging
 
 @dataclass
 class DatasetConfig:
-    """データセット設定"""
+    """Dataset settings"""
 
     name: str
     path: Path
 
 
 def _discover_h5ad_files(benchmark_dir: Path) -> Dict[str, Path]:
-    """ベンチマークディレクトリ内の .h5ad を列挙する"""
+    """Enumerate .h5ad in benchmark directory"""
     h5ad_files: Dict[str, Path] = {}
     for file_path in benchmark_dir.glob("*.h5ad"):
         h5ad_files[file_path.stem] = file_path
@@ -41,7 +41,7 @@ def _discover_h5ad_files(benchmark_dir: Path) -> Dict[str, Path]:
 
 
 def _select_datasets(all_files: Dict[str, Path], selected: Optional[List[str]]) -> List[DatasetConfig]:
-    """対象データセットを選別する"""
+    """Select the target dataset"""
     if not selected:
         return [DatasetConfig(name=k, path=v) for k, v in sorted(all_files.items())]
 
@@ -49,13 +49,13 @@ def _select_datasets(all_files: Dict[str, Path], selected: Optional[List[str]]) 
     configs: List[DatasetConfig] = []
     for name in selected_set:
         if name not in all_files:
-            raise FileNotFoundError(f"指定されたデータセットが見つかりません: {name}")
+            raise FileNotFoundError(f"The specified dataset was not found: {name}")
         configs.append(DatasetConfig(name=name, path=all_files[name]))
     return configs
 
 
 def _resolve_gene_id_column(adata: ad.AnnData, preferred: Optional[str]) -> Tuple[str, List[str]]:
-    """遺伝子IDカラムを特定する"""
+    """Identify gene ID column"""
     candidates: List[str] = []
     if preferred:
         candidates.append(preferred)
@@ -64,7 +64,7 @@ def _resolve_gene_id_column(adata: ad.AnnData, preferred: Optional[str]) -> Tupl
     for col in candidates:
         if col in adata.var.columns:
             return col, list(adata.var[col].astype(str))
-    # フォールバック: var_names
+    # Fallback: var_names
     return "__var_names__", list(adata.var_names.astype(str))
 
 
@@ -73,7 +73,7 @@ def _auto_detect_mapping_columns(
     symbol_column: Optional[str],
     ensembl_column: Optional[str],
 ) -> Tuple[str, str]:
-    """マッピングファイルの列名を自動検出する"""
+    """Automatically detect column names in mapping file"""
     symbol_candidates = [col for col in [symbol_column, "hgnc_symbol", "symbol", "gene_symbol"] if col]
     ensembl_candidates = [col for col in [ensembl_column, "ensembl_gene_id", "ensembl_id", "gene_id"] if col]
 
@@ -81,7 +81,9 @@ def _auto_detect_mapping_columns(
     resolved_ensembl = next((col for col in ensembl_candidates if col in df.columns), None)
 
     if resolved_symbol is None or resolved_ensembl is None:
-        raise ValueError(f"マッピングファイルの列名を自動検出できませんでした。 利用可能カラム: {list(df.columns)}")
+        raise ValueError(
+            f"Failed to automatically detect column names in the mapping file. Available columns: {list(df.columns)}"
+        )
 
     return resolved_symbol, resolved_ensembl
 
@@ -91,9 +93,9 @@ def _load_symbol_to_ensembl_map(
     symbol_column: Optional[str],
     ensembl_column: Optional[str],
 ) -> Dict[str, str]:
-    """遺伝子シンボル→Ensembl IDのマッピングを読み込む"""
+    """Load gene symbol → Ensembl ID mapping"""
     if not mapping_path.exists():
-        raise FileNotFoundError(f"マッピングファイルが見つかりません: {mapping_path}")
+        raise FileNotFoundError(f"Mapping file not found: {mapping_path}")
 
     if mapping_path.suffix.lower() in {".csv"}:
         df = pd.read_csv(mapping_path, comment="#")
@@ -111,22 +113,20 @@ def _validate_gene_ids(
     dataset_name: str,
     logger,
 ) -> None:
-    """遺伝子IDの一致率を検証する"""
+    """Verify gene ID match rate"""
     if not gene_ids:
-        raise ValueError(f"{dataset_name}: 遺伝子IDが空です。")
+        raise ValueError(f"{dataset_name}: Gene ID is empty.")
 
     match_count = sum(1 for gene_id in gene_ids if gene_id in known_gene_ids)
     match_ratio = match_count / max(len(gene_ids), 1)
     logger.info(f"{dataset_name}: gene_id match ratio = {match_ratio:.2%}")
 
     if match_ratio < 0.1:
-        raise ValueError(
-            f"{dataset_name}: 遺伝子IDの一致率が低すぎます（{match_ratio:.2%}）。 Ensembl ID列が存在しない可能性があります。"
-        )
+        raise ValueError(f"{dataset_name}: Gene ID match rate too low ({match_ratio:.2%}). Ensembl ID column may be missing.")
 
 
 def _compute_n_counts(X_view) -> np.ndarray:
-    """Xから細胞ごとの総カウントを算出する"""
+    """Calculate the total count per cell from X"""
     if sp.issparse(X_view):
         return np.asarray(X_view.sum(axis=1)).reshape(-1)
     return np.asarray(X_view.sum(axis=1)).reshape(-1)
@@ -137,19 +137,19 @@ def _tokenize_anndata_with_gene_ids(
     adata: ad.AnnData,
     gene_ids: List[str],
 ) -> List[List[int]]:
-    """anndataオブジェクトをトークン列に変換する（gene_id列指定対応）"""
+    """Convert anndata object to token column (gene_id column specification supported)"""
     has_n_counts: bool = "n_counts" in adata.obs.columns
 
-    # コーディング/miRNA遺伝子のみ選択
+    # Select only coding/miRNA genes
     coding_mirna_mask = np.array([tokenizer.genelist_dict.get(gene_id, False) for gene_id in gene_ids])
     coding_mirna_loc = np.where(coding_mirna_mask)[0]
     if len(coding_mirna_loc) == 0:
-        raise ValueError("有効な遺伝子IDが見つかりませんでした。")
+        raise ValueError("No valid gene ID was found.")
 
     norm_factor_vector = np.array([tokenizer.gene_median_dict[gene_ids[i]] for i in coding_mirna_loc])
     coding_mirna_tokens = np.array([tokenizer.gene_token_dict[gene_ids[i]] for i in coding_mirna_loc])
 
-    # filter_pass があれば対象を限定
+    # If filter_pass is present, limit the target
     if "filter_pass" in adata.obs.columns:
         filter_pass_loc = np.where(adata.obs["filter_pass"].values == 1)[0]
     else:
@@ -161,8 +161,8 @@ def _tokenize_anndata_with_gene_ids(
 
     for i in range(0, len(filter_pass_loc), chunk_size):
         idx = filter_pass_loc[i : i + chunk_size]
-        # backed anndataでは行・列の同時fancy indexが制限されるため、
-        # まず行のみで取得し、その後に列を抽出する
+        # Backed anndata restricts simultaneous fancy indexing of rows and columns, so
+        # Get only the rows first, then extract the columns
         X_rows = adata[idx].X
         if sp.issparse(X_rows):
             X_view = X_rows[:, coding_mirna_loc]
@@ -171,7 +171,7 @@ def _tokenize_anndata_with_gene_ids(
         if has_n_counts:
             n_counts = adata[idx].obs["n_counts"].values[:, None]
         else:
-            # n_counts が無い場合は、対象遺伝子の総カウントを算出して代用
+            # If n_counts is missing, calculate the total count of the target gene and use it instead
             n_counts = _compute_n_counts(X_view)[:, None]
         X_norm = X_view / n_counts * target_sum / norm_factor_vector
         X_norm = sp.csr_matrix(X_norm)
@@ -199,14 +199,14 @@ def _tokenize_h5ad(
     ensembl_column: str,
     logger,
 ) -> List[List[int]]:
-    """h5ad を読み込み、細胞ごとのトークン列を生成する"""
+    """Read h5ad and generate token string for each cell"""
     random.seed(seed)
     adata = ad.read_h5ad(dataset.path, backed="r")
 
     gene_id_col, gene_ids = _resolve_gene_id_column(adata, gene_id_column)
     logger.info(f"{dataset.name}: gene_id column = {gene_id_col}")
 
-    # シンボル→Ensemblのマッピングが指定されている場合は変換
+    # Convert if symbol → Ensembl mapping is specified
     if gene_symbol_map is not None:
         mapping = _load_symbol_to_ensembl_map(gene_symbol_map, symbol_column, ensembl_column)
         converted: List[str] = []
@@ -222,7 +222,7 @@ def _tokenize_h5ad(
     if max_cells is not None and len(tokenized_cells) > max_cells:
         tokenized_cells = random.sample(tokenized_cells, k=max_cells)
 
-    # numpy配列などを通常のlist[int]に変換
+    # Convert numpy array etc. to normal list[int]
     tokens_list: List[List[int]] = []
     for cell_tokens in tokenized_cells:
         if hasattr(cell_tokens, "tolist"):
@@ -237,7 +237,7 @@ def _write_jsonl(
     dataset_name: str,
     tokens_list: Iterable[List[int]],
 ) -> int:
-    """JSONLとして追記保存する"""
+    """Append and save as JSONL"""
     count = 0
     with output_file.open("a", encoding="utf-8") as f:
         for tokens in tokens_list:
@@ -249,38 +249,38 @@ def _write_jsonl(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="RNA Benchmark Data Preparation")
-    parser.add_argument("--benchmark_dir", required=True, help="RNAベンチマークデータ(.h5ad)のディレクトリ")
-    parser.add_argument("--output_dir", required=True, help="出力ディレクトリ")
+    parser.add_argument("--benchmark_dir", required=True, help="RNA benchmark data (.h5ad) directory")
+    parser.add_argument("--output_dir", required=True, help="Output directory")
     parser.add_argument(
         "--datasets",
         default="",
-        help="対象データセット名（カンマ区切り、空なら全て）",
+        help="Target dataset name (comma separated, all if empty)",
     )
-    parser.add_argument("--max_cells_per_dataset", type=int, default=None, help="データセットごとの最大細胞数")
-    parser.add_argument("--seed", type=int, default=42, help="サンプリングの乱数シード")
+    parser.add_argument("--max_cells_per_dataset", type=int, default=None, help="Maximum number of cells per dataset")
+    parser.add_argument("--seed", type=int, default=42, help="Sampling random number seed")
     parser.add_argument(
         "--gene_id_column",
         type=str,
         default=None,
-        help="h5adのvarにある遺伝子ID列名（未指定なら自動検出）",
+        help="Gene ID column name in var of h5ad (automatically detected if not specified)",
     )
     parser.add_argument(
         "--gene_symbol_map",
         type=str,
         default=None,
-        help="遺伝子シンボル→Ensembl IDのマッピングTSV/CSV",
+        help="Gene symbol → Ensembl ID mapping TSV/CSV",
     )
     parser.add_argument(
         "--symbol_column",
         type=str,
         default="symbol",
-        help="マッピングファイル内のシンボル列名",
+        help="Symbol column name in mapping file",
     )
     parser.add_argument(
         "--ensembl_column",
         type=str,
         default="ensembl_id",
-        help="マッピングファイル内のEnsembl列名",
+        help="Ensembl column name in mapping file",
     )
     args = parser.parse_args()
 
@@ -298,12 +298,12 @@ def main() -> None:
     datasets = _select_datasets(all_files, selected_names if selected_names else None)
 
     if not datasets:
-        raise FileNotFoundError("対象データセットが見つかりませんでした。")
+        raise FileNotFoundError("Target dataset not found.")
 
     tokenizer = TranscriptomeTokenizer()
     output_file = output_dir / "rna_benchmark_dataset.jsonl"
     if output_file.exists():
-        logger.info(f"既存ファイルに追記します: {output_file}")
+        logger.info(f"Append to existing file: {output_file}")
 
     summary: Dict[str, int] = {}
     for dataset in datasets:

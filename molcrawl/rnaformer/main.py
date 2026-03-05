@@ -2,14 +2,14 @@
 """
 RNAformer Training Script
 
-RNA配列（遺伝子発現データ）に特化したTransformerモデルの学習スクリプト。
-Geneformerアーキテクチャをベースに、RNA transcriptomeデータの学習に最適化。
+Transformer model training script specialized for RNA sequences (gene expression data).
+Based on Geneformer architecture and optimized for learning RNA transcriptome data.
 
 Features:
-- 遺伝子発現データ用のカスタムトークナイゼーション
-- セルタイプ特異的な学習
-- 長いコンテキスト（1024トークン）のサポート
-- 効率的なバッチ処理とメモリ管理
+- Custom tokenization for gene expression data
+- Cell type specific learning
+- Support for long contexts (1024 tokens)
+- Efficient batch processing and memory management
 """
 
 import os
@@ -164,9 +164,9 @@ if __name__ == "__main__":
 
     class RNADatasetLoader:
         """
-        RNA Transcriptome Dataset Loader
+                RNA Transcriptome Dataset Loader
 
-        遺伝子発現データを読み込み、RNAformer学習用に前処理します。
+        Load gene expression data and preprocess it for RNAformer training.
         """
 
         def __init__(self, dataset_dir, tokenizer, max_length=1024):

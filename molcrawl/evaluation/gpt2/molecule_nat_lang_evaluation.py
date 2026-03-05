@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Molecule Natural Language モデルの評価スクリプト
+Molecule Natural Language model evaluation script
 
-このスクリプトは、訓練済みのGPT-2 molecule_nat_langモデルを使って
-分子関連自然言語タスクの性能を検証します。
+This script uses the trained GPT-2 molecule_nat_lang model to
+Verifying the performance of molecular-related natural language tasks.
 """
 
 import argparse
@@ -21,7 +21,7 @@ import torch
 import torch.nn.functional as F
 from datasets import load_from_disk
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.environment_check import check_learning_source_dir
 
@@ -36,41 +36,40 @@ from molcrawl.utils.evaluation_output import (
 )
 from molcrawl.utils.model_evaluator import ModelEvaluator
 
-# ログ設定は後でsetup_evaluation_loggingで行う
+# Log settingslatersetup_evaluation_loggingdo it with
 logger = logging.getLogger(__name__)
 
 
 class GPT2MoleculeNLEvaluator(ModelEvaluator):
-    """Molecule NLデータを使用したモデル評価クラス"""
+    """Model evaluation class using Molecule NL data"""
 
     def __init__(self, model_path, tokenizer_path="", device="cuda", max_length=1024):
         """
-        初期化
+        initialization
 
         Args:
-            model_path (str): 訓練済みモデルのパス
-            tokenizer_path (str): 未使用（MoleculeNatLangTokenizerを内部で初期化）
-            device (str): 使用デバイス
-            max_length (int): 最大入力長
+            model_path (str): path of the trained model
+            tokenizer_path (str): unused (MoleculeNatLangTokenizer is initialized internally)
+            device (str): Device used
+            max_length (int): Maximum input length
         """
         self.max_length = max_length
         self.model_path = model_path
-        self.tokenizer_path = "molecule_nat_lang_internal"  # ダミーパス
+        self.tokenizer_path = "molecule_nat_lang_internal"  # dummy path
         self.device = device
 
-        # ModelEvaluatorのパス検証をスキップして直接初期化
         if not os.path.exists(self.model_path):
             raise FileNotFoundError(f"Model path not found: {self.model_path}")
 
-        # トークナイザーとモデルを初期化
+        # Initialize tokenizer and model
         self.tokenizer = self._init_tokenizer()
         self.model = self._init_model()
 
-        # 語彙サイズを設定
+        # set vocabulary size
         self.vocab_size = getattr(self.tokenizer, "vocab_size", 32024)
 
     def _init_tokenizer(self):
-        """トークナイザーの初期化（抽象メソッドの実装）"""
+        """Tokenizer initialization (abstract method implementation)"""
         logger.info("Loading MoleculeNatLangTokenizer")
         try:
             tokenizer = MoleculeNatLangTokenizer()
@@ -81,24 +80,24 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
             raise
 
     def _init_model(self):
-        """モデルの初期化（抽象メソッドの実装）"""
+        """Model initialization (abstract method implementation)"""
         logger.info(f"Loading GPT2 model from {self.model_path}")
         return self._load_gpt2_model()
 
     def _load_gpt2_model(self):
-        """訓練済みGPT2モデルの読み込み"""
+        """Loading the trained GPT2 model"""
         try:
-            # チェックポイントの読み込み
+            # Read checkpoint
             checkpoint = torch.load(self.model_path, map_location="cpu")
             logger.info("✅ Checkpoint loaded successfully")
 
-            # モデル設定の取得
+            # Get model settings
             if "config" in checkpoint:
-                # 新しい形式: 設定が保存されている
+                # New format: settings are saved
                 saved_config = checkpoint["config"]
                 logger.info("📝 Using saved model configuration")
 
-                # GPTConfigで使用可能なパラメータのみを抽出
+                # Extract only parameters available in GPTConfig
                 valid_params = {
                     "block_size",
                     "vocab_size",
@@ -110,7 +109,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 }
                 model_args = {k: v for k, v in saved_config.items() if k in valid_params}
 
-                # 語彙サイズが設定にない場合は重みから推測
+                # If the vocabulary size is not in the settings, infer it from the weights
                 if "vocab_size" not in model_args:
                     if "model" in checkpoint:
                         state_dict = checkpoint["model"]
@@ -124,10 +123,10 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 if self.tokenizer:
                     logger.info(f"   - Tokenizer vocab_size: {self.tokenizer.vocab_size}")
             else:
-                # 古い形式: チェックポイントから語彙サイズを推測
+                # Old style: infer vocabulary size from checkpoints
                 logger.warning("⚠️  No saved config found, using checkpoint weights for config")
 
-                # チェックポイントから語彙サイズを推測
+                # Estimate vocabulary size from checkpoints
                 if "model" in checkpoint:
                     state_dict = checkpoint["model"]
                 elif isinstance(checkpoint, dict) and "transformer.wte.weight" in checkpoint:
@@ -135,8 +134,8 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 else:
                     state_dict = checkpoint
 
-                # 埋め込み層から語彙サイズを取得
-                vocab_size = 32024  # デフォルト値（チェックポイントから確認済み）
+                # Get vocabulary size from embedding layer
+                vocab_size = 32024  # Default value (verified from checkpoint)
                 if "transformer.wte.weight" in state_dict:
                     vocab_size = state_dict["transformer.wte.weight"].shape[0]
                     logger.info(f"📊 Detected vocab_size from checkpoint: {vocab_size}")
@@ -156,11 +155,11 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                     "bias": True,
                 }
 
-            # モデルの作成
+            # Create a model
             gptconf = GPTConfig(**model_args)
             model = GPT(gptconf)
 
-            # 重みの読み込み
+            # Load weights
             if "model" in checkpoint:
                 model.load_state_dict(checkpoint["model"])
             else:
@@ -169,7 +168,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
             model.to(self.device)
             model.eval()
 
-            # モデル統計の表示
+            # Display model statistics
             total_params = sum(p.numel() for p in model.parameters())
             logger.info("📊 Model Statistics:")
             logger.info(f"   - Total parameters: {total_params:,}")
@@ -185,31 +184,31 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
             raise RuntimeError(f"Model loading failed: {e}") from e
 
     def encode_sequence(self, sequence: str) -> torch.Tensor:
-        """シーケンスをエンコード（抽象メソッドの実装）"""
+        """Encode sequence (implementation of abstract method)"""
         return self.encode_text(sequence)
 
     def encode_text(self, text, add_special_tokens=True):
-        """テキストをトークンIDにエンコード"""
+        """Encode text to token ID"""
         try:
-            # MoleculeNatLangTokenizerを使用してエンコード
+            # Use MoleculeNatLangTokenizerand encode
             tokenized_result = self.tokenizer.tokenize_text(text)
             tokens = tokenized_result["input_ids"]
 
-            # 最大長に調整
+            # adjust to maximum length
             if len(tokens) > self.max_length:
                 tokens = tokens[: self.max_length]
                 logger.debug(f"Text truncated to {len(tokens)} tokens")
 
             if not tokens:
                 logger.warning(f"Empty tokenization for text: {text[:50]}...")
-                # パディングトークンのIDを使用
+                # Use padding token ID
                 tokens = [self.tokenizer.pad_token_id if hasattr(self.tokenizer, "pad_token_id") else 0]
 
             return torch.tensor(tokens, dtype=torch.long)
 
         except Exception as e:
             logger.warning(f"Tokenization failed for text: {text[:50]}... Error: {e}")
-            # フォールバック：基本的なトークン化
+            # fallback：Basic tokenization
             try:
                 tokens = self.tokenizer(
                     text,
@@ -223,47 +222,47 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 return torch.tensor([0], dtype=torch.long)
 
     def calculate_perplexity(self, text_or_tokens):
-        """テキストまたはトークンIDsのパープレキシティを計算
+        """Calculate perplexity of text or token IDs
 
         Args:
-            text_or_tokens: テキスト文字列 または トークンIDのリスト/配列
+            text_or_tokens: text string or list/array of token IDs
         """
         with torch.no_grad():
             try:
-                # 入力がトークンIDsかテキストかを判定
+                # Determine whether the input is token IDs or text
                 if isinstance(text_or_tokens, (list, tuple)) or (
                     hasattr(text_or_tokens, "__iter__") and not isinstance(text_or_tokens, str)
                 ):
-                    # 既にトークン化されている場合
+                    # If already tokenized
                     if hasattr(text_or_tokens, "tolist"):
                         tokens = torch.tensor(text_or_tokens.tolist(), dtype=torch.long)
                     else:
                         tokens = torch.tensor(list(text_or_tokens), dtype=torch.long)
                 else:
-                    # テキストの場合はエンコード
+                    # encode if text
                     tokens = self.encode_text(text_or_tokens)
 
                 if len(tokens) < 2:
                     logger.info(f"Sequence too short for perplexity calculation: {len(tokens)} tokens")
                     return float("inf")
 
-                # バッチ次元を追加してデバイスに転送
+                # Add batch dimension and transfer to device
                 tokens = tokens.unsqueeze(0).to(self.device)
 
-                # 訓練時と同じように、入力と目標をシフト
-                # x = tokens[:, :-1] (最後のトークンを除く)
-                # y = tokens[:, 1:] (最初のトークンを除く)
+                # Shift inputs and goals just like during training
+                # x = tokens[:, :-1] (excluding the last token)
+                # y = tokens[:, 1:] (excluding the first token)
                 x = tokens[:, :-1]
                 y = tokens[:, 1:]
 
-                # モデルの予測
+                # Model prediction
                 logits, loss = self.model(x, targets=y)
 
                 if loss is None:
                     logger.info("Model returned None for loss")
                     return float("inf")
 
-                # パープレキシティは損失の指数
+                # Perplexity is an index of loss
                 perplexity = torch.exp(loss).item()
 
                 return perplexity
@@ -276,7 +275,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 return float("inf")
 
     def generate_text(self, prompt, max_new_tokens=100, temperature=1.0, top_k=50):
-        """テキスト生成"""
+        """Text generation"""
         self.model.eval()
         with torch.no_grad():
             tokens = self.encode_text(prompt)
@@ -286,7 +285,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 if tokens.shape[1] >= self.max_length:
                     break
 
-                # 予測
+                # prediction
                 logits, _ = self.model(tokens)
                 logits = logits[:, -1, :] / temperature
 
@@ -296,14 +295,14 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                     logits = torch.full_like(logits, float("-inf"))
                     logits.scatter_(1, top_k_indices, top_k_logits)
 
-                # サンプリング
+                # sampling
                 probs = F.softmax(logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
 
-                # トークンを追加
+                # add token
                 tokens = torch.cat([tokens, next_token], dim=1)
 
-            # デコード
+            # decode
             generated_tokens = tokens[0].cpu().numpy().tolist()
             try:
                 generated_text = self.tokenizer.decode(generated_tokens)
@@ -320,34 +319,33 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
         sample_size=None,
     ):
         """
-        Molecule NLデータセット全体の評価
+        Evaluation of the entire Molecule NL dataset
 
         Args:
-            dataset_path (str): データセットのパス
-            output_dir (str): 出力ディレクトリ
-            sample_size (int): サンプルサイズ（None=全データ）
+            dataset_path (str): dataset path
+            output_dir (str): Output directory
+            sample_size (int): Sample size (None=all data)
         """
         print("DEBUG: evaluate_dataset method called!", flush=True)
 
-        # タイムスタンプを追加してoutput_dirを更新
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = f"{output_dir}_{timestamp}"
 
-        # 出力ディレクトリが存在しない場合は作成
+        # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
 
         logger.info("🔬 Starting Molecule NL Model Evaluation")
         print("DEBUG: After first logger.info", flush=True)
         logger.info("=" * 60)
 
-        # データセット読み込み
+        # Load dataset
         logger.info("📚 Loading Molecule NL dataset...")
         try:
             dataset = load_from_disk(dataset_path)
 
-            # DatasetDictの場合、適切なsplitを選択
+            # For DatasetDict, select appropriate split
             if hasattr(dataset, "keys"):
-                # DatasetDictの場合、testまたはvalidationを優先的に使用
+                # For DatasetDict, use test or validation preferentially
                 if "test" in dataset:
                     dataset_split = dataset["test"]
                     logger.info("Using 'test' split from dataset")
@@ -358,15 +356,15 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                     dataset_split = dataset["train"]
                     logger.info("Using 'train' split from dataset")
                 else:
-                    # 最初のsplitを使用
+                    # use first split
                     split_name = list(dataset.keys())[0]
                     dataset_split = dataset[split_name]
                     logger.info(f"Using '{split_name}' split from dataset")
             else:
-                # 単一のDatasetの場合
+                # For a single Dataset
                 dataset_split = dataset
 
-            # HuggingFace DatasetをpandasのDataFrameに変換
+            # Convert HuggingFace Dataset to pandas DataFrame
             df = dataset_split.to_pandas()
             logger.info(f"✅ Dataset loaded successfully: {len(df)} samples")
         except Exception as e:
@@ -379,11 +377,11 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
         else:
             logger.info(f"📊 Evaluating all {len(df)} texts")
 
-        # データセット統計
+        # dataset statistics
         logger.info(f"   - Total samples: {len(df)}")
         logger.info(f"   - Available columns: {list(df.columns)}")
         if "input_ids" in df.columns:
-            # input_idsがリスト型の場合の長さ計算
+            # Length calculation when input_ids is list type
             try:
                 avg_length = df["input_ids"].apply(lambda x: len(x) if isinstance(x, (list, tuple)) else 0).mean()
                 logger.info(f"   - Average sequence length: {avg_length:.1f}")
@@ -402,12 +400,12 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 logger.info(f"   Progress: {idx}/{len(df)} texts processed, avg perplexity: {avg_perplexity:.2f}")
 
             try:
-                # input_idsを直接使用（既にトークン化されているため）
+                # use input_ids directly (as they are already tokenized)
                 if "input_ids" in row:
                     input_ids = row["input_ids"]
 
-                    # デバッグ: input_idsの型と内容を確認
-                    if idx == 0:  # 最初のサンプルで詳細確認
+                    # Debugging: Check the type and contents of input_ids
+                    if idx == 0:  # Check details with first sample
                         logger.info("First sample analysis:")
                         logger.info(f"  input_ids type: {type(input_ids)}")
                         logger.info(f"  input_ids length: {len(input_ids) if hasattr(input_ids, '__len__') else 'N/A'}")
@@ -416,14 +414,14 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                             logger.info(f"  input_ids sample: {sample_ids}")
                             logger.info(f"  Min/Max IDs: {min(input_ids)}/{max(input_ids)}")
 
-                    # numpy配列、リスト、タプルに対応
+                    # Supports numpy arrays, lists, and tuples
                     if hasattr(input_ids, "__len__") and len(input_ids) > 0:
-                        # パープレキシティ計算（input_idsを直接渡す）
+                        # Perplexity calculation (pass input_ids directly)
                         logger.info(f"Sample {idx}: Calculating perplexity for {len(input_ids)} tokens...")
                         perplexity = self.calculate_perplexity(input_ids)
                         logger.info(f"Sample {idx}: Perplexity = {perplexity}")
 
-                        # テキストプレビュー用（表示のみ）
+                        # For text preview (display only)
                         text_preview = row.get("input_text", f"[{len(input_ids)} tokens]")[:100]
                     else:
                         logger.warning(f"Sample {idx}: Empty or invalid input_ids")
@@ -432,7 +430,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                     logger.warning(f"Sample {idx}: No input_ids found in row")
                     continue
 
-                # 結果を記録
+                # record the result
                 result = {
                     "index": idx,
                     "text_length": len(text_preview),
@@ -458,7 +456,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
         logger.info(f"   - Successfully processed: {len(results)} texts")
         logger.info(f"   - Processing errors: {processing_errors}")
 
-        # 結果が空の場合の処理
+        # What to do if the result is empty
         if not results:
             logger.error("❌ No samples were successfully processed!")
             logger.error("   Please check:")
@@ -466,7 +464,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
             logger.error("   2. Tokenizer compatibility")
             logger.error("   3. Model checkpoint path")
 
-            # 空のDataFrameを作成（カラムは定義する）
+            # Create an empty DataFrame (columns are defined)
             results_df = pd.DataFrame(
                 columns=[
                     "index",
@@ -478,7 +476,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
                 ]
             )
 
-            # 空のメトリクスを返す
+            # return empty metrics
             metrics = {
                 "mean_perplexity": float("inf"),
                 "median_perplexity": float("inf"),
@@ -490,7 +488,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
 
             return metrics, results_df
 
-        # 結果の保存と分析
+        # Save resultsand analysis
         results_df = pd.DataFrame(results)
         results_df.to_csv(os.path.join(output_dir, "molecule_nat_lang_detailed_results.csv"), index=False)
 
@@ -499,38 +497,38 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
         if len(results_df) > 0:
             logger.info(f"   Sample data:\n{results_df.head()}")
 
-        # 性能指標の計算
+        # Calculating performance indicators
         metrics = self._calculate_metrics(perplexities, results_df)
 
-        # 結果の保存
+        # Save results
         with open(os.path.join(output_dir, "molecule_nat_lang_evaluation_results.json"), "w") as f:
             json.dump(metrics, f, indent=2)
 
-        # 可視化（別クラスで処理）
+        # Visualization (processed in a separate class)
         self._create_visualizations_with_separate_class(results_df, output_dir)
 
-        # レポート生成
+        # generate report
         self._generate_report(metrics, results_df, output_dir)
 
         logger.info(f"📁 Results saved to: {output_dir}")
         return metrics, results_df
 
     def _create_visualizations_with_separate_class(self, results_df, output_dir):
-        """分離された可視化クラスを使用して可視化を生成"""
+        """Generate visualizations using separate visualization classes"""
         try:
-            # CSV結果ファイルのパスを生成
+            # Generate path for CSV result file
             csv_file = os.path.join(output_dir, "molecule_nat_lang_detailed_results.csv")
 
-            # 可視化クラスをインポート
+            # import visualization class
             from molecule_nat_lang_visualization import MoleculeNLVisualizationGenerator
 
-            # 可視化器を初期化
+            # initialize the visualizer
             visualizer = MoleculeNLVisualizationGenerator(results_file=csv_file, output_dir=output_dir)
 
-            # 全ての可視化を生成
+            # generate all visualizations
             visualizer.generate_all_visualizations()
 
-            # HTMLレポートも生成
+            # Also generate HTML report
             visualizer.create_html_report()
 
             logger.info("✅ Visualizations created using separate visualization class")
@@ -538,23 +536,23 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
         except Exception as e:
             logger.warning(f"⚠️  Visualization generation failed: {e}")
             logger.info("📊 Falling back to basic visualization")
-            # フォールバック：基本的な可視化のみ実行
+            # fallback：Perform basic visualization only
             self._create_basic_visualization(results_df, output_dir)
-        """分離された可視化クラスを使用して可視化を生成"""
+        """Generate visualizations using separate visualization classes"""
         try:
-            # CSV結果ファイルのパスを生成
+            # Generate path for CSV result file
             csv_file = os.path.join(output_dir, "molecule_nat_lang_detailed_results.csv")
 
-            # 可視化クラスをインポート
+            # import visualization class
             from molecule_nat_lang_visualization import MoleculeNLVisualizationGenerator
 
-            # 可視化器を初期化
+            # initialize the visualizer
             visualizer = MoleculeNLVisualizationGenerator(results_file=csv_file, output_dir=output_dir)
 
-            # 全ての可視化を生成
+            # generate all visualizations
             visualizer.generate_all_visualizations()
 
-            # HTMLレポートも生成
+            # Also generate HTML report
             visualizer.create_html_report()
 
             logger.info("✅ Visualizations created using separate visualization class")
@@ -562,17 +560,17 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
         except Exception as e:
             logger.warning(f"⚠️  Visualization generation failed: {e}")
             logger.info("📊 Falling back to basic visualization")
-            # フォールバック：基本的な可視化のみ実行
+            # fallback：Perform basic visualization only
             self._create_basic_visualization(results_df, output_dir)
 
     def _create_basic_visualization(self, results_df, output_dir):
-        """⚠️ DEPRECATED: 可視化は molecule_nat_lang_visualization.py を使用してください"""
+        """⚠️ DEPRECATED: Please use molecule_nat_lang_visualization.py for visualization"""
         logger.warning("⚠️  Inline visualization is deprecated.")
         logger.info("Please use: python scripts/evaluation/gpt2/molecule_nat_lang_visualization.py --result-dir <output_dir>")
         logger.info("Skipping inline visualization.")
 
     def _calculate_metrics(self, perplexities, results_df):
-        """性能指標の計算"""
+        """Calculating performance indicators"""
         if not perplexities:
             logger.warning("No valid perplexities found")
             return {
@@ -604,7 +602,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
         return metrics
 
     def _generate_report(self, metrics, results_df, output_dir):
-        """評価レポートの生成"""
+        """Generate evaluation report"""
         report_path = os.path.join(output_dir, "molecule_nat_lang_evaluation_report.txt")
 
         with open(report_path, "w") as f:
@@ -633,7 +631,7 @@ class GPT2MoleculeNLEvaluator(ModelEvaluator):
             f.write(f"   • 25th Percentile Perplexity: {metrics.get('percentile_25', float('inf')):.3f}\n")
             f.write(f"   • 75th Percentile Perplexity: {metrics.get('percentile_75', float('inf')):.3f}\n\n")
 
-            # パフォーマンス解釈
+            # performance interpretation
             mean_ppl = metrics.get("mean_perplexity", float("inf"))
             if mean_ppl < 10:
                 performance_interpretation = "🟢 Excellent language modeling performance"
@@ -679,7 +677,7 @@ def main():
     parser.add_argument("--max_length", type=int, default=1024, help="Maximum sequence length")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
 
-    # 画像再生成オプション
+    # Image regeneration option
     parser.add_argument(
         "--visualize-only",
         action="store_true",
@@ -694,10 +692,10 @@ def main():
 
     args = parser.parse_args()
 
-    # LEARNING_SOURCE_DIRの設定
+    # Setting LEARNING_SOURCE_DIR
     learning_source_dir = check_learning_source_dir()
 
-    # 画像のみ生成モード
+    # Image only generation mode
     if args.visualize_only:
         if args.result_dir is None:
             print("Error: --result-dir must be specified when using --visualize-only")
@@ -707,7 +705,7 @@ def main():
             print(f"Error: Result directory not found: {args.result_dir}")
             sys.exit(1)
 
-        # ログ設定
+        # Log settings
         logger = setup_evaluation_logging(Path(args.result_dir), "molecule_nat_lang_visualization")
 
         if args.debug:
@@ -718,7 +716,7 @@ def main():
         logger.info(f"📁 Loading results from: {args.result_dir}")
 
         try:
-            # CSVファイルを読み込み
+            # Read CSV file
             csv_file = os.path.join(args.result_dir, "molecule_nat_lang_detailed_results.csv")
             if not os.path.exists(csv_file):
                 logger.error(f"❌ CSV file not found: {csv_file}")
@@ -727,14 +725,14 @@ def main():
             results_df = pd.read_csv(csv_file)
             logger.info(f"✅ Loaded {len(results_df)} results from CSV")
 
-            # メトリクスJSONを読み込み（存在する場合）
+            # Load metrics JSON (if available)
             json_file = os.path.join(args.result_dir, "molecule_nat_lang_evaluation_results.json")
             if os.path.exists(json_file):
                 with open(json_file, "r") as f:
                     metrics = json.load(f)
                 logger.info("✅ Loaded metrics from JSON")
             else:
-                # CSVから再計算
+                # Recalculate from CSV
                 logger.info("ℹ️  Metrics JSON not found, recalculating from CSV...")
                 valid_perplexities = results_df[results_df["perplexity"] != float("inf")]["perplexity"].tolist()
                 metrics = {
@@ -747,12 +745,12 @@ def main():
                     "max_perplexity": float(np.max(valid_perplexities)) if valid_perplexities else float("inf"),
                 }
 
-            # 可視化生成クラスを使用
+            # Use visualization generation class
             from molecule_nat_lang_visualization import MoleculeNLVisualizationGenerator
 
             visualizer = MoleculeNLVisualizationGenerator(results_file=csv_file, output_dir=args.result_dir)
 
-            # すべての可視化を生成
+            # generate all visualizations
             logger.info("🎨 Generating visualizations...")
             visualizer.generate_all_visualizations()
 
@@ -769,12 +767,12 @@ def main():
 
         return
 
-    # 通常の評価モード
-    # デフォルトパスの設定
+    # Normal evaluation mode
+    # Set default path
     if args.dataset_path is None:
         args.dataset_path = f"{learning_source_dir}/molecule_nat_lang/training_ready_hf_dataset/test"
 
-    # データセットパスの存在確認
+    # Check the existence of dataset path
     if not os.path.exists(args.dataset_path):
         print(f"❌ ERROR: Dataset path does not exist: {args.dataset_path}")
         print(f"Expected structure: {learning_source_dir}/molecule_nat_lang/training_ready_hf_dataset/test")
@@ -784,7 +782,7 @@ def main():
         print("2. The molecule_nat_lang dataset has been processed")
         sys.exit(1)
 
-    # 出力ディレクトリを自動生成または指定されたものを使用
+    # Automatically generate output directory or use specified one
     if args.output_dir is None:
         model_type = get_model_type_from_path(args.model_path)
         model_name = get_model_name_from_path(args.model_path)
@@ -792,10 +790,10 @@ def main():
     else:
         os.makedirs(args.output_dir, exist_ok=True)
 
-    # ログ設定
+    # Log settings
     logger = setup_evaluation_logging(Path(args.output_dir), "molecule_nat_lang_evaluation")
 
-    # ログレベルの設定（デバッグモード）
+    # Set log level (debug mode)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
@@ -807,22 +805,22 @@ def main():
     logger.info(f"Output directory: {args.output_dir}")
 
     try:
-        # 評価器の初期化（トークナイザーパスは不要）
+        # Initialize the evaluator(Tokenizer pass not required)
         evaluator = GPT2MoleculeNLEvaluator(
             model_path=args.model_path,
-            tokenizer_path="",  # MoleculeNatLangTokenizerは内部で初期化
+            tokenizer_path="",  # MoleculeNatLangTokenizer is initialized internally
             device=args.device,
             max_length=args.max_length,
         )
 
-        # 評価の実行
+        # Run evaluation
         metrics, results_df = evaluator.evaluate_dataset(
             dataset_path=args.dataset_path,
             output_dir=args.output_dir,
             sample_size=args.sample_size,
         )
 
-        # 結果の表示
+        # Display results
         logger.info("Evaluation completed successfully!")
         logger.info(f"Mean Perplexity: {metrics.get('mean_perplexity', float('inf')):.3f}")
         logger.info(f"Valid samples: {metrics.get('valid_samples', 0)}/{metrics.get('total_samples', 0)}")

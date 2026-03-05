@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Hugging Face Hub へモデルをアップロードするPythonスクリプト
+Python script to upload model to Hugging Face Hub
 
-このスクリプトは huggingface_hub ライブラリを使用して、
-学習済みモデルを Hugging Face Hub にアップロードします。
+This script uses the huggingface_hub library to
+Upload the trained model to Hugging Face Hub.
 
-使用方法:
+How to use:
     python upload_to_huggingface.py <model_path> <repo_id> [options]
 
-詳細は --help を参照してください。
+See --help for details.
 """
 
 import argparse
@@ -21,55 +21,53 @@ from typing import Optional
 try:
     from huggingface_hub import HfApi, create_repo, upload_folder, upload_file
 except ImportError:
-    print("ERROR: huggingface_hub がインストールされていません")
-    print("インストール: pip install huggingface_hub")
+    print("ERROR: huggingface_hub not installed")
+    print("Installation: pip install huggingface_hub")
     sys.exit(1)
 
 
-# プロジェクトルートを取得
+# get project root
 SCRIPT_DIR = Path(__file__).parent.resolve()
 PROJECT_ROOT = SCRIPT_DIR.parent
 
 
 def parse_args():
-    """コマンドライン引数を解析"""
+    """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Hugging Face Hub へモデルをアップロード",
+        description="Upload model to Hugging Face Hub",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-例:
-  # 基本的な使用
+example:
+  # Basic usage
   python upload_to_huggingface.py ../gpt2-output/rna-small matsubara-riken/rna-small-gpt2
 
-  # プライベートリポジトリとして、モデルカード付きでアップロード
+  # Upload as a private repository with model card
   python upload_to_huggingface.py ../gpt2-output/rna-small matsubara-riken/rna-small-gpt2 \\
       --private --create-model-card --model-type gpt2
         """,
     )
 
-    parser.add_argument("model_path", type=str, help="アップロードするモデルのパス")
-    parser.add_argument("repo_id", type=str, help="Hugging Face Hub のリポジトリID (例: username/model-name)")
+    parser.add_argument("model_path", type=str, help="Path of model to upload")
+    parser.add_argument("repo_id", type=str, help="Hugging Face Hub repository ID (e.g. username/model-name)")
 
-    parser.add_argument("--private", action="store_true", help="プライベートリポジトリとして作成")
-    parser.add_argument(
-        "--commit-message", type=str, default="Upload model", help="コミットメッセージ（デフォルト: 'Upload model'）"
-    )
+    parser.add_argument("--private", action="store_true", help="Create as private repository")
+    parser.add_argument("--commit-message", type=str, default="Upload model", help="Commit message (default: 'Upload model')")
     parser.add_argument(
         "--model-type",
         type=str,
         choices=["gpt2", "bert", "dnabert2", "esm2", "rnaformer", "chemberta2"],
-        help="モデルタイプ",
+        help="Model type",
     )
-    parser.add_argument("--tokenizer-path", type=str, help="トークナイザーのパス")
-    parser.add_argument("--config-path", type=str, help="設定ファイルのパス")
-    parser.add_argument("--create-model-card", action="store_true", help="モデルカードを自動生成")
-    parser.add_argument("--dry-run", action="store_true", help="実際にはアップロードせず、何が行われるか表示")
+    parser.add_argument("--tokenizer-path", type=str, help="Tokenizer path")
+    parser.add_argument("--config-path", type=str, help="Configuration file path")
+    parser.add_argument("--create-model-card", action="store_true", help="Automatically generate model card")
+    parser.add_argument("--dry-run", action="store_true", help="Do not actually upload, show what will happen")
 
     return parser.parse_args()
 
 
 def detect_model_type(model_path: Path) -> Optional[str]:
-    """モデルタイプを自動検出"""
+    """Auto detect model type"""
     path_str = str(model_path).lower()
 
     if "gpt2" in path_str or model_path.name.startswith("gpt2"):
@@ -86,7 +84,7 @@ def detect_model_type(model_path: Path) -> Optional[str]:
     elif "rnaformer" in path_str:
         return "rnaformer"
 
-    # config.json からモデルタイプを検出
+    # Detect model type from config.json
     config_file = model_path / "config.json" if model_path.is_dir() else model_path.parent / "config.json"
     if config_file.exists():
         try:
@@ -102,7 +100,7 @@ def detect_model_type(model_path: Path) -> Optional[str]:
 
 
 def detect_data_type(model_path: Path) -> Optional[str]:
-    """学習データタイプを自動検出"""
+    """Automatically detect training data type"""
     path_str = str(model_path).lower()
 
     if "rna" in path_str:
@@ -149,22 +147,22 @@ def find_latest_checkpoint_dir(model_path: Path) -> Optional[Path]:
 
 
 def find_checkpoint_files(model_path: Path) -> list[Path]:
-    """チェックポイントファイルを検索"""
+    """Search checkpoint file"""
     files = []
 
     if model_path.is_file():
         files.append(model_path)
     elif model_path.is_dir():
-        # PyTorch チェックポイント
+        # PyTorch Checkpoint
         files.extend(model_path.glob("*.pt"))
         files.extend(model_path.glob("*.pth"))
         files.extend(model_path.glob("*.bin"))
 
-        # HuggingFace 形式
+        # HuggingFace form
         files.extend(model_path.glob("pytorch_model.bin"))
         files.extend(model_path.glob("model.safetensors"))
 
-        # 設定ファイル
+        # configuration file
         files.extend(model_path.glob("config.json"))
         files.extend(model_path.glob("tokenizer*.json"))
         files.extend(model_path.glob("vocab*.json"))
@@ -175,7 +173,7 @@ def find_checkpoint_files(model_path: Path) -> list[Path]:
 
 
 def find_tokenizer_files(model_path: Path, tokenizer_path: Optional[Path] = None) -> list[Path]:
-    """トークナイザーファイルを検索"""
+    """Search tokenizer file"""
     files = []
 
     search_paths = [model_path] if model_path.is_dir() else [model_path.parent]
@@ -199,13 +197,13 @@ def generate_model_card(
     data_type: Optional[str],
     model_path: Path,
 ) -> str:
-    """モデルカード（README.md）を生成"""
+    """Generate model card (README.md)"""
     model_name = repo_id.split("/")[-1] if "/" in repo_id else repo_id
     date_str = datetime.now().strftime("%Y-%m-%d")
     current_year = datetime.now().year
     cite_key = model_name.replace("-", "_")
 
-    # タグを生成
+    # generate tag
     tags = ["pytorch"]
     if model_type:
         tags.append(model_type)
@@ -213,10 +211,10 @@ def generate_model_card(
         data_tag = data_type.lower().replace("/", "-").replace(" ", "-")
         tags.append(data_tag)
 
-    # ライセンス（必要に応じて変更）
+    # License (change as necessary)
     license_str = "apache-2.0"
 
-    # パイプラインタグを決定
+    # Determine pipeline tag
     pipeline_tag = "text-generation"
     if model_type in ["bert", "dnabert2", "esm2"]:
         pipeline_tag = "fill-mask"
@@ -291,54 +289,54 @@ def upload_model(
     create_model_card: bool = False,
     dry_run: bool = False,
 ) -> bool:
-    """モデルを Hugging Face Hub にアップロード"""
+    """Upload model to Hugging Face Hub"""
 
     api = HfApi()
 
-    # モデルタイプを自動検出
+    # Automatically detect model type
     if not model_type:
         model_type = detect_model_type(model_path)
         if model_type:
-            print(f"[INFO] モデルタイプを自動検出: {model_type}")
+            print(f"[INFO] Auto detect model type: {model_type}")
 
-    # データタイプを自動検出
+    # Auto detect data type
     data_type = detect_data_type(model_path)
     if data_type:
-        print(f"[INFO] データタイプを自動検出: {data_type}")
+        print(f"[INFO] Auto detect data type: {data_type}")
 
-    # HuggingFace互換チェックポイントディレクトリを探す
+    # Find HuggingFace compatible checkpoint directory
     upload_path = model_path
     latest_checkpoint_dir = find_latest_checkpoint_dir(model_path)
     if latest_checkpoint_dir:
-        print(f"[INFO] HuggingFace互換チェックポイントを検出: {latest_checkpoint_dir.name}")
+        print(f"[INFO] HuggingFace compatible checkpoint detected: {latest_checkpoint_dir.name}")
         upload_path = latest_checkpoint_dir
 
-    # アップロードするファイルを検索
+    # Search for files to upload
     checkpoint_files = find_checkpoint_files(upload_path)
     tokenizer_files = find_tokenizer_files(upload_path, tokenizer_path)
 
     all_files = list(set(checkpoint_files + tokenizer_files))
 
     if not all_files:
-        print(f"[ERROR] アップロードするファイルが見つかりません: {model_path}")
+        print(f"[ERROR] Unable to find file to upload: {model_path}")
         return False
 
-    print(f"\n[INFO] アップロード対象ファイル ({len(all_files)} 件):")
+    print(f"\n[INFO] Files to be uploaded ({len(all_files)}):")
     for f in all_files:
         size_mb = f.stat().st_size / (1024 * 1024)
         print(f"  - {f.name} ({size_mb:.2f} MB)")
 
     if dry_run:
-        print("\n[DRY-RUN] 以下の操作が実行されます:")
-        print(f"  1. リポジトリ作成: {repo_id} (private={private})")
-        print(f"  2. ファイルアップロード: {len(all_files)} 件")
+        print("\n[DRY-RUN] The following operations will be performed:")
+        print(f" 1. Create repository: {repo_id} (private={private})")
+        print(f" 2. File uploads: {len(all_files)} items")
         if create_model_card:
-            print("  3. モデルカード (README.md) 生成")
-        print("\n[DRY-RUN] 実際のアップロードは行いませんでした")
+            print(" 3. Model card (README.md) generation")
+        print("\n[DRY-RUN] No actual upload was performed")
         return True
 
-    # リポジトリを作成（存在しない場合）
-    print(f"\n[INFO] リポジトリを確認/作成中: {repo_id}")
+    # Create a repository (if it doesn't exist)
+    print(f"\n[INFO] Checking/creating repository: {repo_id}")
     try:
         create_repo(
             repo_id=repo_id,
@@ -346,16 +344,16 @@ def upload_model(
             exist_ok=True,
             repo_type="model",
         )
-        print(f"[SUCCESS] リポジトリ準備完了: {repo_id}")
+        print(f"[SUCCESS] Repository ready: {repo_id}")
     except Exception as e:
-        print(f"[ERROR] リポジトリの作成に失敗: {e}")
+        print(f"[ERROR] Failed to create repository: {e}")
         return False
 
-    # ディレクトリ全体をアップロード
+    # Upload entire directory
     if upload_path.is_dir():
-        print(f"\n[INFO] ディレクトリをアップロード中: {upload_path}")
+        print(f"\n[INFO] Uploading directory: {upload_path}")
         try:
-            # training_state.binはアップロードしない（学習再開用のファイルで、HF互換ではない）
+            # Do not upload training_state.bin (this is a file for resuming learning and is not HF compatible)
             upload_folder(
                 folder_path=str(upload_path),
                 repo_id=repo_id,
@@ -363,13 +361,13 @@ def upload_model(
                 commit_message=commit_message,
                 ignore_patterns=["*.tfevents.*", "*.csv", "__pycache__", "*.pyc", "training_state.bin"],
             )
-            print("[SUCCESS] ディレクトリのアップロード完了")
+            print("[SUCCESS] Directory upload completed")
         except Exception as e:
-            print(f"[ERROR] アップロードに失敗: {e}")
+            print(f"[ERROR] Upload failed: {e}")
             return False
     else:
-        # 単一ファイルをアップロード
-        print(f"\n[INFO] ファイルをアップロード中: {upload_path.name}")
+        # Upload a single file
+        print(f"\n[INFO] Uploading file: {upload_path.name}")
         try:
             upload_file(
                 path_or_fileobj=str(upload_path),
@@ -378,14 +376,14 @@ def upload_model(
                 repo_type="model",
                 commit_message=commit_message,
             )
-            print("[SUCCESS] ファイルのアップロード完了")
+            print("[SUCCESS] File upload completed")
         except Exception as e:
-            print(f"[ERROR] アップロードに失敗: {e}")
+            print(f"[ERROR] Upload failed: {e}")
             return False
 
-    # モデルカードを生成してアップロード
+    # Generate and upload model card
     if create_model_card:
-        print("\n[INFO] モデルカードを生成中...")
+        print("\n[INFO] Generating model card...")
         model_card_content = generate_model_card(repo_id, model_type, data_type, model_path)
 
         try:
@@ -396,18 +394,18 @@ def upload_model(
                 repo_type="model",
                 commit_message="Add model card",
             )
-            print("[SUCCESS] モデルカードのアップロード完了")
+            print("[SUCCESS] Model card upload completed")
         except Exception as e:
-            print(f"[WARNING] モデルカードのアップロードに失敗: {e}")
+            print(f"[WARNING] Failed to upload model card: {e}")
 
-    print("\n[SUCCESS] アップロード完了！")
+    print("\n[SUCCESS] Upload completed!")
     print(f"[INFO] URL: https://huggingface.co/{repo_id}")
 
     return True
 
 
 def main():
-    """メイン関数"""
+    """Main function"""
     args = parse_args()
 
     model_path = Path(args.model_path)
@@ -416,7 +414,7 @@ def main():
     model_path = model_path.resolve()
 
     if not model_path.exists():
-        print(f"[ERROR] モデルパスが見つかりません: {model_path}")
+        print(f"[ERROR] Model path not found: {model_path}")
         sys.exit(1)
 
     tokenizer_path = None

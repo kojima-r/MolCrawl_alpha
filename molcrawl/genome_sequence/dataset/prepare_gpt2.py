@@ -2,11 +2,11 @@ from argparse import ArgumentParser
 from pathlib import Path
 from functools import partial
 
-# プロジェクトルートのsrcディレクトリをパスに追加
+# Add project root src directory to path
 
-# データセットキャッシュ設定を読み込み（assets/configs/cache.yamlから）
+# datasetLoad cache settings (assets/configs/cache.yamlfrom)
 try:
-    # 任意のキャッシュ設定。存在しない環境でも学習は継続できる。
+    # Any cache settings. Learning can continue even in non-existent environments.
     from molcrawl.utils.cache_config import setup_cache_env
 except ModuleNotFoundError:
     setup_cache_env = None
@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 if setup_cache_env is not None:
     setup_cache_env()
 else:
-    # cache_configが無い環境でも動作は可能
+    # Can operate even in an environment without cache_config
     print("WARNING: utils.cache_config not found. Continuing without cache setup.")
 
 from molcrawl.genome_sequence.utils.config import GenomeSequenceConfig

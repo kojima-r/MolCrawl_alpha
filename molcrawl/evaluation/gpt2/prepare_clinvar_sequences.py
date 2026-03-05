@@ -81,16 +81,16 @@ def main():
 
     args = parser.parse_args()
 
-    # ファイル形式の自動対応
+    # Automatic file format support
     ref_fasta_path = args.ref_fasta
     if ref_fasta_path.endswith(".gz"):
-        # .gzファイルの場合、展開された版があるかチェック
+        # For .gz files, check if there is an unzipped version
         uncompressed_path = ref_fasta_path.replace(".gz", "")
         if os.path.exists(uncompressed_path):
             print(f"Using uncompressed FASTA file: {uncompressed_path}")
             ref_fasta_path = uncompressed_path
         else:
-            # 展開された版がない場合は一時的に展開
+            # Temporarily extract if there is no expanded version
             print(f"Uncompressing {ref_fasta_path} for compatibility...")
             with gzip.open(ref_fasta_path, "rb") as f_in:
                 with open(uncompressed_path, "wb") as f_out:
@@ -105,10 +105,10 @@ def main():
         df = df.head(args.max_samples)
         print(f"Processing only first {args.max_samples} variants for testing")
 
-    # デバッグ: 利用可能なカラムを確認
+    # debug: check available columns
     print(f"Available columns in dataset: {df.columns.tolist()}")
 
-    # ClinicalSignificanceカラムの存在確認
+    # Check the existence of ClinicalSignificance column
     clinical_significance_col = None
     possible_names = [
         "ClinicalSignificance",
@@ -128,10 +128,10 @@ def main():
         for col in df.columns:
             print(f"  - {col}")
     else:
-        # Clinical significanceの分布を表示
+        # Display distribution of clinical significance
         print("\nClinical significance distribution in source data:")
         clin_sig_counts = df[clinical_significance_col].value_counts()
-        for sig, count in clin_sig_counts.head(10).items():  # 上位10個を表示
+        for sig, count in clin_sig_counts.head(10).items():  # Display top 10
             print(f"  {sig}: {count}")
 
     ref_genome = Fasta(ref_fasta_path)
@@ -150,7 +150,7 @@ def main():
                 flank=args.flank,
             )
 
-            # 基本的な変異情報
+            # Basic mutation information
             record = {
                 "chrom": row["chrom"],
                 "pos": row["pos"],
@@ -160,11 +160,11 @@ def main():
                 "variant_sequence": var_seq,
             }
 
-            # labelカラムがある場合は追加（後方互換性のため）
+            # Add label column if there is one (for backward compatibility)
             if "label" in row:
                 record["label"] = row["label"]
 
-            # ClinicalSignificanceを追加（存在する場合）
+            # Add ClinicalSignificance(if any)
             if clinical_significance_col:
                 record["ClinicalSignificance"] = row[clinical_significance_col]
             else:
@@ -179,7 +179,7 @@ def main():
     df_out = pd.DataFrame(records)
     df_out.to_csv(args.output_file, index=False)
 
-    # 統計情報の出力
+    # Output of statistics information
     print(f"Saved {len(df_out)} variants with sequences → {args.output_file}")
 
     if clinical_significance_col:
@@ -188,7 +188,7 @@ def main():
         for sig, count in significance_counts.items():
             print(f"  {sig}: {count}")
 
-        # 病原性/良性の分布も表示
+        # Also shows pathogenic/benign distribution
         pathogenic_count = df_out["ClinicalSignificance"].str.contains("pathogenic", case=False, na=False).sum()
         benign_count = df_out["ClinicalSignificance"].str.contains("benign", case=False, na=False).sum()
         uncertain_count = df_out["ClinicalSignificance"].str.contains("uncertain", case=False, na=False).sum()

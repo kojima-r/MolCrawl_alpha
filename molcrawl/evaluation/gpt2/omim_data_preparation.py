@@ -3,19 +3,19 @@
 OMIM Data Preparation Script
 ============================
 
-OMIM (Online Mendelian Inheritance in Man) データベースの遺伝性疾患情報を
-ゲノム配列モデルの評価用に前処理するスクリプト
+Genetic disease information from the OMIM (Online Mendelian Inheritance in Man) database
+Script to preprocess genome sequence models for evaluation
 
-主な機能:
-- OMIMサンプルデータの生成
-- 実際のOMIMデータの処理（認証済みアクセス）
-- 遺伝性疾患関連変異とベニン変異の分類
-- モデル評価用データセットの作成
-- データ品質チェック
+Main features:
+- Generation of OMIM sample data
+- Processing of actual OMIM data (authenticated access)
+- Classification of genetic disease-related mutations and Benin mutations
+- Creation of dataset for model evaluation
+- Data quality check
 
-注意:
-- 実際のOMIMデータ使用にはライセンスが必要です
-- LEARNING_SOURCE_DIR環境変数の設定が必須です
+Notice:
+- License required for actual OMIM data usage
+- Setting the LEARNING_SOURCE_DIR environment variable is mandatory
 """
 
 import argparse
@@ -30,17 +30,17 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-# scriptsディレクトリ
+# scripts directory
 scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# 実データプロセッサをインポート
+# import real data processor
 import_error_message = None
 try:
     from omim_real_data_processor import process_omim_real_data
 except ImportError as e:
     process_omim_real_data = None
     import_error_message = str(e)
-    # デバッグ情報を標準エラー出力に表示
+    # Display debug information on standard error output
     import traceback
 
     print("=" * 80, file=sys.stderr)
@@ -52,12 +52,12 @@ except ImportError as e:
     traceback.print_exc(file=sys.stderr)
     print("=" * 80, file=sys.stderr)
 
-# 共通環境チェックモジュールを追加
+# Add common environment check module
 check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
 
 
 def setup_logging(output_dir: str) -> logging.Logger:
-    """ログ設定をセットアップ"""
+    """Set up log settings"""
     log_dir = os.path.join(output_dir, "logs")
     os.makedirs(log_dir, exist_ok=True)
 
@@ -77,13 +77,13 @@ def setup_logging(output_dir: str) -> logging.Logger:
 
 
 class OMIMDataGenerator:
-    """OMIM評価用サンプルデータ生成クラス"""
+    """Sample data generation class for OMIM evaluation"""
 
     def __init__(self, sequence_length: int = 100, logger: Optional[logging.Logger] = None):
         self.sequence_length = sequence_length
         self.logger = logger or logging.getLogger(__name__)
 
-        # OMIM関連遺伝子の例（実際のOMIMから取得した代表的な遺伝子）
+        # Examples of OMIM-related genes (representative genes obtained from actual OMIM)
         self.disease_genes = [
             "BRCA1",
             "BRCA2",
@@ -131,7 +131,7 @@ class OMIMDataGenerator:
             "RNF43",
         ]
 
-        # OMIM表現型分類
+        # OMIMPhenotype classification
         self.phenotype_categories = {
             "autosomal_dominant": 0.3,
             "autosomal_recessive": 0.25,
@@ -140,7 +140,7 @@ class OMIMDataGenerator:
             "complex": 0.25,
         }
 
-        # 病原性レベル
+        # Pathogenicity level
         self.pathogenicity_levels = {
             "pathogenic": 1,
             "likely_pathogenic": 1,
@@ -150,28 +150,28 @@ class OMIMDataGenerator:
         }
 
     def generate_sequence(self, is_pathogenic: bool = True) -> str:
-        """ゲノム配列を生成"""
+        """Generate genome sequence"""
         nucleotides = ["A", "T", "G", "C"]
 
         if is_pathogenic:
-            # 病原性変異: より多くの変異を含む
+            # Pathogenic mutations: Contains more mutations
             sequence = "".join(random.choices(nucleotides, k=self.sequence_length))
-            # 特定の位置に病原性変異パターンを挿入
+            # Insert pathogenic mutation pattern at specific position
             mutation_positions = random.sample(range(self.sequence_length), min(5, self.sequence_length // 20))
             sequence_list = list(sequence)
             for pos in mutation_positions:
-                # フレームシフトや停止コドンを模倣
-                sequence_list[pos] = random.choice(["T", "A"])  # より病原性の高い変異
+                # Mimic frameshifts and stop codons
+                sequence_list[pos] = random.choice(["T", "A"])  # More pathogenic mutations
             sequence = "".join(sequence_list)
         else:
-            # ベニン変異: より保守的な配列
+            # Benin mutation: more conservative sequence
             sequence = "".join(random.choices(nucleotides, weights=[0.3, 0.3, 0.2, 0.2], k=self.sequence_length))
 
         return sequence
 
     def generate_omim_entry(self, entry_id: int) -> Dict:
-        """単一のOMIMエントリを生成"""
-        is_pathogenic = random.random() < 0.7  # 70%が病原性
+        """Generate a single OMIM entry"""
+        is_pathogenic = random.random() < 0.7  # 70% pathogenic
 
         gene = random.choice(self.disease_genes)
         phenotype_type = random.choices(
@@ -187,7 +187,7 @@ class OMIMDataGenerator:
                 weights=[0.5, 0.3, 0.2],
             )[0]
 
-        # OMIM ID形式 (6桁の数字)
+        # OMIM ID format (6 digit number)
         omim_id = f"{entry_id + 100000:06d}"
 
         return {
@@ -207,7 +207,7 @@ class OMIMDataGenerator:
         }
 
     def generate_dataset(self, num_samples: int) -> pd.DataFrame:
-        """OMIMデータセットを生成"""
+        """Generate OMIM dataset"""
         self.logger.info(f"Creating sample OMIM data with {num_samples} samples")
 
         data = []
@@ -220,7 +220,7 @@ class OMIMDataGenerator:
 
         df = pd.DataFrame(data)
 
-        # データバランスの調整
+        # Adjust data balance
         pathogenic_count = df["is_disease_causing"].sum()
         benign_count = len(df) - pathogenic_count
 
@@ -233,33 +233,33 @@ class OMIMDataGenerator:
 
 
 def prepare_omim_data(output_dir: str, num_samples: int = 1000, sequence_length: int = 100, seed: int = 42) -> str:
-    """OMIM評価データを準備"""
+    """Prepare OMIM evaluation data"""
 
-    # 出力ディレクトリ作成
+    # create output directory
     os.makedirs(output_dir, exist_ok=True)
     data_dir = os.path.join(output_dir, "data")
     os.makedirs(data_dir, exist_ok=True)
 
-    # ログ設定
+    # Log settings
     logger = setup_logging(output_dir)
     logger.info("Starting OMIM data preparation")
 
-    # シード設定
+    # Seed settings
     random.seed(seed)
     np.random.seed(seed)
 
-    # データ生成
+    # data generation
     generator = OMIMDataGenerator(sequence_length=sequence_length, logger=logger)
     df = generator.generate_dataset(num_samples)
 
-    # データ保存
+    # Save data
     output_file = os.path.join(data_dir, "omim_evaluation_dataset.csv")
     df.to_csv(output_file, index=False)
 
     logger.info(f"Sample OMIM data saved to {output_file}")
     logger.info(f"Data distribution: {df['is_disease_causing'].value_counts().to_dict()}")
 
-    # メタデータ保存
+    # metadatakeep
     metadata = {
         "total_samples": len(df),
         "disease_causing": int(df["is_disease_causing"].sum()),
@@ -281,7 +281,7 @@ def prepare_omim_data(output_dir: str, num_samples: int = 1000, sequence_length:
 
 
 def main():
-    """メイン関数"""
+    """Main function"""
     parser = argparse.ArgumentParser(
         description="OMIM Data Preparation for Genome Sequence Evaluation",
         epilog="Note: LEARNING_SOURCE_DIR environment variable must be set.",
@@ -336,14 +336,14 @@ def main():
 
     args = parser.parse_args()
 
-    # output_dirのデフォルト設定
+    # Default setting for output_dir
     if args.output_dir is None:
         learning_source = check_learning_source_dir()
         args.output_dir = os.path.join(learning_source, "genome_sequence", "data", "omim")
 
     try:
         if args.mode == "real":
-            # 実データモード
+            # real data mode
             if not args.config:
                 raise ValueError("Real data mode requires --config parameter")
 
@@ -385,7 +385,7 @@ def main():
             print("Real OMIM data processing completed!")
 
         else:
-            # サンプルデータモード
+            # sample data mode
             print("Generating sample OMIM data...")
             output_file = prepare_omim_data(
                 output_dir=args.output_dir,

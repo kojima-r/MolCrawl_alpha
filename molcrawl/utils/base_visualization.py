@@ -35,15 +35,15 @@ from molcrawl.utils.image_manager import get_image_output_dir
 
 class BaseVisualizationGenerator(ABC):
     """
-    評価結果可視化の抽象基底クラス
+    Abstract base class for visualization of evaluation results
 
-    全ての可視化クラスが継承すべき共通インターフェースと機能を提供する。
+    Provides common interfaces and functionality that all visualization classes should inherit.
 
-    共通機能:
-    - 出力ディレクトリの管理
-    - プロット設定の統一
-    - 共通ユーティリティメソッド
-    - HTMLレポート生成の基盤
+    Common features:
+    - Manage output directory
+    - Unification of plot settings
+    - Common utility methods
+    - Foundation for HTML report generation
     """
 
     def __init__(
@@ -54,15 +54,15 @@ class BaseVisualizationGenerator(ABC):
         model_type: Optional[str] = None,
     ):
         """
-        基底クラス初期化
+        Base class initialization
 
         Args:
-            results_source: 評価結果（ファイルパスまたは辞書データ）
-            output_dir: 可視化結果の出力ディレクトリ
-            logger: ログ出力用のロガー
-            model_type: モデルタイプ（画像保存ディレクトリの判定用）
+            results_source: Evaluation results (file path or dictionary data)
+            output_dir: Output directory of visualization results
+            logger: logger for log output
+            model_type: Model type(For determining image storage directory)
         """
-        # モデルタイプが指定されている場合は統一画像ディレクトリを使用
+        # Use unified image directory if model type is specified
         if model_type:
             try:
                 self.image_dir = Path(get_image_output_dir(model_type))
@@ -70,7 +70,7 @@ class BaseVisualizationGenerator(ABC):
                 self.output_dir.mkdir(parents=True, exist_ok=True)
                 self.model_type = model_type
             except Exception:
-                # 環境変数設定エラーなどの場合はフォールバック
+                # Fallback in case of environment variable setting error etc.
                 self.output_dir = Path(output_dir)
                 self.output_dir.mkdir(parents=True, exist_ok=True)
                 self.image_dir = self.output_dir
@@ -83,19 +83,19 @@ class BaseVisualizationGenerator(ABC):
 
         self.logger = logger or self._setup_logger()
 
-        # 結果データの読み込み
+        # Load result data
         self.results = self._load_results(results_source)
 
-        # 可視化設定の初期化
+        # Initializing visualization settings
         self._setup_plot_style()
 
-        # 生成されたファイルリスト
+        # generatelist of files
         self.generated_files: List[Path] = []
 
         self.logger.info(f"Visualization generator initialized. Output directory: {self.output_dir}")
 
     def _setup_logger(self) -> logging.Logger:
-        """デフォルトのロガーを設定"""
+        """Set default logger"""
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -103,7 +103,7 @@ class BaseVisualizationGenerator(ABC):
         return logging.getLogger(self.__class__.__name__)
 
     def _detect_model_type_from_output_dir(self, output_dir: str) -> Optional[str]:
-        """出力ディレクトリパスからモデルタイプを推定"""
+        """Infer model type from output directory path"""
         output_path = str(output_dir).lower()
 
         model_keywords = {
@@ -122,13 +122,13 @@ class BaseVisualizationGenerator(ABC):
 
     def _load_results(self, results_source: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
-        評価結果データの読み込み
+        Loading evaluation result data
 
         Args:
-            results_source: ファイルパスまたは辞書データ
+            results_source: file path or dictionary data
 
         Returns:
-            評価結果辞書
+            Evaluation result dictionary
         """
         if isinstance(results_source, dict):
             self.logger.info("Using provided results dictionary")
@@ -145,15 +145,15 @@ class BaseVisualizationGenerator(ABC):
             raise ValueError("results_source must be a file path or dictionary")
 
     def _setup_plot_style(self):
-        """プロットスタイルの統一設定"""
+        """Unified plotting style settings"""
         if plt is None or sns is None:
             raise RuntimeError("matplotlib and seaborn are required for visualization")
 
-        # 基本スタイル設定
+        # Basic style settings
         plt.style.use("default")
         sns.set_palette("husl")
 
-        # 日本語フォント対応
+        # Supports Japanese fonts
         plt.rcParams["font.family"] = [
             "DejaVu Sans",
             "Hiragino Sans",
@@ -166,39 +166,38 @@ class BaseVisualizationGenerator(ABC):
             "Noto Sans CJK JP",
         ]
 
-        # 図のデフォルト設定
+        # Default settings for diagrams
         plt.rcParams["figure.figsize"] = (10, 6)
         plt.rcParams["figure.dpi"] = 100
         plt.rcParams["savefig.dpi"] = 300
         plt.rcParams["savefig.bbox"] = "tight"
 
-        # グリッドとスタイル
         sns.set_style("whitegrid")
 
         self.logger.debug("Plot style configured")
 
     def _save_plot(self, filename: str, formats: List[str] = None, dpi: int = 300) -> List[Path]:
         """
-        プロットを指定された形式で保存
+        Save plot in specified format
 
         Args:
-            filename: ファイル名（拡張子なし）
-            formats: 保存する形式のリスト（デフォルト: ['png']）
-            dpi: 解像度（デフォルト: 300）
+            filename: file name (without extension)
+            formats: list of formats to save (default: ['png'])
+            dpi: resolution (default: 300)
 
         Returns:
-            保存されたファイルパスのリスト
+            List of saved file paths
         """
         if formats is None:
-            formats = ["png"]  # PNG優先で統一
+            formats = ["png"]  # Unified with PNG priority
 
         saved_files = []
         for fmt in formats:
-            # 画像ファイル（png, jpg等）は統一画像ディレクトリに保存
+            # Save image files (png, jpg, etc.) in the unified image directory
             if fmt.lower() in ["png", "jpg", "jpeg", "gif", "bmp", "svg"]:
                 filepath = self.image_dir / f"{filename}.{fmt}"
             else:
-                # PDF等は従来通りoutput_dirに保存
+                # Save PDF etc. in output_dir as usual
                 filepath = self.output_dir / f"{filename}.{fmt}"
 
             plt.savefig(filepath, format=fmt, bbox_inches="tight", dpi=dpi)
@@ -219,19 +218,19 @@ class BaseVisualizationGenerator(ABC):
         custom_title: str = "Model Evaluation Dashboard",
     ):
         """
-        汎用的な包括ダッシュボードを作成（BERT形式ベース）
+        Create a generic comprehensive dashboard (based on BERT format)
 
         Args:
-            results_df: 結果データフレーム
-            prediction_score_col: 予測スコア列名
-            true_label_col: 真の正解ラベル列名
-            confidence_col: 信頼度列名（オプション）
-            similarity_col: 類似度列名（オプション）
-            custom_title: ダッシュボードのタイトル
+            results_df: results data frame
+            prediction_score_col: Prediction score column name
+            true_label_col: True correct label column name
+            confidence_col: confidence column name (optional)
+            similarity_col: similarity column name (optional)
+            custom_title: Dashboard title
         """
         self.logger.info("Creating comprehensive evaluation dashboard")
 
-        # データの検証
+        # Validate data
         required_cols = [prediction_score_col, true_label_col]
         missing_cols = [col for col in required_cols if col not in results_df.columns]
         if missing_cols:
@@ -241,10 +240,10 @@ class BaseVisualizationGenerator(ABC):
         plt.style.use("default")
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
 
-        # 予測スコアの分布（ラベル別）
+        # Distribution of prediction scores (by label)
         self._plot_score_distribution(axes[0, 0], results_df, prediction_score_col, true_label_col)
 
-        # 類似度分布（もし利用可能なら）
+        # Similarity distribution (if available)
         if similarity_col and similarity_col in results_df.columns:
             self._plot_similarity_distribution(axes[0, 1], results_df, similarity_col, true_label_col)
         else:
@@ -258,7 +257,7 @@ class BaseVisualizationGenerator(ABC):
             )
             axes[0, 1].set_title("Similarity Distribution (N/A)")
 
-        # 散布図: スコア vs 類似度
+        # Scatterplot: Score vs Similarity
         if similarity_col and similarity_col in results_df.columns:
             self._plot_score_vs_similarity_scatter(
                 axes[0, 2],
@@ -278,17 +277,17 @@ class BaseVisualizationGenerator(ABC):
             )
             axes[0, 2].set_title("Score vs Similarity (N/A)")
 
-        # ROC曲線
+        # ROCcurve
         self._plot_roc_curve(axes[1, 0], results_df, prediction_score_col, true_label_col)
 
-        # 混同行列
+        # Mix rows
         self._plot_confusion_matrix_subplot(axes[1, 1], results_df, prediction_score_col, true_label_col)
 
-        # 信頼度分布
+        # Confidence distribution
         if confidence_col and confidence_col in results_df.columns:
             self._plot_confidence_distribution(axes[1, 2], results_df, confidence_col)
         else:
-            # 予測スコアの代替として使用
+            # Use as an alternative to prediction score
             self._plot_confidence_distribution(axes[1, 2], results_df, prediction_score_col)
 
         plt.suptitle(custom_title, fontsize=16, y=0.98)
@@ -296,7 +295,7 @@ class BaseVisualizationGenerator(ABC):
         self._save_plot("comprehensive_dashboard")
 
     def _plot_score_distribution(self, ax, results_df: pd.DataFrame, score_col: str, label_col: str):
-        """予測スコアの分布をプロット"""
+        """Plot the distribution of predicted scores"""
         try:
             positive_scores = results_df[results_df[label_col] == 1][score_col]
             negative_scores = results_df[results_df[label_col] == 0][score_col]
@@ -319,7 +318,7 @@ class BaseVisualizationGenerator(ABC):
             ax.set_title("Score Distribution (Error)")
 
     def _plot_similarity_distribution(self, ax, results_df: pd.DataFrame, sim_col: str, label_col: str):
-        """類似度分布をプロット"""
+        """Plot similarity distribution"""
         try:
             positive_sim = results_df[results_df[label_col] == 1][sim_col]
             negative_sim = results_df[results_df[label_col] == 0][sim_col]
@@ -342,7 +341,7 @@ class BaseVisualizationGenerator(ABC):
             ax.set_title("Similarity Distribution (Error)")
 
     def _plot_score_vs_similarity_scatter(self, ax, results_df: pd.DataFrame, score_col: str, sim_col: str, label_col: str):
-        """スコア vs 類似度の散布図"""
+        """Score vs Similarity Scatter Plot"""
         try:
             positive_data = results_df[results_df[label_col] == 1]
             negative_data = results_df[results_df[label_col] == 0]
@@ -379,7 +378,7 @@ class BaseVisualizationGenerator(ABC):
             ax.set_title("Score vs Similarity (Error)")
 
     def _plot_roc_curve(self, ax, results_df: pd.DataFrame, score_col: str, label_col: str):
-        """ROC曲線をプロット"""
+        """Plot ROC curve"""
         try:
             from sklearn.metrics import roc_auc_score, roc_curve
 
@@ -405,11 +404,11 @@ class BaseVisualizationGenerator(ABC):
             ax.set_title("ROC Curve (Error)")
 
     def _plot_confusion_matrix_subplot(self, ax, results_df: pd.DataFrame, score_col: str, label_col: str):
-        """混同行列をサブプロットとしてプロット"""
+        """Plot the confusion matrix as a subplot"""
         try:
             from sklearn.metrics import confusion_matrix
 
-            # 予測値を生成（閾値0.5または0）
+            # Generate predicted value (threshold 0.5 or 0)
             threshold = 0.5 if results_df[score_col].max() > 1 else 0
             predictions = (results_df[score_col] > threshold).astype(int)
             cm = confusion_matrix(results_df[label_col], predictions)
@@ -438,7 +437,7 @@ class BaseVisualizationGenerator(ABC):
             ax.set_title("Confusion Matrix (Error)")
 
     def _plot_confidence_distribution(self, ax, results_df: pd.DataFrame, conf_col: str):
-        """信頼度分布をプロット"""
+        """Plot confidence distribution"""
         try:
             ax.hist(results_df[conf_col], bins=30, alpha=0.7, color="green")
             ax.set_xlabel("Confidence Score")
@@ -457,15 +456,15 @@ class BaseVisualizationGenerator(ABC):
 
     def _create_figure_grid(self, nrows: int, ncols: int, figsize: tuple = None) -> tuple:
         """
-        グリッド形式の図を作成
+        Create a diagram in grid format
 
         Args:
-            nrows: 行数
-            ncols: 列数
-            figsize: 図のサイズ
+            nrows: number of rows
+            ncols: number of columns
+            figsize: figure size
 
         Returns:
-            (figure, axes)のタプル
+            tuple of (figure, axes)
         """
         if figsize is None:
             figsize = (ncols * 5, nrows * 4)
@@ -480,24 +479,24 @@ class BaseVisualizationGenerator(ABC):
 
     def _validate_results(self, required_keys: List[str]):
         """
-        結果データに必要なキーが存在するか検証
+        Verify that the required key exists in the result data
 
         Args:
-            required_keys: 必要なキーのリスト
+            required_keys: list of required keys
 
         Raises:
-            KeyError: 必要なキーが存在しない場合
+            KeyError: If the required key does not exist
         """
         missing_keys = [key for key in required_keys if key not in self.results]
         if missing_keys:
             raise KeyError(f"Missing required keys in results: {missing_keys}")
 
     def _get_timestamp(self) -> str:
-        """現在のタイムスタンプを取得"""
+        """Get current timestamp"""
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def _create_html_header(self, title: str) -> str:
-        """HTML レポートのヘッダー部分を生成"""
+        """Generate header part of HTML report"""
         return f"""
         <!DOCTYPE html>
         <html>
@@ -580,7 +579,7 @@ class BaseVisualizationGenerator(ABC):
         """
 
     def _create_html_footer(self) -> str:
-        """HTML レポートのフッター部分を生成"""
+        """Generate footer part of HTML report"""
         return f"""
             <div class="footer">
                 <p>Report generated by {self.__class__.__name__}</p>
@@ -591,46 +590,46 @@ class BaseVisualizationGenerator(ABC):
         """
 
     def get_generated_files(self) -> List[Path]:
-        """生成されたファイルのリストを取得"""
+        """Get list of generated files"""
         return self.generated_files.copy()
 
-    # 抽象メソッド群 - サブクラスで実装必須
+    # Abstract methods - Must be implemented in subclasses
 
     @abstractmethod
     def plot_confusion_matrix(self):
-        """混同行列プロットの生成（実装必須）"""
+        """Generation of confusion matrix plot (required to implement)"""
         pass
 
     @abstractmethod
     def plot_performance_metrics(self):
-        """性能指標プロットの生成（実装必須）"""
+        """Generation of performance index plot (required to implement)"""
         pass
 
     @abstractmethod
     def create_summary_dashboard(self):
-        """サマリーダッシュボードの生成（実装必須）"""
+        """Generate summary dashboard (required to implement)"""
         pass
 
     @abstractmethod
     def generate_all_visualizations(self):
-        """全ての可視化の生成（実装必須）"""
+        """Generation of all visualizations (required to implement)"""
         pass
 
     @abstractmethod
     def create_html_report(self):
-        """HTMLレポートの生成（実装必須）"""
+        """Generate HTML report (required to implement)"""
         pass
 
-    # オプショナル抽象メソッド（サブクラスで必要に応じて実装）
+    # Optional abstract method (implemented by subclass as needed)
 
     def plot_auc_comparison(self):
-        """AUC指標の比較プロット（オプション）"""
+        """Comparison plot of AUC metrics (optional)"""
         self.logger.info("AUC comparison plot not implemented in this visualizer")
 
     def create_performance_radar_chart(self):
-        """性能指標レーダーチャート（オプション）"""
+        """Performance indicator radar chart (optional)"""
         self.logger.info("Performance radar chart not implemented in this visualizer")
 
     def plot_score_distribution(self):
-        """スコア分布プロット（オプション）"""
+        """Score distribution plot (optional)"""
         self.logger.info("Score distribution plot not implemented in this visualizer")

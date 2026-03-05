@@ -3,7 +3,7 @@
 RNA Encoding Validation Script
 ==============================
 
-RNAデータセットのエンコード整合性を詳細に検証するスクリプト
+Script for detailed encoding integrity verification of RNA datasets
 """
 
 import json
@@ -15,7 +15,7 @@ from pathlib import Path
 
 from molcrawl.utils.environment_check import check_learning_source_dir
 
-# プロジェクトルートをパスに追加
+# add project root to path
 
 try:
     import numpy as np
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class RNAEncodingValidator:
-    """RNAエンコード整合性検証クラス"""
+    """RNA encoding integrity verification class"""
 
     def __init__(self, dataset_dir: str):
         self.dataset_dir = Path(dataset_dir)
@@ -43,7 +43,7 @@ class RNAEncodingValidator:
         self.issues: list[str] = []
 
     def load_vocabulary(self) -> bool:
-        """語彙ファイルを読み込み"""
+        """Load vocabulary file"""
         try:
             if not self.vocab_file.exists():
                 self.issues.append(f"Vocabulary file not found: {self.vocab_file}")
@@ -60,7 +60,7 @@ class RNAEncodingValidator:
             return False
 
     def load_dataset(self) -> bool:
-        """パーケットデータセットを読み込み"""
+        """Load parquet dataset"""
         try:
             if not self.parquet_dir.exists():
                 self.issues.append(f"Parquet directory not found: {self.parquet_dir}")
@@ -89,7 +89,7 @@ class RNAEncodingValidator:
             return False
 
     def validate_token_ranges(self) -> bool:
-        """トークンIDの範囲を検証"""
+        """Validate token ID range"""
         try:
             if not self.vocab or not self.dataset:
                 return False
@@ -100,7 +100,7 @@ class RNAEncodingValidator:
             logger.info(f"Vocabulary size: {vocab_size}")
             logger.info(f"Max vocabulary ID: {max_vocab_id}")
 
-            # サンプルのトークンIDをチェック
+            # Check sample token ID
             sample_size = min(1000, len(self.dataset))
             logger.info(f"Checking token ranges in {sample_size} samples...")
 
@@ -110,7 +110,7 @@ class RNAEncodingValidator:
 
             for i in range(sample_size):
                 tokens = self.dataset[i]["token"]
-                if tokens:  # 空でない場合
+                if tokens:  # if not empty
                     total_tokens += len(tokens)
                     for token_id in tokens:
                         if token_id < 0 or token_id > max_vocab_id:
@@ -119,7 +119,7 @@ class RNAEncodingValidator:
 
             if invalid_tokens:
                 self.issues.append(f"Found {out_of_range_count} out-of-range tokens in {len(invalid_tokens)} sequences")
-                # 最初の10個の無効なトークンを表示
+                # show first 10 invalid tokens
                 for seq_idx, token_id in invalid_tokens[:10]:
                     self.issues.append(f"  Sequence {seq_idx}: token_id {token_id} (valid range: 0-{max_vocab_id})")
                 return False
@@ -132,12 +132,12 @@ class RNAEncodingValidator:
             return False
 
     def validate_vocabulary_consistency(self) -> bool:
-        """語彙の一貫性を検証"""
+        """Verify vocabulary consistency"""
         try:
             if not self.vocab:
                 return False
 
-            # 重複チェック
+            # Duplicate check
             gene_names = list(self.vocab.keys())
             token_ids = list(self.vocab.values())
 
@@ -152,7 +152,7 @@ class RNAEncodingValidator:
                 self.issues.append("Duplicate token IDs found in vocabulary")
                 return False
 
-            # ID範囲チェック
+            # ID range check
             min_id, max_id = min(token_ids), max(token_ids)
             expected_range = list(range(len(token_ids)))
             actual_range = sorted(token_ids)
@@ -161,7 +161,7 @@ class RNAEncodingValidator:
                 self.issues.append(f"Token ID range is not continuous: expected 0-{len(token_ids) - 1}, got {min_id}-{max_id}")
                 missing_ids = set(expected_range) - set(actual_range)
                 if missing_ids:
-                    self.issues.append(f"Missing token IDs: {sorted(list(missing_ids))[:10]}...")  # 最初の10個
+                    self.issues.append(f"Missing token IDs: {sorted(list(missing_ids))[:10]}...")  # First 10
                 return False
 
             logger.info(f"✓ Vocabulary consistency validated: {len(gene_names)} unique genes, IDs 0-{max_id}")
@@ -172,12 +172,12 @@ class RNAEncodingValidator:
             return False
 
     def validate_tokenization_quality(self) -> bool:
-        """トークン化品質を検証"""
+        """Verify tokenization quality"""
         try:
             if not self.dataset:
                 return False
 
-            # 統計情報の収集
+            # Collect statistics
             token_counts = []
             empty_sequences = 0
             total_sequences = min(1000, len(self.dataset))
@@ -195,7 +195,7 @@ class RNAEncodingValidator:
                 self.issues.append("All sequences are empty (no tokens)")
                 return False
 
-            # 統計計算
+            # statistical calculation
             avg_tokens = np.mean(token_counts)
             median_tokens = np.median(token_counts)
             min_tokens = np.min(token_counts)
@@ -207,7 +207,7 @@ class RNAEncodingValidator:
             logger.info(f"  Median tokens per sequence: {median_tokens:.1f}")
             logger.info(f"  Token count range: {min_tokens}-{max_tokens}")
 
-            # 品質チェック
+            # Quality check
             if empty_sequences / total_sequences > 0.5:
                 self.issues.append(f"Too many empty sequences: {empty_sequences}/{total_sequences}")
                 return False
@@ -224,16 +224,16 @@ class RNAEncodingValidator:
             return False
 
     def check_encoding_pipeline_consistency(self) -> bool:
-        """エンコードパイプライン全体の一貫性をチェック"""
+        """Check consistency across encoding pipeline"""
         try:
-            # 異なるトークン化手法の整合性チェック
+            # Consistency check of different tokenization methods
             if not self.dataset or not self.vocab:
                 return False
 
-            # Geneformerとscgptのトークン化の違いをチェック
-            # (この部分は実際の実装に合わせて調整が必要)
+            # Check the difference between tokenization between Geneformer and scgpt
+            # (This part needs to be adjusted according to the actual implementation)
 
-            # データセット内のtoken_countフィールドの整合性チェック
+            # Check the integrity of the token_count field in the dataset
             inconsistent_counts = 0
             total_checked = min(100, len(self.dataset))
 
@@ -258,7 +258,7 @@ class RNAEncodingValidator:
             return False
 
     def run_full_validation(self) -> bool:
-        """完全な検証を実行"""
+        """Run full validation"""
         logger.info("=== RNA Encoding Validation Started ===")
 
         validation_steps = [
@@ -284,7 +284,7 @@ class RNAEncodingValidator:
                 logger.error(f"❌ {step_name} ERROR: {e}")
                 all_passed = False
 
-        # 結果サマリー
+        # Result summary
         logger.info("=== Validation Results ===")
         if all_passed:
             logger.info("✅ All validation checks PASSED")
@@ -298,10 +298,10 @@ class RNAEncodingValidator:
 
 
 def main():
-    """メイン関数"""
+    """Main function"""
     import argparse
 
-    # LEARNING_SOURCE_DIRを取得
+    # Get LEARNING_SOURCE_DIR
     learning_source_dir = check_learning_source_dir()
 
     parser = argparse.ArgumentParser(description="RNA Encoding Validation")
@@ -314,10 +314,10 @@ def main():
 
     args = parser.parse_args()
 
-    # データセットディレクトリを構築
+    # Build dataset directory
     dataset_dir = os.path.join(learning_source_dir, args.dataset_subdir)
 
-    # ディレクトリの存在確認
+    # Check the existence of the directory
     if not os.path.exists(dataset_dir):
         print(f"❌ ERROR: Dataset directory does not exist: {dataset_dir}")
         print(f"Expected structure: {learning_source_dir}/{args.dataset_subdir}")

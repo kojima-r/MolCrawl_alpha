@@ -1,6 +1,6 @@
 """
-実験トラッキングのヘルパー関数
-既存のスクリプトに簡単に統合できるデコレータとコンテキストマネージャー
+Experiment tracking helper functions
+Decorators and context managers that can be easily integrated into existing scripts
 """
 
 import functools
@@ -21,7 +21,7 @@ def track_experiment(
     config_path: Optional[str] = None,
 ):
     """
-    関数を実験としてトラッキングするデコレータ
+    Decorator to track functions as experiments
 
     Usage:
         @track_experiment(
@@ -31,7 +31,7 @@ def track_experiment(
             dataset_type=DatasetType.PROTEIN_SEQUENCE
         )
         def train_model(config):
-            # 訓練処理
+            # Training process
             return {"accuracy": 0.95}
     """
 
@@ -40,7 +40,7 @@ def track_experiment(
         def wrapper(*args, **kwargs):
             tracker = ExperimentTracker()
 
-            # 実験開始
+            # Start experiment
             exp_id = tracker.start_experiment(
                 name=name,
                 experiment_type=experiment_type,
@@ -51,10 +51,10 @@ def track_experiment(
             )
 
             try:
-                # 関数実行
+                # function execution
                 result = func(*args, **kwargs)
 
-                # 結果を記録
+                # record the result
                 if isinstance(result, dict):
                     metrics = {k: v for k, v in result.items() if isinstance(v, (int, float))}
                     other_results = {k: v for k, v in result.items() if not isinstance(v, (int, float))}
@@ -65,7 +65,7 @@ def track_experiment(
                 return result
 
             except Exception as e:
-                # エラー処理
+                # Error handling
                 error_msg = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
                 tracker.fail_experiment(exp_id, error_msg)
                 raise
@@ -85,7 +85,7 @@ def experiment_context(
     config_path: Optional[str] = None,
 ):
     """
-    実験をコンテキストマネージャーで管理
+    Manage experiments with a context manager
 
     Usage:
         with experiment_context(
@@ -94,7 +94,7 @@ def experiment_context(
             model_type=ModelType.GPT2,
             dataset_type=DatasetType.PROTEIN_SEQUENCE
         ) as exp:
-            # 処理
+            # process
             exp.log("INFO", "Processing started")
             exp.start_step("step1", "Load data")
             # ...
@@ -119,27 +119,27 @@ def experiment_context(
             self.metrics: dict[str, float] = {}
 
         def log(self, level: str, message: str, source: Optional[str] = None):
-            """ログを追加"""
+            """Add log"""
             self.tracker.log(self.experiment_id, level, message, source)
 
         def start_step(self, step_id: str, step_name: str, command: Optional[str] = None):
-            """ステップを開始"""
+            """Start step"""
             return self.tracker.start_step(self.experiment_id, step_id, step_name, command)
 
         def complete_step(self, step_id: str, output_path: Optional[str] = None):
-            """ステップを完了"""
+            """Complete step"""
             self.tracker.complete_step(self.experiment_id, step_id, output_path)
 
         def fail_step(self, step_id: str, error_message: str):
-            """ステップを失敗"""
+            """Failed Step"""
             self.tracker.fail_step(self.experiment_id, step_id, error_message)
 
         def add_result(self, key: str, value: Any):
-            """結果を追加"""
+            """Add result"""
             self.results[key] = value
 
         def add_metric(self, key: str, value: float):
-            """メトリクスを追加"""
+            """Add metric"""
             self.metrics[key] = value
 
     ctx = ExperimentContext(exp_id, tracker)
@@ -155,14 +155,14 @@ def experiment_context(
 
 def simple_track(tracker: ExperimentTracker, exp_id: str, step_name: str):
     """
-    シンプルなステップトラッキングのコンテキストマネージャー
+    Simple step tracking context manager
 
     Usage:
         tracker = ExperimentTracker()
         exp_id = tracker.start_experiment(...)
 
         with simple_track(tracker, exp_id, "Data Loading"):
-            # 処理
+            # process
             pass
     """
     return _SimpleStepContext(tracker, exp_id, step_name)

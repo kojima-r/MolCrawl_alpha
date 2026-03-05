@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-# プロジェクトルートのsrcディレクトリをパスに追加
+# Add project root src directory to path
 from molcrawl.core.base import setup_logging
 from molcrawl.molecule_nat_lang.utils.config import MoleculeNLConfig
 from molcrawl.molecule_nat_lang.utils.general import compute_resource_aware_params, read_dataset, save_dataset
@@ -23,7 +23,7 @@ def run_statistics(series, column_name):
     plt.xlabel("Length of tokenized {}".format(column_name))
     plt.title("Distribution of tokenized {} lengths".format(column_name))
 
-    # 統一画像ディレクトリに保存
+    # Save to unified image directory
     from molcrawl.utils.image_manager import get_image_path
 
     image_path = get_image_path("molecule_nat_lang", "molecule_nat_lang_tokenized_{}_lengths_dist.png".format(column_name))
@@ -181,7 +181,7 @@ if __name__ == "__main__":
                 value = str(sample[key])[:100] + "..." if len(str(sample[key])) > 100 else sample[key]
                 logger.info(f"    {key}: {value}")
 
-    # 既に処理済みのparquetファイルが存在するかチェック
+    # Check if there is already a processed parquet file
     if not args.force and parquet_file.exists():
         logger.info(msg=f"Processed dataset already exists at {parquet_file}.")
         logger.info(

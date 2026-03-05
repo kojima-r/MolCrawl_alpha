@@ -1,5 +1,5 @@
 """
-実験管理のデータモデル定義
+Experiment management data model definition
 """
 
 import json
@@ -10,28 +10,28 @@ from typing import Any, Dict, List, Optional
 
 
 class ExperimentStatus(str, Enum):
-    """実験ステータス"""
+    """Experiment Status"""
 
-    PENDING = "pending"  # 未実行
-    RUNNING = "running"  # 実行中
-    COMPLETED = "completed"  # 完了
-    FAILED = "failed"  # 失敗
-    CANCELLED = "cancelled"  # キャンセル
-    SKIPPED = "skipped"  # スキップ
+    PENDING = "pending"  # Not executed
+    RUNNING = "running"  # Running
+    COMPLETED = "completed"  # Completed
+    FAILED = "failed"  # failed
+    CANCELLED = "cancelled"  # cancel
+    SKIPPED = "skipped"  # skipped
 
 
 class ExperimentType(str, Enum):
-    """実験タイプ"""
+    """Experiment type"""
 
-    DATA_PREPARATION = "data_preparation"  # データ準備
-    TRAINING = "training"  # モデル訓練
-    EVALUATION = "evaluation"  # 評価
-    VISUALIZATION = "visualization"  # 可視化
-    INFERENCE = "inference"  # 推論
+    DATA_PREPARATION = "data_preparation"  # Data preparation
+    TRAINING = "training"  # model training
+    EVALUATION = "evaluation"  # Evaluation
+    VISUALIZATION = "visualization"  # visualization
+    INFERENCE = "inference"  # inference
 
 
 class ModelType(str, Enum):
-    """モデルタイプ"""
+    """Model type"""
 
     GPT2 = "gpt2"
     BERT = "bert"
@@ -40,7 +40,7 @@ class ModelType(str, Enum):
 
 
 class DatasetType(str, Enum):
-    """データセットタイプ"""
+    """Dataset type"""
 
     COMPOUNDS = "compounds"
     GENOME_SEQUENCE = "genome_sequence"
@@ -56,7 +56,7 @@ class DatasetType(str, Enum):
 
 @dataclass
 class ExperimentStep:
-    """実験の各ステップ"""
+    """Each step of the experiment"""
 
     step_id: str
     step_name: str
@@ -88,12 +88,12 @@ class ExperimentStep:
 
 @dataclass
 class ExperimentLog:
-    """実験ログエントリ"""
+    """Experiment Log Entry"""
 
     timestamp: datetime
     level: str  # INFO, WARNING, ERROR, DEBUG
     message: str
-    source: Optional[str] = None  # ログのソース（ファイル名、関数名など）
+    source: Optional[str] = None  # Log source (file name, function name, etc.)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -111,7 +111,7 @@ class ExperimentLog:
 
 @dataclass
 class Experiment:
-    """実験の全体情報"""
+    """Overall information about the experiment"""
 
     experiment_id: str
     experiment_name: str
@@ -124,20 +124,20 @@ class Experiment:
     completed_at: Optional[datetime] = None
     total_duration_seconds: Optional[float] = None
 
-    # 設定情報
+    # Setting information
     config_path: Optional[str] = None
     config: Dict[str, Any] = field(default_factory=dict)
 
-    # 結果情報
+    # Results information
     results_dir: Optional[str] = None
     results: Dict[str, Any] = field(default_factory=dict)
     metrics: Dict[str, float] = field(default_factory=dict)
 
-    # ステップとログ
+    # steps and logs
     steps: List[ExperimentStep] = field(default_factory=list)
     logs: List[ExperimentLog] = field(default_factory=list)
 
-    # メタデータ
+    # metadata
     tags: List[str] = field(default_factory=list)
     notes: str = ""
     environment: Dict[str, Any] = field(default_factory=dict)
@@ -182,10 +182,10 @@ class Experiment:
         return cls(**data)
 
     def to_json(self) -> str:
-        """JSON文字列に変換"""
+        """Convert to JSON string"""
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, json_str: str) -> "Experiment":
-        """JSON文字列から復元"""
+        """Restore from JSON string"""
         return cls.from_dict(json.loads(json_str))

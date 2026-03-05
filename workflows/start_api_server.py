@@ -1,5 +1,5 @@
 """
-APIサーバー起動スクリプト
+API server startup script
 """
 
 from pathlib import Path
@@ -11,7 +11,7 @@ project_root = Path(__file__).parent
 if __name__ == "__main__":
     import os
 
-    # 環境変数にPYTHONPATHを追加
+    # Add PYTHONPATH to environment variables
     current_pythonpath = os.environ.get("PYTHONPATH", "")
     if str(project_root) not in current_pythonpath:
         os.environ["PYTHONPATH"] = f"{project_root}:{current_pythonpath}"

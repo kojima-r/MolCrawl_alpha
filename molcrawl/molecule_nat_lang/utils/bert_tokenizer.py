@@ -1,6 +1,6 @@
 """
-Molecule Natural Language用のBERT互換トークナイザーラッパー
-MoleculeNatLangTokenizerをBERT学習と互換性のある形式でラップ
+BERT-compatible tokenizer wrapper for Molecule Natural Language
+Wrap MoleculeNatLangTokenizer in a format compatible with BERT learning
 """
 
 from __future__ import annotations

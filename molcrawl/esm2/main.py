@@ -1,16 +1,16 @@
 """
 ESM-2 Training Script for Protein Sequence Data
 
-ESM-2 (Evolutionary Scale Modeling 2) は、Metaが開発したタンパク質配列専用の
-最先端トランスフォーマーモデルです。
+ESM-2 (Evolutionary Scale Modeling 2) is a protein sequence-specific software developed by Meta.
+This is a cutting edge Transformer model.
 
-主な特徴:
-- タンパク質配列に特化した事前学習
-- 6.5億パラメータまでのスケーラブルなアーキテクチャ
-- Structure prediction, function annotation, variant effect predictionなど幅広いタスクに対応
-- ESM-1bよりも高速で高精度
+Main features:
+- Pre-learning specialized for protein sequences
+- Scalable architecture up to 650 million parameters
+- Supports a wide range of tasks such as structure prediction, function annotation, variant effect prediction, etc.
+- Faster and more accurate than ESM-1b
 
-参考:
+reference:
 - Language models of protein sequences at the scale of evolution enable accurate structure prediction
 - https://github.com/facebookresearch/esm
 """
@@ -35,10 +35,10 @@ except ImportError:
 
 class ProteinDatasetLoader:
     """
-    タンパク質配列データセット用のローダー
+    Loader for protein sequence datasets
 
-    既存のprotein_sequenceデータセットを読み込み、
-    ESM-2用に前処理を行います。
+    Load the existing protein_sequence dataset,
+    Perform preprocessing for ESM-2.
     """
 
     def __init__(self, data_dir, split="train", test_size=0.1):
@@ -142,11 +142,11 @@ if __name__ == "__main__":
     model_path = ""
     max_length = 1024  # ESM-2 default: 1024
     dataset_dir = ""
-    learning_rate = 4e-4  # ESM-2推奨値（論文より）
+    learning_rate = 4e-4  # ESM-2 recommended value (from the paper)
     weight_decay = 0.01
     warmup_steps = 2000
     max_steps = 500000
-    batch_size = 4  # タンパク質配列は長いためバッチサイズは小さめ
+    batch_size = 4  # Batch size is small because protein sequences are long
     gradient_accumulation_steps = 32  # Effective batch size = 4 * 32 = 128
     per_device_eval_batch_size = 2
     log_interval = 100
@@ -183,8 +183,8 @@ if __name__ == "__main__":
 
     # ESM-2 Model Configuration
     # Based on original ESM-2 architecture
-    # ESM-2のモデルサイズ: 8M, 35M, 150M, 650M, 3B, 15B
-    # ここでは学習可能なサイズとして small/medium/large を定義
+    # ESM-2 model size: 8M, 35M, 150M, 650M, 3B, 15B
+    # Here we define small/medium/large as the learnable size
     if model_size == "small":
         # ESM-2 8M parameters equivalent
         model_config = EsmConfig(

@@ -3,7 +3,7 @@
 OMIM Real Data Processor
 ========================
 
-実際のOMIMデータファイルを処理してゲノム配列評価用データセットを作成するモジュール
+A module that processes actual OMIM data files to create datasets for genome sequence evaluation
 """
 
 import logging
@@ -17,16 +17,16 @@ import pandas as pd
 import requests
 import yaml
 
-# プロジェクトルートを追加
+# add project root
 
 
 class OMIMRealDataProcessor:
-    """OMIM実データ処理クラス"""
+    """OMIM real data processing class"""
 
     def __init__(self, config_path: str, logger: Optional[logging.Logger] = None):
         self.logger = logger or logging.getLogger(__name__)
 
-        # 設定ファイル読み込み
+        # configuration fileloading
         with open(config_path, "r") as f:
             self.config = yaml.safe_load(f)
 
@@ -34,7 +34,7 @@ class OMIMRealDataProcessor:
         self.cache_dir = self.config["data_directories"]["cache_dir"]
         self.processed_dir = self.config["data_directories"]["processed_dir"]
 
-        # ディレクトリ作成
+        # create directory
         for dir_path in [self.data_dir, self.cache_dir, self.processed_dir]:
             os.makedirs(dir_path, exist_ok=True)
 
@@ -42,7 +42,7 @@ class OMIMRealDataProcessor:
         self.logger.info(f"Data directory: {self.data_dir}")
 
     def download_omim_files(self, force_download: bool = False) -> Dict[str, str]:
-        """OMIMファイルをダウンロード"""
+        """Download OMIM file"""
         downloaded_files = {}
 
         for file_key, file_info in self.config["omim_data_sources"].items():
@@ -73,7 +73,7 @@ class OMIMRealDataProcessor:
         return downloaded_files
 
     def parse_mim2gene(self, file_path: str) -> pd.DataFrame:
-        """mim2gene.txtファイルを解析"""
+        """Analyze mim2gene.txt file"""
         self.logger.info("Parsing mim2gene.txt")
 
         data = []
@@ -100,7 +100,7 @@ class OMIMRealDataProcessor:
         return df
 
     def parse_mim_titles(self, file_path: str) -> pd.DataFrame:
-        """mimTitles.txtファイルを解析"""
+        """Parse mimTitles.txt file"""
         self.logger.info("Parsing mimTitles.txt")
 
         data = []
@@ -117,7 +117,7 @@ class OMIMRealDataProcessor:
                     mim_number = parts[1]
                     title = parts[2]
 
-                    # 遺伝パターンを推定
+                    # Estimate genetic pattern
                     inheritance_pattern = self._extract_inheritance_pattern(title)
 
                     data.append(
@@ -135,7 +135,7 @@ class OMIMRealDataProcessor:
         return df
 
     def parse_genemap2(self, file_path: str) -> pd.DataFrame:
-        """genemap2.txtファイルを解析"""
+        """Analyze genemap2.txt file"""
         self.logger.info("Parsing genemap2.txt")
 
         column_names = [
@@ -174,7 +174,7 @@ class OMIMRealDataProcessor:
         return df
 
     def parse_morbidmap(self, file_path: str) -> pd.DataFrame:
-        """morbidmap.txtファイルを解析"""
+        """Parse morbidmap.txt file"""
         self.logger.info("Parsing morbidmap.txt")
 
         data = []
@@ -191,7 +191,7 @@ class OMIMRealDataProcessor:
                     mim_number = parts[2]
                     cyto_location = parts[3]
 
-                    # 病原性を推定
+                    # Estimate pathogenicity
                     pathogenicity = self._estimate_pathogenicity(disorder)
 
                     data.append(
@@ -210,7 +210,7 @@ class OMIMRealDataProcessor:
         return df
 
     def _extract_inheritance_pattern(self, title: str) -> str:
-        """タイトルから遺伝パターンを抽出"""
+        """Extract genetic pattern from title"""
         title_lower = title.lower()
 
         if "autosomal dominant" in title_lower or "ad" in title_lower:
@@ -227,10 +227,10 @@ class OMIMRealDataProcessor:
             return "unknown"
 
     def _estimate_pathogenicity(self, disorder: str) -> str:
-        """疾患名から病原性を推定"""
+        """Estimating pathogenicity from disease name"""
         disorder_lower = disorder.lower()
 
-        # 重篤な疾患キーワード
+        # Serious disease keyword
         severe_keywords = [
             "cancer",
             "carcinoma",
@@ -243,7 +243,7 @@ class OMIMRealDataProcessor:
             "degeneration",
         ]
 
-        # 軽度な疾患キーワード
+        # Mild disease keyword
         mild_keywords = ["susceptibility", "predisposition", "variant", "polymorphism"]
 
         if any(keyword in disorder_lower for keyword in severe_keywords):
@@ -254,11 +254,11 @@ class OMIMRealDataProcessor:
             return "uncertain_significance"
 
     def generate_sequences_for_genes(self, gene_symbols: List[str], sequence_length: int = 100) -> Dict[str, str]:
-        """遺伝子シンボルに基づいてダミー配列を生成"""
+        """Generate dummy array based on gene symbol"""
         sequences = {}
 
         for gene in gene_symbols:
-            # 遺伝子名をシードとして使用し、再現可能な配列を生成
+            # Generate reproducible sequences using gene names as seeds
             seed = hash(gene) % (2**32)
             np.random.seed(seed)
 
@@ -269,22 +269,21 @@ class OMIMRealDataProcessor:
         return sequences
 
     def create_evaluation_dataset(self, downloaded_files: Dict[str, str]) -> pd.DataFrame:
-        """評価用データセットを作成"""
+        """Create evaluation dataset"""
         self.logger.info("Creating evaluation dataset from OMIM real data")
 
-        # 各ファイルを解析
+        # parse each file
         mim2gene_df = self.parse_mim2gene(downloaded_files["mim2gene"])
         mim_titles_df = self.parse_mim_titles(downloaded_files["mim_titles"])
         genemap2_df = self.parse_genemap2(downloaded_files["genemap2"])
         morbidmap_df = self.parse_morbidmap(downloaded_files["morbidmap"])
 
-        # データを統合
+        # Integrate data
         self.logger.info("Merging OMIM datasets")
 
-        # morbidmapをベースにして他のデータを結合
+        # Combine other data based on morbidmap
         merged_df = morbidmap_df.copy()
 
-        # mim2geneと結合
         merged_df = merged_df.merge(
             mim2gene_df[["mim_number", "approved_gene_symbol", "entrez_gene_id"]],
             on="mim_number",
@@ -292,14 +291,13 @@ class OMIMRealDataProcessor:
             suffixes=("", "_mim2gene"),
         )
 
-        # mimTitlesと結合
         merged_df = merged_df.merge(
             mim_titles_df[["mim_number", "inheritance_pattern", "is_phenotype"]],
             on="mim_number",
             how="left",
         )
 
-        # genemap2と結合
+        # Combine with genemap2
         merged_df = merged_df.merge(
             genemap2_df[["mim_number", "chromosome", "gene_name", "phenotypes"]],
             on="mim_number",
@@ -307,16 +305,16 @@ class OMIMRealDataProcessor:
             suffixes=("", "_genemap2"),
         )
 
-        # データクリーニング
+        # data cleaning
         merged_df = merged_df.dropna(subset=["gene_symbols"])
         merged_df = merged_df[merged_df["gene_symbols"] != ""]
 
-        # 設定に基づくフィルタリング
+        # Filtering based on settings
         max_sequences = self.config["processing_options"]["max_sequences"]
         if len(merged_df) > max_sequences:
             merged_df = merged_df.sample(n=max_sequences, random_state=42)
 
-        # 配列生成
+        # create array
         self.logger.info("Generating sequences for genes")
         unique_genes = []
         for gene_symbols in merged_df["gene_symbols"].unique():
@@ -328,7 +326,7 @@ class OMIMRealDataProcessor:
         sequence_length = self.config["processing_options"]["sequence_length"]
         sequences = self.generate_sequences_for_genes(unique_genes, sequence_length)
 
-        # 配列をデータフレームに追加
+        # add array to data frame
         def get_sequence_for_row(row):
             gene_symbols = row["gene_symbols"]
             if pd.notna(gene_symbols):
@@ -338,7 +336,7 @@ class OMIMRealDataProcessor:
 
         merged_df["sequence"] = merged_df.apply(get_sequence_for_row, axis=1)
 
-        # 空の配列を除外
+        # exclude empty arrays
         merged_df = merged_df[merged_df["sequence"] != ""]
 
         self.logger.info(f"Created evaluation dataset with {len(merged_df)} entries")
@@ -355,18 +353,18 @@ def process_omim_real_data(
     force_download: bool = False,
 ) -> str:
     """
-    OMIM実データを処理してデータセットを作成
+    Process OMIM real data to create datasets
 
     Args:
-        config_path: 設定ファイルパス
-        output_dir: 出力ディレクトリ
-        existing_omim_dir: 既存のOMIMデータディレクトリ（指定時はダウンロードをスキップ）
-        force_download: 強制ダウンロードフラグ
+        config_path: configuration file path
+        output_dir: Output directory
+        existing_omim_dir: Existing OMIM data directory (skip download if specified)
+        force_download: force download flag
 
     Returns:
-        出力ファイルパス
+        output file path
     """
-    # ログ設定
+    # Log settings
     log_dir = os.path.join(output_dir, "logs")
     os.makedirs(log_dir, exist_ok=True)
 
@@ -385,13 +383,13 @@ def process_omim_real_data(
         logger.info(f"Using existing OMIM directory: {existing_omim_dir}")
 
     try:
-        # プロセッサ初期化
+        # Processor initialization
         processor = OMIMRealDataProcessor(config_path, logger)
 
-        # ファイルダウンロードまたは既存ファイル使用
+        # Download file or use existing file
         if existing_omim_dir and os.path.isdir(existing_omim_dir):
             logger.info("Using existing OMIM files, skipping download")
-            # 既存ファイルのパスを設定
+            # set path to existing file
             downloaded_files = {
                 "mim2gene": os.path.join(existing_omim_dir, "mim2gene.txt"),
                 "mim_titles": os.path.join(existing_omim_dir, "mimTitles.txt"),
@@ -399,19 +397,19 @@ def process_omim_real_data(
                 "morbidmap": os.path.join(existing_omim_dir, "morbidmap.txt"),
             }
 
-            # ファイルの存在確認
+            # Check the existence of the file
             for _key, path in downloaded_files.items():
                 if not os.path.exists(path):
                     logger.warning(f"File not found: {path}")
         else:
-            # ファイルダウンロード
+            # file download
             downloaded_files = processor.download_omim_files(force_download)
 
-        # データセット作成
+        # Create dataset
         dataset = processor.create_evaluation_dataset(downloaded_files)
 
-        # 結果保存
-        # output_dirが既にdata配下を指している想定
+        # Save results
+        # Assuming output_dir already points to data
         os.makedirs(output_dir, exist_ok=True)
 
         output_file = os.path.join(output_dir, "omim_real_evaluation_dataset.csv")

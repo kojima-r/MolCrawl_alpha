@@ -30,20 +30,20 @@ eval_iters = 200
 log_interval = 10
 
 # init from checkpoint
-init_from = "resume"  # 'scratch' or 'resume' - デフォルトでチェックポイントから再開
+init_from = "resume"  # 'scratch' or 'resume' - resume from checkpoint by default
 
-# checkpoint management - 定期保存で過学習前のモデルを確保
-always_save_checkpoint = False  # best modelのみ保存（過学習対策）
-save_checkpoint_steps = 5000  # 5000ステップごとに定期保存
-max_checkpoints = 10  # 過学習前のcheckpointを保持するため多めに
+# checkpoint management - Ensure model before overfitting with regular save
+always_save_checkpoint = False  # Save only the best model (to prevent overfitting)
+save_checkpoint_steps = 5000  # Periodically save every 5000 steps
+max_checkpoints = 10  # Increase to maintain checkpoints before overfitting
 
-# early stopping - 過学習を検知して自動停止
+# early stopping - detect overfitting and automatically stop
 early_stopping = True
-early_stopping_patience = 5  # 5回（5000ステップ）改善がなければ停止
+early_stopping_patience = 5  # Stop if there is no improvement 5 times (5000 steps)
 
-# regularization - 過学習を抑制
+# regularization - suppress overfitting
 weight_decay = 1e-1
-dropout = 0.1  # Dropoutを有効化（デフォルトは0.0）
+dropout = 0.1  # enable Dropout (default 0.0)
 
 # dataset
 dataset = "protein_sequence"

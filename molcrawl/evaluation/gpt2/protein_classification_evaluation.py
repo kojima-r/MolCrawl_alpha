@@ -37,7 +37,7 @@ from molcrawl.utils.evaluation_output import (
 )
 from molcrawl.utils.model_evaluator import ModelEvaluator
 
-# ログ設定は後でsetup_evaluation_loggingで行う
+# Log settingslatersetup_evaluation_loggingdo it with
 logger = logging.getLogger(__name__)
 
 
@@ -52,23 +52,23 @@ class ProteinClassificationEvaluator(ModelEvaluator):
             model_path: Path to trained GPT2 model
             tokenizer_path: Path to tokenizer (None for EsmSequenceTokenizer)
         """
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(model_path, tokenizer_path)
 
-        # サブクラス固有の初期化
+        # Subclass-specific initialization
         self.tokenizer = self._init_tokenizer()
         self.model = self._init_model()
         self.model.to(self.device)
         self.model.eval()
 
     def _init_tokenizer(self):
-        """トークナイザーの初期化（抽象メソッドの実装）"""
-        # protein_sequenceはEsmSequenceTokenizerを使用（ファイル不要）
+        """Tokenizer initialization (abstract method implementation)"""
+        # protein_sequence uses EsmSequenceTokenizer (no file required)
         logger.info("Using EsmSequenceTokenizer for protein_sequence")
         return EsmSequenceTokenizer(vocab_size=33)
 
     def _init_model(self):
-        """モデルの初期化（抽象メソッドの実装）"""
+        """Model initialization (abstract method implementation)"""
         logger.info(f"Loading model from {self.model_path}")
         return self._load_model()
 
@@ -137,14 +137,14 @@ class ProteinClassificationEvaluator(ModelEvaluator):
 
     def encode_sequence(self, sequence: str, **kwargs) -> List[int]:
         """
-        配列をトークンIDにエンコード（抽象メソッドの実装）
+        Encode array to token ID (implementation of abstract method)
 
         Args:
-            sequence: タンパク質配列
-            **kwargs: 追加の引数
+            sequence: protein sequence
+            Error 500 (Server Error)!!1500.That’s an error.There was an error. Please try again later.That’s all we know.
 
         Returns:
-            トークンIDのリスト
+            List of token IDs
         """
         return self.tokenizer.encode(sequence)
 
@@ -396,14 +396,14 @@ def create_sample_dataset(output_path: str, num_samples: int = 100):
 
 def get_protein_tokenizer_path():
     """
-    protein_sequence用のトークナイザーパスを取得
-    protein_sequenceはEsmSequenceTokenizerを使用するため、Noneを返す
+    Get tokenizer path for protein_sequence
+    protein_sequence uses EsmSequenceTokenizer, so returns None
 
     Returns:
-        None: protein_sequenceはSentencePieceを使用しない
+        None: protein_sequence does not use SentencePiece
     """
-    # protein_sequenceはEsmSequenceTokenizerを使用するため、
-    # SentencePieceトークナイザーは不要
+    # protein_sequence uses EsmSequenceTokenizer, so
+    # No SentencePiece tokenizer required
     logger.info("protein_sequence uses EsmSequenceTokenizer, not SentencePiece")
     return None
 
@@ -444,7 +444,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 出力ディレクトリを自動生成または指定されたものを使用
+    # Automatically generate output directory or use specified one
     if hasattr(args, "output_dir") and args.output_dir != "./protein_classification_results":
         output_dir = Path(args.output_dir)
         output_dir.mkdir(exist_ok=True)
@@ -453,7 +453,7 @@ def main():
         model_name = get_model_name_from_path(args.model_path)
         output_dir = get_evaluation_output_dir(model_type, "protein_classification", model_name)
 
-    # ログ設定
+    # Log settings
     logger = setup_evaluation_logging(output_dir, "protein_classification_evaluation")
 
     # Create sample dataset if requested
@@ -468,17 +468,17 @@ def main():
     if not os.path.exists(args.model_path):
         raise FileNotFoundError(f"Model checkpoint not found: {args.model_path}")
 
-    # トークナイザーパスの取得
+    # Get tokenizer pass
     if args.tokenizer_path:
         tokenizer_path = args.tokenizer_path
     else:
         tokenizer_path = get_protein_tokenizer_path()
 
-    # protein_sequenceはEsmSequenceTokenizerを使用するため、tokenizer_pathはNoneでも可
+    # protein_sequence uses EsmSequenceTokenizer, sotokenizer_pathteethNoneBut it is possible
     if tokenizer_path and tokenizer_path != "None" and not os.path.exists(tokenizer_path):
         raise FileNotFoundError(f"Tokenizer not found: {tokenizer_path}")
 
-    # Noneの場合は使用しない
+    # Not used if None
     if tokenizer_path == "None":
         tokenizer_path = None
 

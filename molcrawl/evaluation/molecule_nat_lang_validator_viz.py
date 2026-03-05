@@ -2,8 +2,8 @@
 """
 Molecule Natural Language Validator - Visualization Module
 
-BaseVisualizationGeneratorを継承したMolecule NL検証結果の可視化クラス
-Performance MetricsとConfusion Matrixを含む包括的なダッシュボードを生成
+Molecule NL verification result visualization class that inherits BaseVisualizationGenerator
+Generate comprehensive dashboards including Performance Metrics and Confusion Matrix
 """
 
 import json
@@ -15,17 +15,17 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
 
 class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
     """
-    Molecule NL検証結果の可視化クラス
+    Molecule NL verification result visualization class
 
-    BaseVisualizationGeneratorを継承し、分子自然言語モデルの
-    検証結果を包括的に可視化します。
+    Inherit BaseVisualizationGenerator and create a molecular natural language model.
+    Comprehensive visualization of verification results.
 
     Features:
         - Performance Metrics (Accuracy, Precision, Recall, F1, ROC-AUC, PR-AUC)
@@ -37,24 +37,24 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
 
     def __init__(self, results_file, output_dir, metrics=None):
         """
-        初期化
+        initialization
 
         Args:
-            results_file (str): 検証結果CSVファイルのパス
-            output_dir (str): 出力ディレクトリ
-            metrics (dict): メトリクス情報（オプション）
+            results_file (str): Path of verification result CSV file
+            output_dir (str): Output directory
+            metrics (dict): metrics information (optional)
         """
-        # 親クラスの初期化（results_sourceとしてresults_fileを渡す）
+        # Initialize parent class（results_sourceasresults_file)
         super().__init__(results_source=results_file)
 
         self.results_file = results_file
         self.output_dir = output_dir
         self.metrics = metrics
 
-        # データの読み込み
+        # Load data
         self.df = pd.read_csv(results_file)
 
-        # メトリクスファイルが存在する場合は読み込み
+        # Load metrics file if it exists
         if metrics is None:
             metrics_path = os.path.join(os.path.dirname(results_file), "validation_metrics.json")
             if os.path.exists(metrics_path):
@@ -66,12 +66,12 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
 
     def create_summary_dashboard(self, output_path):
         """
-        要約ダッシュボードの作成（BaseVisualizationGenerator要求メソッド）
+        Creating a summary dashboard (BaseVisualizationGenerator request method)
 
         Args:
-            output_path (str): 出力ファイルパス
+            output_path (str): Output file path
         """
-        # 包括的ダッシュボードをサマリーとして使用
+        # Use comprehensive dashboards as summaries
         self._create_comprehensive_dashboard(
             df=self.df,
             output_path=output_path,
@@ -80,10 +80,10 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
 
     def plot_performance_metrics(self, output_path):
         """
-        パフォーマンスメトリクスプロット（BaseVisualizationGenerator要求メソッド）
+        Performance metrics plot (BaseVisualizationGenerator request method)
 
         Args:
-            output_path (str): 出力ファイルパス
+            output_path (str): Output file path
         """
         fig, ax = plt.subplots(figsize=(10, 6))
         self._plot_performance_metrics(ax)
@@ -93,10 +93,10 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
 
     def plot_confusion_matrix(self, output_path):
         """
-        混同行列プロット（BaseVisualizationGenerator要求メソッド）
+        Confusion matrix plot (BaseVisualizationGenerator request method)
 
         Args:
-            output_path (str): 出力ファイルパス
+            output_path (str): Output file path
         """
         fig, ax = plt.subplots(figsize=(8, 6))
         self._plot_confusion_matrix(
@@ -110,56 +110,56 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         plt.close()
 
     def generate_all_visualizations(self):
-        """すべての可視化を生成"""
+        """Generate all visualizations"""
         print("🎨 Generating comprehensive visualizations...")
 
-        # BaseVisualizationGeneratorの包括的ダッシュボードを使用
+        # Use BaseVisualizationGenerator's comprehensive dashboard
         self._create_comprehensive_dashboard(
             df=self.df,
             output_path=os.path.join(self.output_dir, "comprehensive_dashboard.png"),
             title="Molecule NL Validation - Comprehensive Dashboard",
         )
 
-        # ドメイン固有の追加プロットを生成
+        # Generate additional domain-specific plots
         self._create_domain_specific_plots()
 
         print("✅ All visualizations generated successfully")
 
     def _prepare_data_for_dashboard(self, df):
         """
-        ダッシュボード用のデータを準備（BaseVisualizationGenerator要求形式）
+        Prepare data for dashboard (BaseVisualizationGenerator request format)
 
         Args:
-            df (pd.DataFrame): 検証結果データフレーム
+            df (pd.DataFrame): Verification result data frame
 
         Returns:
-            dict: ダッシュボード用データ
+            dict: data for dashboard
         """
-        # BaseVisualizationGeneratorが期待する形式にデータを変換
+        # Convert data to the format expected by BaseVisualizationGenerator
         data = {
             "y_true": df["true_label"].values,
             "y_pred": df["predicted_label"].values,
             "y_scores": df["prediction_score"].values,
-            "confidence": df["prediction_score"].values,  # スコアを信頼度として使用
+            "confidence": df["prediction_score"].values,  # use score as confidence
         }
 
         return data
 
     def _create_comprehensive_dashboard(self, df, output_path, title):
         """
-        包括的ダッシュボードの作成
+        Create comprehensive dashboards
 
-        BaseVisualizationGeneratorのダッシュボード機能を活用し、
-        6パネルの詳細な可視化を生成
+        Utilizing BaseVisualizationGenerator's dashboard function,
+        Generates a 6-panel detailed visualization
         """
-        # データの準備
+        # Prepare data
         dashboard_data = self._prepare_data_for_dashboard(df)
 
-        # 親クラスのダッシュボード生成メソッドを呼び出し
+        # Call the dashboard generation method of the parent class
         fig, axes = plt.subplots(3, 2, figsize=(16, 18))
         fig.suptitle(title, fontsize=16, fontweight="bold", y=0.995)
 
-        # 1. Score Distribution (左上)
+        # 1. Score Distribution (top left)
         self._plot_score_distribution(
             dashboard_data["y_scores"],
             dashboard_data["y_true"],
@@ -167,10 +167,10 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
             "Prediction Score Distribution by True Label",
         )
 
-        # 2. Performance Metrics (右上)
+        # 2. Performance Metrics (upper right)
         self._plot_performance_metrics(axes[0, 1])
 
-        # 3. Confusion Matrix (中央左)
+        # 3. Confusion Matrix (center left)
         self._plot_confusion_matrix(
             dashboard_data["y_true"],
             dashboard_data["y_pred"],
@@ -178,7 +178,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
             "Confusion Matrix",
         )
 
-        # 4. ROC Curve (中央右)
+        # 4. ROC Curve (center right)
         self._plot_roc_curve(
             dashboard_data["y_true"],
             dashboard_data["y_scores"],
@@ -186,7 +186,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
             "ROC Curve",
         )
 
-        # 5. Precision-Recall Curve (左下)
+        # 5. Precision-Recall Curve (bottom left)
         self._plot_pr_curve(
             dashboard_data["y_true"],
             dashboard_data["y_scores"],
@@ -194,7 +194,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
             "Precision-Recall Curve",
         )
 
-        # 6. Label Distribution (右下)
+        # 6. Label Distribution (lower right)
         self._plot_label_distribution(dashboard_data["y_true"], axes[2, 1], "Dataset Label Distribution")
 
         plt.tight_layout()
@@ -204,7 +204,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         print(f"   ✅ Comprehensive dashboard saved: {output_path}")
 
     def _plot_performance_metrics(self, ax):
-        """Performance Metricsの棒グラフ"""
+        """Performance Metrics bar graph"""
         if self.metrics is None:
             ax.text(0.5, 0.5, "Metrics not available", ha="center", va="center")
             ax.set_title("Performance Metrics")
@@ -237,7 +237,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
 
         bars = ax.barh(metric_names, metric_values, color=colors, alpha=0.7)
 
-        # 値をバーの横に表示
+        # Display the value next to the bar
         for _i, (bar, val) in enumerate(zip(bars, metric_values)):
             ax.text(
                 val + 0.02,
@@ -254,7 +254,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         ax.axvline(0.5, color="gray", linestyle="--", alpha=0.5, linewidth=1)
 
     def _plot_label_distribution(self, y_true, ax, title):
-        """ラベル分布の可視化"""
+        """Visualization of label distribution"""
         unique, counts = np.unique(y_true, return_counts=True)
 
         colors = ["#3498db", "#e74c3c"]
@@ -267,7 +267,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
             linewidth=1.5,
         )
 
-        # パーセンテージを追加
+        # add percentage
         total = sum(counts)
         for bar, count in zip(bars, counts):
             height = bar.get_height()
@@ -287,7 +287,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         ax.grid(True, alpha=0.3, axis="y")
 
     def _create_domain_specific_plots(self):
-        """ドメイン固有の追加プロット"""
+        """Additional domain-specific plots"""
         # 1. Detailed Confusion Matrix with annotations
         self._create_detailed_confusion_matrix()
 
@@ -298,7 +298,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         self._create_error_analysis_plot()
 
     def _create_detailed_confusion_matrix(self):
-        """詳細なConfusion Matrixヒートマップ"""
+        """Detailed Confusion Matrix Heatmap"""
         if self.metrics is None:
             return
 
@@ -325,7 +325,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
             linecolor="black",
         )
 
-        # パーセンテージを追加
+        # add percentage
         total = cm_array.sum()
         for i in range(2):
             for j in range(2):
@@ -352,10 +352,10 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         print(f"   ✅ Detailed confusion matrix saved: {output_path}")
 
     def _create_confidence_histogram(self):
-        """予測信頼度のヒストグラム"""
+        """Histogram of prediction confidence"""
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-        # 正解・不正解別の信頼度分布
+        # Confidence distribution by correct/incorrect answers
         correct = self.df[self.df["true_label"] == self.df["predicted_label"]]
         incorrect = self.df[self.df["true_label"] != self.df["predicted_label"]]
 
@@ -381,7 +381,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         axes[0].legend()
         axes[0].grid(True, alpha=0.3)
 
-        # ラベル別の信頼度分布
+        # Confidence distribution by label
         pos_samples = self.df[self.df["true_label"] == 1]
         neg_samples = self.df[self.df["true_label"] == 0]
 
@@ -415,14 +415,14 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         print(f"   ✅ Confidence histogram saved: {output_path}")
 
     def _create_error_analysis_plot(self):
-        """エラー分析プロット"""
-        # False PositivesとFalse Negativesの分析
+        """Error analysis plot"""
+        # Analysis of False Positives and False Negatives
         fp = self.df[(self.df["true_label"] == 0) & (self.df["predicted_label"] == 1)]
         fn = self.df[(self.df["true_label"] == 1) & (self.df["predicted_label"] == 0)]
 
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-        # False Positivesのスコア分布
+        # Score distribution of False Positives
         if len(fp) > 0:
             axes[0].hist(
                 fp["prediction_score"],
@@ -441,7 +441,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
             axes[0].text(0.5, 0.5, "No False Positives", ha="center", va="center", fontsize=14)
             axes[0].set_title("False Positives", fontsize=12, fontweight="bold")
 
-        # False Negativesのスコア分布
+        # Score distribution of False Negatives
         if len(fn) > 0:
             axes[1].hist(
                 fn["prediction_score"],
@@ -468,7 +468,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         print(f"   ✅ Error analysis plot saved: {output_path}")
 
     def create_html_report(self):
-        """HTMLレポートの生成"""
+        """Generate HTML report"""
         html_content = self._generate_html_report()
 
         output_path = os.path.join(self.output_dir, "validation_report.html")
@@ -478,8 +478,8 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
         print(f"   ✅ HTML report saved: {output_path}")
 
     def _generate_html_report(self):
-        """HTML形式のレポート生成"""
-        # メトリクスの取得
+        """HTML format report generation"""
+        # Get metrics
         if self.metrics:
             pm = self.metrics["performance_metrics"]
             cm = self.metrics["confusion_matrix"]
@@ -507,7 +507,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
                 "negative_samples": 0,
             }
 
-        # F1スコアに基づく評価
+        # Evaluation based on F1 score
         f1 = pm["f1_score"]
         if f1 >= 0.8:
             assessment = "🟢 Excellent"
@@ -767,7 +767,7 @@ class MoleculeNLValidatorVisualization(BaseVisualizationGenerator):
 
 
 def main():
-    """スタンドアローン実行用メインルーチン"""
+    """Main routine for standalone execution"""
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate visualizations for Molecule NL validation results")
@@ -793,7 +793,7 @@ def main():
     print(f"Results file: {args.results_file}")
     print(f"Output directory: {args.output_dir}")
 
-    # 可視化の生成
+    # Generate visualization
     visualizer = MoleculeNLValidatorVisualization(results_file=args.results_file, output_dir=args.output_dir)
 
     visualizer.generate_all_visualizations()

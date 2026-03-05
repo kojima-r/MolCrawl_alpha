@@ -8,7 +8,7 @@ import os
 from molcrawl.compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 from molcrawl.config.paths import LEARNING_SOURCE_DIR, get_gpt2_output_path
 
-# compounds データセットのパスを直接指定
+# Compounds Directly specify the dataset path
 dataset_dir = os.path.join(LEARNING_SOURCE_DIR, "compounds", "organix13", "compounds", "training_ready_hf_dataset")
 
 tokenizer_path = "assets/molecules/vocab.txt"  # path to the tokenizer vocab file
@@ -40,12 +40,12 @@ eval_iters = 200
 log_interval = 200
 
 # init from checkpoint
-init_from = "resume"  # 'scratch' or 'resume' - デフォルトでチェックポイントから再開
+init_from = "resume"  # 'scratch' or 'resume' - resume from checkpoint by default
 
 # checkpoint management
-always_save_checkpoint = True  # 検証ロスに関係なく定期的に保存
-save_checkpoint_steps = None  # Noneの場合はeval_intervalで保存
-max_checkpoints = 5  # 最大5個のチェックポイントを保持
+always_save_checkpoint = True  # Save regularly regardless of validation loss
+save_checkpoint_steps = None  # If None, save with eval_interval
+max_checkpoints = 5  # Keep up to 5 checkpoints
 
 # weight decay
 weight_decay = 1e-1

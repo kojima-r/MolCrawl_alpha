@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-ProteinGym評価結果の可視化スクリプト
+Visualization script for ProteinGym evaluation results
 
-このスクリプトは、ProteinGym評価の結果を様々なグラフで可視化します。
+This script visualizes the results of the ProteinGym assessment in various graphs.
 """
 
 import argparse
@@ -14,56 +14,56 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
-# ログ設定
+# Log settings
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 class ProteinGymVisualizer(BaseVisualizationGenerator):
-    """ProteinGym評価結果の可視化クラス"""
+    """ProteinGym evaluation result visualization class"""
 
     def __init__(self, output_dir="./proteingym_visualizations"):
         """
-        初期化
+        initialization
 
         Args:
-            output_dir (str): 可視化結果の出力ディレクトリ
+            output_dir (str): Output directory of visualization results
         """
-        # 親クラスの初期化（空の結果辞書で初期化）
+        # Initialize parent class(initialized with empty result dictionary)
         super().__init__({}, output_dir, logger)
 
-        # ProteinGym固有の初期化
+        # ProteinGym-specific initialization
         self.evaluation_data = None
 
     def load_evaluation_results(self, results_file):
         """
-        評価結果ファイルを読み込み
+        Load evaluation result file
 
         Args:
-            results_file (str): 評価結果JSONファイルのパス
+            results_file (str): Path of evaluation result JSON file
 
         Returns:
-            dict: 評価結果
+            dict: evaluation result
         """
         self.logger.info(f"Loading evaluation results from {results_file}")
 
-        # 親クラスのメソッドを使用
+        # Use parent class method
         self.results = self._load_results(results_file)
         return self.results
 
     def load_prediction_data(self, prediction_file):
         """
-        予測データファイルを読み込み
+        Load prediction data file
 
         Args:
-            prediction_file (str): 予測データCSVファイルのパス
+            prediction_file (str): Path of prediction data CSV file
 
         Returns:
-            pd.DataFrame: 予測データ
+            pd.DataFrame: Prediction data
         """
         logger.info(f"Loading prediction data from {prediction_file}")
 
@@ -78,39 +78,39 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         save_name="correlation_scatter.png",
     ):
         """
-        相関散布図を作成
+        Create a correlation scatter plot
 
         Args:
-            true_scores (array-like): 真の値
-            predicted_scores (array-like): 予測値
-            title (str): グラフタイトル
-            save_name (str): 保存ファイル名
+            true_scores (array-like): true values
+            predicted_scores (array-like): predicted values
+            title (str): Graph title
+            save_name (str): Save file name
         """
         fig, ax = plt.subplots(figsize=(10, 8))
 
-        # 散布図
+        # Scatterplot
         ax.scatter(true_scores, predicted_scores, alpha=0.6, s=50)
 
-        # 相関係数を計算
+        # correlation coefficientcalculate
         spearman_corr, spearman_p = spearmanr(true_scores, predicted_scores)
         pearson_corr, pearson_p = pearsonr(true_scores, predicted_scores)
 
-        # 回帰直線
+        # regression line
         z = np.polyfit(true_scores, predicted_scores, 1)
         p = np.poly1d(z)
         ax.plot(true_scores, p(true_scores), "r--", alpha=0.8, linewidth=2)
 
-        # 対角線（完璧な予測）
+        # Diagonal (perfect prediction)
         min_val = min(min(true_scores), min(predicted_scores))
         max_val = max(max(true_scores), max(predicted_scores))
         ax.plot([min_val, max_val], [min_val, max_val], "k--", alpha=0.5, linewidth=1)
 
-        # ラベルと統計情報
+        # Labels and statistics
         ax.set_xlabel("True DMS Score", fontsize=12)
         ax.set_ylabel("Predicted Score", fontsize=12)
         ax.set_title(title, fontsize=14)
 
-        # 統計情報をテキストボックスに表示
+        # Display statistics in text box
         textstr = f"Spearman ρ = {spearman_corr:.3f} (p={spearman_p:.2e})\nPearson r = {pearson_corr:.3f} (p={pearson_p:.2e})\nN = {len(true_scores)}"
         props = dict(boxstyle="round", facecolor="wheat", alpha=0.8)
         ax.text(
@@ -133,16 +133,16 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
     def plot_score_distributions(self, true_scores, predicted_scores, save_name="score_distributions.png"):
         """
-        スコア分布の比較図を作成
+        Create a comparison chart of score distribution
 
         Args:
-            true_scores (array-like): 真の値
-            predicted_scores (array-like): 予測値
-            save_name (str): 保存ファイル名
+            true_scores (array-like): true values
+            predicted_scores (array-like): predicted values
+            save_name (str): Save file name
         """
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
-        # ヒストグラム
+        # Histogram
         ax1.hist(
             true_scores,
             bins=30,
@@ -165,7 +165,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # Q-Qプロット
+        # Q-Q plot
 
         true_quantiles = np.percentile(true_scores, np.linspace(0, 100, 100))
         pred_quantiles = np.percentile(predicted_scores, np.linspace(0, 100, 100))
@@ -189,18 +189,18 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
     def plot_residuals(self, true_scores, predicted_scores, save_name="residuals.png"):
         """
-        残差プロットを作成
+        Create residual plot
 
         Args:
-            true_scores (array-like): 真の値
-            predicted_scores (array-like): 予測値
-            save_name (str): 保存ファイル名
+            true_scores (array-like): true values
+            predicted_scores (array-like): predicted values
+            save_name (str): Save file name
         """
         residuals = np.array(predicted_scores) - np.array(true_scores)
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
-        # 残差 vs 予測値
+        # Residual vs predicted value
         ax1.scatter(predicted_scores, residuals, alpha=0.6, s=50)
         ax1.axhline(y=0, color="r", linestyle="--", alpha=0.8)
         ax1.set_xlabel("Predicted Scores", fontsize=12)
@@ -208,7 +208,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         ax1.set_title("Residuals vs Predicted", fontsize=14)
         ax1.grid(True, alpha=0.3)
 
-        # 残差のヒストグラム
+        # histogram of residuals
         ax2.hist(residuals, bins=30, alpha=0.7, color="green", density=True)
         ax2.axvline(x=0, color="r", linestyle="--", alpha=0.8)
         ax2.set_xlabel("Residuals", fontsize=12)
@@ -216,7 +216,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         ax2.set_title("Residual Distribution", fontsize=14)
         ax2.grid(True, alpha=0.3)
 
-        # 統計情報
+        # Statistics information
         textstr = f"Mean: {np.mean(residuals):.4f}\nStd: {np.std(residuals):.4f}\nMAE: {np.mean(np.abs(residuals)):.4f}"
         props = dict(boxstyle="round", facecolor="lightgreen", alpha=0.8)
         ax2.text(
@@ -239,17 +239,17 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
     def plot_performance_metrics(self, results, save_name="performance_metrics.png"):
         """
-        パフォーマンス指標の棒グラフを作成
+        Create bar graphs for performance metrics
 
         Args:
-            results (dict): 評価結果
-            save_name (str): 保存ファイル名
+            results (dict): evaluation results
+            save_name (str): Save file name
         """
         metrics = {
             "Spearman ρ": results.get("spearman_correlation", 0),
             "Pearson r": results.get("pearson_correlation", 0),
-            "MAE": -results.get("mae", 0),  # 負の値で表示（低い方が良い）
-            "RMSE": -results.get("rmse", 0),  # 負の値で表示（低い方が良い）
+            "MAE": -results.get("mae", 0),  # Display as negative value (lower is better)
+            "RMSE": -results.get("rmse", 0),  # Display as negative value (lower is better)
         }
 
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -260,11 +260,11 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
         bars = ax.bar(names, values, color=colors, alpha=0.7)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value, name in zip(bars, values, names):
             height = bar.get_height()
             if name in ["MAE", "RMSE"]:
-                # 負の値で表示したものは正の値で表示
+                # Displayed as a negative value is displayed as a positive value
                 label_value = -value
                 ax.text(
                     bar.get_x() + bar.get_width() / 2.0,
@@ -286,7 +286,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         ax.set_title("Performance Metrics", fontsize=14)
         ax.grid(True, alpha=0.3, axis="y")
 
-        # ゼロライン
+        # zero line
         ax.axhline(y=0, color="black", linestyle="-", alpha=0.3)
 
         plt.xticks(rotation=45)
@@ -300,17 +300,17 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
     def plot_mutation_type_analysis(self, df, save_name="mutation_analysis.png"):
         """
-        変異タイプ別の分析プロットを作成
+        Create analysis plots by mutation type
 
         Args:
-            df (pd.DataFrame): 予測データ（mutant, true_score, predicted_scoreカラムを含む）
-            save_name (str): 保存ファイル名
+            df (pd.DataFrame): Predicted data (including mutant, true_score, predicted_score columns)
+            save_name (str): Save file name
         """
         if "mutant" not in df.columns:
             logger.warning("No 'mutant' column found. Skipping mutation analysis.")
             return
 
-        # 変異タイプの分類
+        # Classification of mutation types
         def classify_mutation(mutant):
             if mutant == "WT":
                 return "Wild Type"
@@ -323,7 +323,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
 
-        # 変異タイプ別の分布
+        # Distribution by mutation type
         mutation_types = df["mutation_type"].unique()
         for mut_type in mutation_types:
             subset = df[df["mutation_type"] == mut_type]
@@ -340,21 +340,21 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         ax1.legend()
         ax1.grid(True, alpha=0.3)
 
-        # 変異タイプ別のボックスプロット（真の値）
+        # Boxplot by mutation type (true values)
         mutation_data_true = [df[df["mutation_type"] == mt]["true_score"].values for mt in mutation_types]
         ax2.boxplot(mutation_data_true, labels=mutation_types)
         ax2.set_ylabel("True Score", fontsize=12)
         ax2.set_title("True Score Distribution by Mutation Type", fontsize=14)
         ax2.grid(True, alpha=0.3)
 
-        # 変異タイプ別のボックスプロット（予測値）
+        # Boxplot by mutation type (predicted values)
         mutation_data_pred = [df[df["mutation_type"] == mt]["predicted_score"].values for mt in mutation_types]
         ax3.boxplot(mutation_data_pred, labels=mutation_types)
         ax3.set_ylabel("Predicted Score", fontsize=12)
         ax3.set_title("Predicted Score Distribution by Mutation Type", fontsize=14)
         ax3.grid(True, alpha=0.3)
 
-        # 変異タイプ別の相関係数
+        # Correlation coefficient by mutation type
         correlations = []
         for mut_type in mutation_types:
             subset = df[df["mutation_type"] == mut_type]
@@ -374,7 +374,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         ax4.set_title("Correlation by Mutation Type", fontsize=14)
         ax4.grid(True, alpha=0.3, axis="y")
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for i, (_mt, corr) in enumerate(zip(mutation_types, correlations)):
             if not np.isnan(corr):
                 ax4.text(i, corr, f"{corr:.3f}", ha="center", va="bottom")
@@ -389,34 +389,34 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
     def create_summary_report(self, results, prediction_file=None):
         """
-        総合レポートを作成
+        Create a comprehensive report
 
         Args:
-            results (dict): 評価結果
-            prediction_file (str): 予測データファイル（オプション）
+            results (dict): evaluation results
+            prediction_file (str): Prediction data file (optional)
         """
         logger.info("Creating comprehensive visualization report")
 
-        # 予測データの読み込み（ある場合）
+        # Load prediction data (if available)
         if prediction_file and os.path.exists(prediction_file):
             df = self.load_prediction_data(prediction_file)
             true_scores = df["true_score"].values if "true_score" in df.columns else df["DMS_score"].values
             predicted_scores = df["predicted_score"].values
         else:
-            # 結果から模擬データを生成
+            # Generate mock data from results
             logger.warning("No prediction data file provided. Creating mock data for visualization.")
             n_points = results.get("n_variants", 100)
-            true_scores = np.random.beta(2, 5, n_points)  # ProteinGymに類似した分布
+            true_scores = np.random.beta(2, 5, n_points)  # Distribution similar to ProteinGym
             noise_level = 0.3
             predicted_scores = true_scores + np.random.normal(0, noise_level, n_points)
 
-        # 各種プロット作成
+        # Create various plots
         self.plot_correlation_scatter(true_scores, predicted_scores)
         self.plot_score_distributions(true_scores, predicted_scores)
         self.plot_residuals(true_scores, predicted_scores)
         self.plot_performance_metrics(results)
 
-        # 変異分析（データがある場合）
+        # Mutation analysis (if data is available)
         if prediction_file and os.path.exists(prediction_file):
             df_with_scores = df.copy()
             df_with_scores["true_score"] = true_scores
@@ -425,13 +425,13 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
         logger.info(f"All visualizations saved to {self.output_dir}")
 
-    # 抽象メソッドの実装
+    # Implementing abstract methods
     def plot_confusion_matrix(self):
-        """混同行列プロット（ProteinGymでは該当なし）"""
+        """Confusion matrix plot (not applicable for ProteinGym)"""
         self.logger.info("Confusion matrix not applicable for ProteinGym regression task")
 
     def create_summary_dashboard(self):
-        """サマリーダッシュボードの生成"""
+        """Generate summary dashboard"""
         self.logger.info("Creating ProteinGym summary dashboard")
 
         if not self.results:
@@ -440,7 +440,6 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
 
-        # ダミーデータでデモンストレーション
         correlations = [0.75, 0.68, 0.82]
         methods = ["Spearman", "Pearson", "Kendall"]
 
@@ -449,7 +448,6 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         ax1.set_ylabel("Correlation")
         ax1.set_ylim(0, 1)
 
-        # その他のプロットをダミーで作成
         ax2.text(
             0.5,
             0.5,
@@ -480,7 +478,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         self._save_plot("proteingym_summary_dashboard")
 
     def generate_all_visualizations(self):
-        """全ての可視化を生成"""
+        """Generate all visualizations"""
         self.logger.info("Generating all ProteinGym visualizations")
 
         if not self.results:
@@ -489,7 +487,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
 
         self.create_summary_dashboard()
 
-        # 汎用ダッシュボードも生成（結果データがあれば）
+        # Also generate a generic dashboard(If result data is available)
         try:
             self._create_comprehensive_evaluation_dashboard()
         except Exception as e:
@@ -498,37 +496,37 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         self.logger.info(f"Generated {len(self.generated_files)} visualization files")
 
     def _create_comprehensive_evaluation_dashboard(self):
-        """ProteinGym用の包括的評価ダッシュボードを作成"""
+        """Create a comprehensive assessment dashboard for ProteinGym"""
         self.logger.info("Creating comprehensive ProteinGym evaluation dashboard")
 
-        # ProteinGymの結果から仮想的なDataFrameを作成
-        # 実際の実装では、評価時に保存されたDataFrameを使用
+        # Create a virtual DataFrame from ProteinGym results
+        # Actual implementation uses the DataFrame saved during evaluation
         import numpy as np
 
         np.random.seed(42)
 
-        # サンプルデータを作成（実際の実装では実データを使用）
+        # Create sample data (actual data will be used in actual implementation)
         n_samples = 1000
 
-        # 回帰問題なので、連続値のスコアを生成
+        # Since it is a regression problem, generate a continuous value score
         true_scores = np.random.normal(0, 1, n_samples)
-        predicted_scores = true_scores + np.random.normal(0, 0.3, n_samples)  # ノイズを追加
+        predicted_scores = true_scores + np.random.normal(0, 0.3, n_samples)  # add noise
 
-        # 二値分類用のラベルを作成（閾値ベース）
+        # Create labels for binary classification (threshold based)
         threshold = np.median(true_scores)
         labels = (true_scores > threshold).astype(int)
 
-        # DataFrameを作成
+        # create a DataFrame
         results_df = pd.DataFrame(
             {
                 "label": labels,
                 "score": predicted_scores,
-                "confidence": np.abs(predicted_scores),  # 絶対値を信頼度として使用
-                "similarity": np.random.uniform(0.5, 1.0, n_samples),  # 仮想的な類似度
+                "confidence": np.abs(predicted_scores),  # use absolute value as confidence
+                "similarity": np.random.uniform(0.5, 1.0, n_samples),  # virtual similarity
             }
         )
 
-        # 汎用ダッシュボードを作成
+        # Create a generic dashboard
         self._create_comprehensive_dashboard(
             results_df=results_df,
             prediction_score_col="score",
@@ -539,7 +537,7 @@ class ProteinGymVisualizer(BaseVisualizationGenerator):
         )
 
     def create_html_report(self):
-        """HTMLレポートの生成"""
+        """Generate HTML report"""
         self.logger.info("Creating ProteinGym HTML report")
 
         html_content = self._create_html_header("ProteinGym Evaluation Report")
@@ -609,13 +607,13 @@ def main():
     args = parser.parse_args()
 
     try:
-        # 可視化器の初期化
+        # Initializing the visualizer
         visualizer = ProteinGymVisualizer(output_dir=args.output_dir)
 
-        # 評価結果の読み込み
+        # Load evaluation results
         results = visualizer.load_evaluation_results(args.results_file)
 
-        # 総合レポート作成
+        # Comprehensive report creation
         visualizer.create_summary_report(results, args.prediction_file)
 
         logger.info("Visualization completed successfully")

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ProteinGymデータベースを使用したprotein sequenceモデルの精度検証スクリプト
+Accuracy verification script for protein sequence model using ProteinGym database
 
-このスクリプトは、訓練済みのGPT-2 protein sequenceモデルを使って
-ProteinGymデータベースのタンパク質変異適合性を評価する精度を検証します。
+This script uses a trained GPT-2 protein sequence model to
+We verify the accuracy of evaluating protein mutation suitability in the ProteinGym database.
 """
 
 import argparse
@@ -17,7 +17,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.gpt2.model import GPT, GPTConfig
 
@@ -29,30 +29,30 @@ from molcrawl.utils.evaluation_output import (
 )
 from molcrawl.utils.model_evaluator import ModelEvaluator
 
-# ログ設定は後でsetup_evaluation_loggingで行う
+# Log settingslatersetup_evaluation_loggingdo it with
 logger = logging.getLogger(__name__)
 
 
 class ProteinGymEvaluator(ModelEvaluator):
-    """ProteinGymデータを使用したモデル評価クラス"""
+    """Model evaluation class using ProteinGym data"""
 
     def __init__(self, model_path, tokenizer_path=None, device="cuda"):
         """
-        初期化
+        initialization
 
         Args:
-            model_path (str): 訓練済みモデルのパス
-            tokenizer_path (str): トークナイザーのパス（protein_sequenceでは不要）
-            device (str): 使用デバイス
+            model_path (str): path of the trained model
+            tokenizer_path (str): tokenizer path（protein_sequence(Unnecessary)
+            device (str): Device used
         """
-        # 親クラスの初期化（tokenizer_pathがNoneの場合はmodel_pathを使用）
-        # トークナイザーとモデルは自動的に初期化される
+        # Initialize parent class（tokenizer_pathbutNoneIn the case ofmodel_path)
+        # Tokenizer and model are automatically initialized
         super().__init__(model_path, tokenizer_path or model_path, device)
 
     def _init_tokenizer(self):
-        """protein_sequence用のトークナイザーを初期化（抽象メソッドの実装）"""
+        """Initialize tokenizer for protein_sequence (implementation of abstract method)"""
         try:
-            # protein_sequence用のEsmSequenceTokenizerを使用
+            # Use EsmSequenceTokenizer for protein_sequence
             from molcrawl.protein_sequence.dataset.tokenizer import EsmSequenceTokenizer
 
             logger.info("Initializing EsmSequenceTokenizer for protein_sequence")
@@ -60,7 +60,7 @@ class ProteinGymEvaluator(ModelEvaluator):
             self.vocab_size = len(tokenizer.get_vocab())
             logger.info(f"EsmSequenceTokenizer initialized with vocab_size: {self.vocab_size}")
 
-            # モデルが40のvocab_sizeで学習されている一方、EsmSequenceTokenizerは33のvocab_sizeの場合の対処
+            # What to do if the model is trained with a vocab_size of 40, while EsmSequenceTokenizer has a vocab_size of 33
             if self.vocab_size != 40:
                 logger.info(f"EsmSequenceTokenizer vocab_size ({self.vocab_size}) != model vocab_size (40)")
                 logger.info("Using SimpleTokenizer with padding tokens to match model vocab_size")
@@ -74,13 +74,13 @@ class ProteinGymEvaluator(ModelEvaluator):
             return self._init_simple_amino_acid_tokenizer()
 
     def _init_model(self):
-        """モデルの初期化（抽象メソッドの実装）"""
+        """Model initialization (abstract method implementation)"""
         logger.info(f"Loading model from {self.model_path}")
         return self._load_model()
 
     def _init_simple_amino_acid_tokenizer(self):
-        """シンプルなアミノ酸トークナイザーを初期化（vocab_size=40）"""
-        # EsmSequenceTokenizerと同じvocab構成 + モデル用にパディング
+        """Initialize simple amino acid tokenizer (vocab_size=40)"""
+        # Same vocab configuration as EsmSequenceTokenizer + padding for model
         vocab_list = [
             "<cls>",
             "<pad>",
@@ -116,11 +116,11 @@ class ProteinGymEvaluator(ModelEvaluator):
             "|",
             "<mask>",
         ]
-        # モデルのvocab_size=40に合わせるため、パディングトークンを追加
+        # Add padding token to match model's vocab_size=40
         while len(vocab_list) < 40:
             vocab_list.append(f"<pad_{len(vocab_list) - 33}>")
 
-        # 語彙の構築
+        # Building vocabulary
         self.vocab = {token: idx for idx, token in enumerate(vocab_list)}
         self.id_to_token = {idx: token for idx, token in enumerate(vocab_list)}
         self.vocab_size = len(vocab_list)  # 40
@@ -128,10 +128,10 @@ class ProteinGymEvaluator(ModelEvaluator):
         logger.info(f"Simple amino acid tokenizer initialized with vocab_size: {self.vocab_size}")
 
         class SimpleTokenizer:
-            """シンプルなアミノ酸トークナイザー（フォールバック用）"""
+            """Simple amino acid tokenizer (for fallback)"""
 
             def __init__(self):
-                # EsmSequenceTokenizerと同じvocab構成
+                # Same vocab configuration as EsmSequenceTokenizer
                 vocab = [
                     "<cls>",
                     "<pad>",
@@ -167,9 +167,9 @@ class ProteinGymEvaluator(ModelEvaluator):
                     "|",
                     "<mask>",
                 ]
-                # トレーニング時のvocab_size=40に合わせるため、パディングを追加
+                # Add padding to match vocab_size=40 during training
                 while len(vocab) < 40:
-                    vocab.append(f"<pad_{len(vocab) - 33}>")  # パディングトークン
+                    vocab.append(f"<pad_{len(vocab) - 33}>")  # padding token
 
                 self.vocab = vocab
                 self.token_to_id = {token: i for i, token in enumerate(self.vocab)}
@@ -178,7 +178,7 @@ class ProteinGymEvaluator(ModelEvaluator):
                 self.unk_token_id = self.token_to_id["<unk>"]
 
             def encode(self, sequence):
-                """アミノ酸配列をトークンIDに変換"""
+                """Convert amino acid sequence to token ID"""
                 tokens = []
                 for char in sequence.upper():
                     if char in self.token_to_id:
@@ -192,16 +192,16 @@ class ProteinGymEvaluator(ModelEvaluator):
 
         tokenizer = SimpleTokenizer()
         self.use_protein_tokenizer = True
-        # 実際のvocab_sizeを更新
+        # update actual vocab_size
         self.vocab_size = tokenizer.vocab_size
 
         return tokenizer
 
     def _load_model(self):
-        """訓練済みモデルの読み込み"""
+        """Load trained model"""
         checkpoint = torch.load(self.model_path, map_location=self.device)
 
-        # モデル設定の復元
+        # Restore model settings
         model_args = checkpoint.get("model_args", {})
         config = GPTConfig(
             vocab_size=self.vocab_size,
@@ -209,7 +209,7 @@ class ProteinGymEvaluator(ModelEvaluator):
             n_layer=model_args.get("n_layer", 12),
             n_head=model_args.get("n_head", 12),
             n_embd=model_args.get("n_embd", 768),
-            dropout=0.0,  # 評価時はdropoutを無効
+            dropout=0.0,  # Disable dropout during evaluation
             bias=model_args.get("bias", True),
         )
 
@@ -222,16 +222,16 @@ class ProteinGymEvaluator(ModelEvaluator):
         return model
 
     def encode_sequence(self, sequence):
-        """アミノ酸配列をトークンIDにエンコード"""
-        # 配列を適切にフォーマット（大文字変換、無効文字の除去など）
+        """Encode amino acid sequence into token ID"""
+        # Format the array properly (convert uppercase, remove invalid characters, etc.)
         sequence = sequence.upper().replace("X", "").replace("-", "").replace("*", "")
 
         if self.use_protein_tokenizer:
-            # EsmSequenceTokenizerまたはSimpleTokenizerを使用
+            # Use EsmSequenceTokenizer or SimpleTokenizer
             if hasattr(self.tokenizer, "encode"):
                 tokens = self.tokenizer.encode(sequence)
             else:
-                # Callableな場合
+                # If it is Callable
                 result = self.tokenizer(sequence)
                 if isinstance(result, dict) and "input_ids" in result:
                     tokens = result["input_ids"]
@@ -240,10 +240,10 @@ class ProteinGymEvaluator(ModelEvaluator):
                 else:
                     tokens = result
         else:
-            # SentencePieceでエンコード（フォールバック）
+            # Encode with SentencePiece (fallback)
             tokens = self.tokenizer.encode(sequence)
 
-        # デバッグ用ログ
+        # debug log
         logger.debug(f"Original sequence length: {len(sequence)}")
         logger.debug(f"Encoded tokens length: {len(tokens)}")
         logger.debug(f"First 10 chars: {sequence[:10]}")
@@ -251,7 +251,7 @@ class ProteinGymEvaluator(ModelEvaluator):
 
         if not tokens:
             logger.warning(f"Empty tokenization for sequence: {sequence[:50]}...")
-            # 空の場合は未知トークンを返す
+            # Return unknown token if empty
             if self.use_protein_tokenizer:
                 tokens = [self.tokenizer.unk_token_id] if hasattr(self.tokenizer, "unk_token_id") else [3]  # <unk> token
             else:
@@ -261,22 +261,22 @@ class ProteinGymEvaluator(ModelEvaluator):
 
     def get_variant_fitness_score(self, wildtype_seq, mutant_seq, context_length=512):
         """
-        変異のフィットネススコアを計算
+        Calculate the fitness score of a mutation
 
         Args:
-            wildtype_seq (str): 野生型配列
-            mutant_seq (str): 変異型配列
-            context_length (int): 評価に使用するコンテキスト長
+            wildtype_seq (str): wildtype sequence
+            mutant_seq (str): mutant sequence
+            context_length (int): Context length used for evaluation
 
         Returns:
-            float: 変異のフィットネススコア（相対的な尤度の差）
+            float: fitness score of mutation (relative likelihood difference)
         """
         with torch.no_grad():
-            # 野生型と変異型をエンコード
+            # Encode wild type and mutant type
             wt_tokens = self.encode_sequence(wildtype_seq)
             mut_tokens = self.encode_sequence(mutant_seq)
 
-            # 最小長を確保（1以上）
+            # Ensure minimum length (1 or more)
             if len(wt_tokens) == 0:
                 logger.warning("Wildtype sequence tokenization resulted in empty tokens")
                 return 0.0
@@ -284,46 +284,46 @@ class ProteinGymEvaluator(ModelEvaluator):
                 logger.warning("Mutant sequence tokenization resulted in empty tokens")
                 return 0.0
 
-            # コンテキスト長に調整
+            # adjust to context length
             if len(wt_tokens) > context_length:
                 wt_tokens = wt_tokens[:context_length]
             if len(mut_tokens) > context_length:
                 mut_tokens = mut_tokens[:context_length]
 
-            # バッチ次元を追加してデバイスに転送
+            # Add batch dimension and transfer to device
             wt_tokens = wt_tokens.unsqueeze(0).to(self.device)
             mut_tokens = mut_tokens.unsqueeze(0).to(self.device)
 
             logger.debug(f"Model input shapes - wt: {wt_tokens.shape}, mut: {mut_tokens.shape}")
 
-            # モデルの予測確率を取得
+            # Model predictionget probability
             wt_logits, _ = self.model(wt_tokens)
             mut_logits, _ = self.model(mut_tokens)
 
             logger.debug(f"Model output shapes - wt: {wt_logits.shape}, mut: {mut_logits.shape}")
 
-            # 対数尤度を計算
+            # calculate log likelihood
             if wt_logits.size(1) == wt_tokens.size(1):
                 wt_log_prob = F.log_softmax(wt_logits, dim=-1)
                 mut_log_prob = F.log_softmax(mut_logits, dim=-1)
 
-                # 各トークンの尤度を計算
+                # Compute the likelihood of each token
                 wt_likelihood = self._calculate_sequence_likelihood(wt_tokens, wt_log_prob)
                 mut_likelihood = self._calculate_sequence_likelihood(mut_tokens, mut_log_prob)
             else:
-                # トークンごとに処理
+                # Process each token
                 wt_likelihood = self._calculate_likelihood_token_by_token(wt_tokens)
                 mut_likelihood = self._calculate_likelihood_token_by_token(mut_tokens)
 
-            # フィットネススコア = 変異型の尤度 - 野生型の尤度
-            # 高いスコア = より良いフィットネス
+            # Fitness score = likelihood of variant - likelihood of wild type
+            # Higher score = better fitness
             fitness_score = mut_likelihood - wt_likelihood
 
             return fitness_score.item()
 
     def _calculate_sequence_likelihood(self, tokens, log_probs):
-        """配列の対数尤度を計算"""
-        # 入力チェック
+        """Calculate the log-likelihood of an array"""
+        # Input check
         if tokens.size(1) <= 1:
             logger.warning(f"Sequence too short for likelihood calculation: {tokens.shape}")
             return torch.tensor(0.0, device=tokens.device)
@@ -332,39 +332,39 @@ class ProteinGymEvaluator(ModelEvaluator):
             logger.warning(f"Empty log_probs: {log_probs.shape}")
             return torch.tensor(0.0, device=tokens.device)
 
-        # 最後のトークンを除く（予測対象がないため）
+        # Exclude the last token (because there is no prediction target)
         target_tokens = tokens[:, 1:]
         pred_log_probs = log_probs[:, :-1, :]
 
-        # サイズの再確認
+        # Double check the size
         if pred_log_probs.size(1) != target_tokens.size(1):
             logger.warning(f"Size mismatch: pred_log_probs={pred_log_probs.shape}, target_tokens={target_tokens.shape}")
             return torch.tensor(0.0, device=tokens.device)
 
-        # 各位置での正解トークンの対数確率を取得
+        # Get the log probability of the correct token at each position
         token_log_probs = pred_log_probs.gather(2, target_tokens.unsqueeze(2)).squeeze(2)
 
-        # 平均対数尤度を返す
+        # Return the average log-likelihood
         return token_log_probs.mean()
 
     def _calculate_likelihood_token_by_token(self, tokens):
-        """トークンごとに尤度を計算（生成モード対応）"""
+        """Calculate the likelihood for each token (compatible with generation mode)"""
         if tokens.size(1) <= 1:
             return torch.tensor(0.0, device=tokens.device)
 
         total_log_prob = 0.0
         count = 0
 
-        # 各位置での条件付き確率を計算
+        # Compute the conditional probability at each position
         for i in range(1, tokens.size(1)):
-            context = tokens[:, :i]  # i番目までのコンテキスト
-            target = tokens[:, i : i + 1]  # i+1番目のトークン（予測対象）
+            context = tokens[:, :i]  # Context up to i-th
+            target = tokens[:, i : i + 1]  # i+1th token (prediction target)
 
             with torch.no_grad():
                 logits, _ = self.model(context)
-                log_probs = F.log_softmax(logits[:, -1:, :], dim=-1)  # 最後の位置の予測のみ
+                log_probs = F.log_softmax(logits[:, -1:, :], dim=-1)  # Only predict the last position
 
-                # 正解トークンの対数確率
+                # Log probability of correct token
                 token_log_prob = log_probs.gather(2, target.unsqueeze(2)).squeeze()
                 total_log_prob += token_log_prob.item()
                 count += 1
@@ -373,17 +373,17 @@ class ProteinGymEvaluator(ModelEvaluator):
 
     def load_proteingym_data(self, proteingym_file):
         """
-        ProteinGymデータの読み込み
+        Loading ProteinGym data
 
         Args:
-            proteingym_file (str): ProteinGymデータファイルのパス
+            proteingym_file (str): Path of ProteinGym data file
 
         Returns:
-            pd.DataFrame: ProteinGymデータ
+            pd.DataFrame: ProteinGym data
         """
         logger.info(f"Loading ProteinGym data from {proteingym_file}")
 
-        # ファイル形式に応じて読み込み
+        # Load according to file format
         if proteingym_file.endswith(".csv"):
             df = pd.read_csv(proteingym_file)
         elif proteingym_file.endswith(".tsv"):
@@ -393,7 +393,7 @@ class ProteinGymEvaluator(ModelEvaluator):
         else:
             raise ValueError(f"Unsupported file format: {proteingym_file}")
 
-        # 必要なカラムの確認
+        # Check required columns
         required_columns = ["mutated_sequence", "DMS_score"]
         missing_columns = [col for col in required_columns if col not in df.columns]
 
@@ -401,7 +401,7 @@ class ProteinGymEvaluator(ModelEvaluator):
             logger.warning(f"Missing columns: {missing_columns}")
             logger.info(f"Available columns: {list(df.columns)}")
 
-        # target_seqがない場合は、mutated_sequenceから推定
+        # If target_seq is not available, estimate from mutated_sequence
         if "target_seq" not in df.columns and "mutant" in df.columns:
             logger.info("Inferring target_seq from mutated_sequence and mutant information")
             df = self._infer_target_sequence(df)
@@ -412,21 +412,21 @@ class ProteinGymEvaluator(ModelEvaluator):
         return df
 
     def _infer_target_sequence(self, df):
-        """mutated_sequenceとmutant情報から野生型配列を推定"""
+        """Infer wild type sequence from mutated_sequence and mutant information"""
 
-        # 簡単な実装：最初の変異を逆変換して野生型を推定
+        # Simple implementation: invert the initial mutation to estimate the wild type
         def reverse_mutation(mutated_seq, mutant):
             if pd.isna(mutant) or mutant == "WT":
                 return mutated_seq
 
-            # 単一変異の場合のみ対応
+            # Supported only for single mutation
             if ":" not in mutant:
                 try:
                     orig_aa = mutant[0]
-                    pos = int(mutant[1:-1]) - 1  # 0-indexedに変換
+                    pos = int(mutant[1:-1]) - 1  # convert to 0-indexed
                     mut_aa = mutant[-1]
 
-                    # mutated_sequenceのmut_aaをorig_aaに戻す
+                    # Return mut_aa of mutated_sequence to orig_aa
                     wt_seq = list(mutated_seq)
                     if pos < len(wt_seq) and wt_seq[pos] == mut_aa:
                         wt_seq[pos] = orig_aa
@@ -444,14 +444,14 @@ class ProteinGymEvaluator(ModelEvaluator):
 
     def evaluate_model(self, proteingym_data, batch_size=32):
         """
-        モデルの評価実行
+        Run model evaluation
 
         Args:
-            proteingym_data (pd.DataFrame): ProteinGymデータ
-            batch_size (int): バッチサイズ
+            proteingym_data (pd.DataFrame): ProteinGymdata
+            batch_size (int): Batch size
 
         Returns:
-            dict: 評価結果
+            dict: evaluation result
         """
         logger.info(f"Starting model evaluation on ProteinGym data ({len(proteingym_data)} variants)")
         logger.info(f"Available columns: {list(proteingym_data.columns)}")
@@ -460,28 +460,27 @@ class ProteinGymEvaluator(ModelEvaluator):
         true_scores = []
         fitness_scores = []
 
-        # バッチ処理で評価
         for i in range(0, len(proteingym_data), batch_size):
             batch = proteingym_data.iloc[i : i + batch_size]
 
             for idx, row in batch.iterrows():
                 try:
-                    # フィットネススコアを計算
+                    # Calculate fitness score
                     if "target_seq" in row and pd.notna(row["target_seq"]):
                         wt_seq = row["target_seq"]
                         mut_seq = row["mutated_sequence"]
                     else:
-                        # target_seqがない場合は、mutated_sequenceを使用
+                        # If target_seq is not available, use mutated_sequence
                         logger.warning(f"Row {idx}: target_seq not found, using mutated_sequence for both WT and mutant")
-                        wt_seq = row["mutated_sequence"]  # 仮の処理
+                        wt_seq = row["mutated_sequence"]  # Temporary processing
                         mut_seq = row["mutated_sequence"]
 
-                    # DMS_scoreの確認
+                    # Check DMS_score
                     if pd.isna(row["DMS_score"]):
                         logger.warning(f"Row {idx}: DMS_score is NaN, skipping")
                         continue
 
-                    # 配列の確認
+                    # Check the array
                     if pd.isna(wt_seq) or pd.isna(mut_seq):
                         logger.warning(f"Row {idx}: Missing sequence data (wt: {pd.isna(wt_seq)}, mut: {pd.isna(mut_seq)})")
                         continue
@@ -491,7 +490,7 @@ class ProteinGymEvaluator(ModelEvaluator):
                     fitness_scores.append(score)
                     true_scores.append(row["DMS_score"])
 
-                    # 最初のバリアントは詳細ログ
+                    # First variant is verbose log
                     if len(fitness_scores) == 1:
                         logger.info(
                             f"First variant processed successfully: score={score:.4f}, DMS_score={row['DMS_score']:.4f}"
@@ -506,14 +505,14 @@ class ProteinGymEvaluator(ModelEvaluator):
                     logger.debug(traceback.format_exc())
                     continue
 
-            # より頻繁に進捗をログ出力
+            # Log progress more frequently
             batch_num = i // batch_size + 1
             if batch_num % 5 == 0 or batch_num == 1:
                 logger.info(
                     f"Processed batch {batch_num}: {len(fitness_scores)}/{len(proteingym_data)} variants successfully evaluated"
                 )
 
-        # 評価指標を計算
+        # Calculate evaluation metrics
         logger.info(f"Successfully processed {len(fitness_scores)} out of {len(proteingym_data)} variants")
 
         if len(fitness_scores) < 2:
@@ -533,17 +532,17 @@ class ProteinGymEvaluator(ModelEvaluator):
         return results
 
     def _calculate_metrics(self, true_scores, predicted_scores):
-        """評価指標を計算"""
+        """Calculate evaluation metrics"""
         from scipy.stats import pearsonr, spearmanr
 
-        # 相関係数
+        # correlation coefficient
         spearman_corr, spearman_p = spearmanr(true_scores, predicted_scores)
         pearson_corr, pearson_p = pearsonr(true_scores, predicted_scores)
 
-        # 平均絶対誤差
+        # mean absolute error
         mae = np.mean(np.abs(true_scores - predicted_scores))
 
-        # 平均二乗誤差の平方根
+        # square root of mean square error
         rmse = np.sqrt(np.mean((true_scores - predicted_scores) ** 2))
 
         results = {
@@ -571,17 +570,17 @@ class ProteinGymEvaluator(ModelEvaluator):
         return results
 
     def save_results(self, results, output_file):
-        """評価結果を保存"""
+        """Save evaluation results"""
         logger.info(f"Saving results to {output_file}")
 
-        # NumPy配列をリストに変換
+        # Convert NumPy array to list
         serializable_results = self._make_serializable(results)
 
         with open(output_file, "w") as f:
             json.dump(serializable_results, f, indent=2)
 
     def _make_serializable(self, obj):
-        """オブジェクトをJSON serializable形式に変換"""
+        """Convert object to JSON serializable format"""
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         elif isinstance(obj, np.integer):
@@ -598,20 +597,20 @@ class ProteinGymEvaluator(ModelEvaluator):
 
 def create_sample_proteingym_data(output_file, balanced=True, positive_samples=1000, negative_samples=1000):
     """
-    サンプルProteinGymデータを作成（テスト用）
+    Create sample ProteinGym data (for testing)
 
     Args:
-        output_file (str): 出力ファイルパス
-        balanced (bool): バランスデータを作成するか
-        positive_samples (int): 陽性サンプル数
-        negative_samples (int): 陰性サンプル数
+        output_file (str): Output file path
+        balanced (bool): whether to create balanced data
+        positive_samples (int): Number of positive samples
+        negative_samples (int): Number of negative samples
     """
     logger.info(f"Creating sample ProteinGym data: {output_file}")
 
     if balanced:
         logger.info(f"Creating balanced dataset: {positive_samples} positive + {negative_samples} negative samples")
 
-        # 陽性サンプル（高いDMS_score）を生成
+        # Generate positive samples (high DMS_score)
         positive_data = []
         base_sequence = "ALKGDLSGLTQVKSGQDKGLTRVKDDLSVLTQVKSGQDKGLT"
         amino_acids = [
@@ -637,7 +636,7 @@ def create_sample_proteingym_data(output_file, balanced=True, positive_samples=1
             "V",
         ]
 
-        np.random.seed(42)  # 再現性のため
+        np.random.seed(42)  # for reproducibility
 
         for _i in range(positive_samples):
             pos = np.random.randint(1, len(base_sequence))
@@ -653,12 +652,12 @@ def create_sample_proteingym_data(output_file, balanced=True, positive_samples=1
                     "mutant": f"{orig_aa}{pos}{new_aa}",
                     "mutated_sequence": mut_sequence,
                     "target_seq": base_sequence,
-                    "DMS_score": np.random.uniform(0.6, 1.0),  # 陽性：0.6-1.0
+                    "DMS_score": np.random.uniform(0.6, 1.0),  # positive：0.6-1.0
                     "protein_name": "TEST_PROTEIN_POSITIVE",
                 }
             )
 
-        # 陰性サンプル（低いDMS_score）を生成
+        # Generate negative samples (low DMS_score)
         negative_data = []
         for _i in range(negative_samples):
             pos = np.random.randint(1, len(base_sequence))
@@ -674,17 +673,17 @@ def create_sample_proteingym_data(output_file, balanced=True, positive_samples=1
                     "mutant": f"{orig_aa}{pos}{new_aa}",
                     "mutated_sequence": mut_sequence,
                     "target_seq": base_sequence,
-                    "DMS_score": np.random.uniform(0.0, 0.4),  # 陰性：0.0-0.4
+                    "DMS_score": np.random.uniform(0.0, 0.4),  # negative：0.0-0.4
                     "protein_name": "TEST_PROTEIN_NEGATIVE",
                 }
             )
 
-        # データを結合してシャッフル
+        # Combine and shuffle data
         sample_data = positive_data + negative_data
         np.random.shuffle(sample_data)
 
     else:
-        # 従来のサンプルデータ（少数）
+        # Conventional sample data (small number)
         sample_data = [
             {
                 "mutant": "A1V",
@@ -720,7 +719,7 @@ def create_sample_proteingym_data(output_file, balanced=True, positive_samples=1
     df.to_csv(output_file, index=False)
 
     if balanced:
-        threshold = 0.5  # 中間値
+        threshold = 0.5  # intermediate value
         positive_count = len(df[df["DMS_score"] >= threshold])
         negative_count = len(df[df["DMS_score"] < threshold])
         logger.info(f"Sample balanced data created: {len(df)} total ({positive_count} positive, {negative_count} negative)")
@@ -730,14 +729,14 @@ def create_sample_proteingym_data(output_file, balanced=True, positive_samples=1
 
 def get_protein_tokenizer_path():
     """
-    protein_sequence用のトークナイザーパスを取得
-    protein_sequenceはEsmSequenceTokenizerを使用するため、Noneを返す
+    Get tokenizer path for protein_sequence
+    protein_sequence uses EsmSequenceTokenizer, so returns None
 
     Returns:
-        None: protein_sequenceはSentencePieceを使用しない
+        None: protein_sequence does not use SentencePiece
     """
-    # protein_sequenceはEsmSequenceTokenizerを使用するため、
-    # SentencePieceトークナイザーは不要
+    # protein_sequence uses EsmSequenceTokenizer, so
+    # No SentencePiece tokenizer required
     logger.info("protein_sequence uses EsmSequenceTokenizer, not SentencePiece")
     return None
 
@@ -771,7 +770,7 @@ def main():
         help="Path to tokenizer (auto-detect if not provided)",
     )
 
-    # バランスサンプルデータ作成用オプション
+    # Options for creating balance sample data
     parser.add_argument(
         "--balanced_samples",
         action="store_true",
@@ -798,7 +797,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 出力ディレクトリを自動生成または指定されたものを使用
+    # Automatically generate output directory or use specified one
     if args.output_dir is None:
         model_type = get_model_type_from_path(args.model_path)
         model_name = get_model_name_from_path(args.model_path)
@@ -806,10 +805,10 @@ def main():
     else:
         os.makedirs(args.output_dir, exist_ok=True)
 
-    # ログ設定
+    # Log settings
     logger = setup_evaluation_logging(Path(args.output_dir), "proteingym_evaluation")
 
-    # サンプルデータ作成モード
+    # Sample data creation mode
     if args.create_sample_data:
         create_sample_proteingym_data(
             output_file=args.proteingym_data,
@@ -826,31 +825,31 @@ def main():
         return
 
     try:
-        # トークナイザーパスの取得
+        # Get tokenizer pass
         if args.tokenizer_path:
             tokenizer_path = args.tokenizer_path
         else:
             tokenizer_path = get_protein_tokenizer_path()
 
-        # 評価器の初期化
+        # Initialize the evaluator
         evaluator = ProteinGymEvaluator(
             model_path=args.model_path,
             tokenizer_path=tokenizer_path,
             device=args.device,
         )
 
-        # ProteinGymデータの読み込み
+        # Load ProteinGym data
         proteingym_data = evaluator.load_proteingym_data(args.proteingym_data)
 
-        # サンプル数の制限（テスト用）
+        # Number of samplesLimits (for testing)
         if args.max_samples is not None and len(proteingym_data) > args.max_samples:
             logger.info(f"Limiting evaluation to first {args.max_samples} samples (out of {len(proteingym_data)})")
             proteingym_data = proteingym_data.head(args.max_samples)
 
-        # モデル評価の実行
+        # model evaluationexecution of
         results = evaluator.evaluate_model(proteingym_data, batch_size=args.batch_size)
 
-        # 結果の表示
+        # Display results
         logger.info("=== Evaluation Results ===")
         logger.info(f"Spearman correlation: {results['spearman_correlation']:.4f} (p={results['spearman_p_value']:.4e})")
         logger.info(f"Pearson correlation: {results['pearson_correlation']:.4f} (p={results['pearson_p_value']:.4e})")
@@ -858,11 +857,11 @@ def main():
         logger.info(f"RMSE: {results['rmse']:.4f}")
         logger.info(f"Number of variants: {results['n_variants']}")
 
-        # 結果の保存
+        # Save results
         results_file = os.path.join(args.output_dir, "evaluation_results.json")
         evaluator.save_results(results, results_file)
 
-        # 詳細レポートの作成
+        # Create detailed report
         report_file = os.path.join(args.output_dir, "evaluation_report.txt")
         with open(report_file, "w") as f:
             f.write("ProteinGym Evaluation Report\n")

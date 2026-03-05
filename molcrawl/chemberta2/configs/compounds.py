@@ -1,21 +1,21 @@
 """
 ChemBERTa-2 Configuration for SMILES Compounds Data
 
-このconfigは既存のcompoundsデータセット（Organix13）を使用して
-ChemBERTa-2モデルを学習するための設定です。
+This config uses an existing compounds dataset (Organix13)
+Settings for learning the ChemBERTa-2 model.
 
-ChemBERTa-2の特徴:
-- SMILES専用のトークナイゼーション
-- RoBERTaアーキテクチャ（BERTの改良版）
-- 化合物特性予測への転移学習が容易
-- 大規模化合物データでの事前学習
+Features of ChemBERTa-2:
+- Tokenization exclusively for SMILES
+- RoBERTa architecture (improved version of BERT)
+- Easy transfer learning to compound property prediction
+- Pre-training on large-scale compound data
 
-既存のBERTベースと比較した改善点:
-1. アーキテクチャ: RoBERTa（BERTより高性能）
-2. トークナイゼーション: SMILES専用語彙（612トークン）
-3. 学習率: 6e-5 (化合物データに最適化)
-4. バッチサイズ: 128 (大きめ)
-5. 最大長: 256 (SMILES文字列に最適)
+Improvements compared to the existing BERT base:
+1. Architecture: RoBERTa (higher performance than BERT)
+2. Tokenization: SMILES exclusive vocabulary (612 tokens)
+3. Learning rate: 6e-5 (optimized for compound data)
+4. Batch size: 128 (large)
+5. Maximum length: 256 (ideal for SMILES strings)
 """
 
 import os
@@ -36,22 +36,22 @@ model_path = os.path.join(
 # ChemBERTa-2 optimized settings
 max_length = 256  # SMILES sequences (typical length ~50-150)
 dataset_dir = COMPOUNDS_DATASET_DIR  # Organix13 dataset
-learning_rate = 6e-5  # ChemBERTa-2推奨値 (RoBERTaベース)
-weight_decay = 0.01  # 正則化
-max_steps = 300000  # 学習ステップ数（Organix13データセット: ~10M samples）
-warmup_steps = 10000  # ウォームアップステップ
+learning_rate = 6e-5  # ChemBERTa-2 recommended value (based on RoBERTa)
+weight_decay = 0.01  # regularization
+max_steps = 300000  # Number of learning steps (Organix13 dataset: ~10M samples)
+warmup_steps = 10000  # warmup steps
 
 log_interval = 100
-save_steps = 5000  # チェックポイント保存間隔
+save_steps = 5000  # Checkpoint save interval
 
 # Batch size settings
-# 化合物データは比較的小さいため、大きめのバッチサイズ
+# Larger batch size as compound data is relatively small
 batch_size = 128
 per_device_eval_batch_size = 128
 gradient_accumulation_steps = 1  # Effective batch size = 128
 
 # Tokenizer setup
-# SMILES専用トークナイザーを使用
+# Use SMILES dedicated tokenizer
 # -----------------------------------------------------------------------------
 vocab_file = "assets/molecules/vocab.txt"
 print(f"📖 Loading SMILES tokenizer from: {vocab_file}")
@@ -72,10 +72,10 @@ print(f"📊 Meta vocab size (padded): {meta_vocab_size}")
 # Preprocessing function
 def preprocess_function(examples):
     """
-    Add attention_mask to the dataset
+        Add attention_mask to the dataset
 
-    ChemBERTa-2はattention_maskを明示的に必要とします。
-    既存のinput_idsからattention_maskを生成します。
+    ChemBERTa-2 requires attention_mask explicitly.
+    Generate attention_mask from existing input_ids.
     """
     if "input_ids" in examples:
         attention_masks = []

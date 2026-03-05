@@ -1,20 +1,20 @@
 """
 ESM-2 Configuration for Protein Sequence Data
 
-このconfigは既存のprotein_sequenceデータセット（UniProt）を使用して
-ESM-2モデルを学習するための設定です。
+This config uses the existing protein_sequence dataset (UniProt)
+Settings for learning the ESM-2 model.
 
-ESM-2の特徴:
-- タンパク質配列専用の進化的スケールモデリング
-- 6.5億パラメータまでスケール可能
-- Structure prediction, function annotation等に高性能
+Features of ESM-2:
+- Evolutionary scale modeling specifically for protein sequences
+- Scalable to 650 million parameters
+- High performance for structure prediction, function annotation, etc.
 
-既存のBERTベースと比較した改善点:
-1. アーキテクチャ: ESM専用に最適化
-2. 学習率: 4e-4 (BERTより高め)
-3. Dropout: 0.0 (ESM-2の論文設定)
+Improvements compared to the existing BERT base:
+1. Architecture: Optimized specifically for ESM
+2. Learning rate: 4e-4 (higher than BERT)
+3. Dropout: 0.0 (ESM-2 paper settings)
 4. Position embeddings: Learned
-5. 収束: より高速で安定
+5. Convergence: faster and more stable
 """
 
 import os
@@ -35,24 +35,24 @@ model_path = os.path.join(
 )
 
 # ESM-2 optimized settings
-max_length = 1024  # ESM-2標準値（タンパク質配列の長さに対応）
+max_length = 1024  # ESM-2 standard value (corresponds to protein sequence length)
 dataset_dir = UNIPROT_DATASET_DIR
-learning_rate = 4e-4  # ESM-2推奨値（論文より）
+learning_rate = 4e-4  # ESM-2 recommended value (from the paper)
 weight_decay = 0.01
-max_steps = 500000  # 学習ステップ数（データ量に応じて調整）
-warmup_steps = 2000  # ウォームアップステップ
+max_steps = 500000  # Number of learning steps (adjusted according to data amount)
+warmup_steps = 2000  # warmup steps
 
 log_interval = 100
-save_steps = 5000  # チェックポイント保存間隔
+save_steps = 5000  # Checkpoint save interval
 
 # Batch size settings
-# タンパク質配列は長いため、バッチサイズは小さめに設定
+# Due to long protein sequences, set batch size small
 batch_size = 4
 per_device_eval_batch_size = 2
 gradient_accumulation_steps = 32  # Effective batch size = 4 * 32 = 128
 
 # Tokenizer setup
-# 既存のESMトークナイザーを使用（BERT互換ラッパー）
+# Use existing ESM tokenizer (BERT compatible wrapper)
 # -----------------------------------------------------------------------------
 print("📖 Creating ESM protein tokenizer...")
 tokenizer = create_bert_protein_tokenizer()

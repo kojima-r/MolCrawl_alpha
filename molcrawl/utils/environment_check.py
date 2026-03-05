@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-環境変数チェック共通モジュール
+Environment variable check common module
 
-LEARNING_SOURCE_DIR環境変数のチェック処理を一元化
+Centralize checking of LEARNING_SOURCE_DIR environment variable
 """
 
 import os
@@ -11,13 +11,13 @@ import sys
 
 def check_learning_source_dir():
     """
-    LEARNING_SOURCE_DIR環境変数をチェックし、取得する
+    Check and retrieve LEARNING_SOURCE_DIR environment variable
 
-    Returns:
-        str: LEARNING_SOURCE_DIR の値
+        Returns:
+    str: Value of LEARNING_SOURCE_DIR
 
-    Note:
-        環境変数が設定されていない場合は、エラーメッセージを出力してexit(1)する
+        Note:
+    If the environment variable is not set, output an error message and exit(1)
     """
     learning_source_dir = os.environ.get("LEARNING_SOURCE_DIR")
     if not learning_source_dir:
@@ -29,7 +29,7 @@ def check_learning_source_dir():
         print("", file=sys.stderr)
         print("Available learning directories:", file=sys.stderr)
         try:
-            # プロジェクトルートを推定
+            # Estimate project root
             current_file = os.path.abspath(__file__)
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
             dirs = [d for d in os.listdir(project_root) if d.startswith("learning_")]

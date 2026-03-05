@@ -1,6 +1,6 @@
 """
-実験管理システム - Experiment Tracking System
-各工程の実行状況、結果、ログを一元管理するモジュール
+Experiment Tracking System
+A module that centrally manages the execution status, results, and logs of each process
 """
 
 from .models import (

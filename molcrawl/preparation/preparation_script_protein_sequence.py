@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from datasets import load_dataset
 
-# プロジェクトルートのsrcディレクトリをパスに追加
+# Add project root src directory to path
 
 from molcrawl.config.paths import PROTEIN_SEQUENCE_DIR
 from molcrawl.core.base import setup_logging
@@ -64,16 +64,16 @@ def check_progress_status(base_dir):
     Returns:
         bool: True if all steps are completed, False otherwise
     """
-    # 各処理段階のマーカーファイルパス
+    # Marker file path for each processing stage
     download_marker = Path(base_dir) / "download_complete.marker"
     raw_marker = Path(base_dir) / "fasta_to_raw_complete.marker"
     parquet_marker = Path(base_dir) / "tokenize_to_parquet_complete.marker"
 
-    # 出力ディレクトリとファイルの存在確認用パス
+    # Output directory and path to check file existence
     raw_files_dir = Path(base_dir) / "raw_files"
     processed_parquet = Path(base_dir) / "parquet_files" / "train.parquet"
 
-    # 進捗状況の確認
+    # Check progress
     logger.info("=== Protein Sequence Dataset Preparation Progress ===")
     steps_completed = 0
     total_steps = 3
@@ -173,7 +173,7 @@ def process2_fasta_to_raw(base_dir, dataset, max_lines_per_file, force=False):
         logger.info(f" - Base Directory: {base_dir}")
         logger.info(f" - Max Lines per File: {max_lines_per_file}")
 
-        # 出力ディレクトリを作成
+        # create output directory
         os.makedirs(raw_files_dir, exist_ok=True)
 
         fasta_to_raw_protein(dataset, base_dir, max_lines_per_file)
@@ -247,12 +247,12 @@ def process4_generate_statistics(base_dir, dataset, force=False):
         logger.info("👍Dataset loaded successfully.")
         logger.info(f"Number of sequence: {len(data['train'])}")
 
-        # トークナイザーの語彙サイズを取得
+        # Get the tokenizer vocabulary size
         tokenizer = EsmSequenceTokenizer()
         logger.info(f"Size of the vocabulary: {tokenizer.vocab_size}")
         logger.info(f"Number of tokens: {sum(data['train']['token_count'])}")
 
-        # 分布プロットの生成（forceオプションまたはプロットが存在しない場合のみ）
+        # Generate distribution plot (only if force option or no plot exists)
         from molcrawl.utils.image_manager import get_image_path
 
         plot_file = Path(get_image_path("protein_sequence", "protein_sequence_tokenized_lengths_dist.png"))
@@ -295,18 +295,18 @@ def main():
 
     setup_logging(PROTEIN_SEQUENCE_DIR)
 
-    # 進捗状況の確認
+    # Check progress
     all_completed = check_progress_status(PROTEIN_SEQUENCE_DIR)
 
     if all_completed and not args.force:
         logger.info("All processing steps are already completed!")
         logger.info("Use --force option if you want to reprocess everything.")
         if not args.skip_stats:
-            # 統計情報のみ生成
+            # Generate only statistics information
             process4_generate_statistics(PROTEIN_SEQUENCE_DIR, cfg.dataset, args.force)
         return
 
-    # 各プロセスを順次実行
+    # Run each process sequentially
     success = True
 
     # Process 1: Download Uniprot dataset

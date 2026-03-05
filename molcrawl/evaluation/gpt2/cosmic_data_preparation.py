@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-COSMICデータダウンロード・前処理スクリプト
+COSMIC data download/preprocessing script
 
-COSMICデータベースから癌関連変異データをダウンロードし、
-genome sequenceモデルの評価に適した形式に前処理します。
+Download cancer-related mutation data from the COSMIC database,
+Preprocess the genome sequence model into a format suitable for evaluation.
 
-注意: LEARNING_SOURCE_DIR環境変数の設定が必須です。
+Notice: LEARNING_SOURCE_DIRSetting environment variables is required.
 """
 
 import argparse
@@ -22,7 +22,7 @@ import requests
 
 from molcrawl.utils.environment_check import check_learning_source_dir
 
-# ログ設定
+# Log settings
 learning_source_dir = check_learning_source_dir()
 log_dir = os.path.join(learning_source_dir, "genome_sequence", "logs")
 os.makedirs(log_dir, exist_ok=True)
@@ -40,14 +40,14 @@ logger.info(f"LEARNING_SOURCE_DIR: {learning_source_dir}")
 
 
 class COSMICProcessor:
-    """COSMICデータの取得・前処理クラス"""
+    """COSMIC data acquisition/preprocessing class"""
 
     def __init__(self, output_dir=None):
         """
-        初期化
+        initialization
 
         Args:
-            output_dir (str): 出力ディレクトリ（Noneの場合は$LEARNING_SOURCE_DIR/genome_sequence/data/cosmic）
+            output_dir (str): Output directory（NoneIn the case of$LEARNING_SOURCE_DIR/genome_sequence/data/cosmic）
         """
         if output_dir is None:
             learning_source = check_learning_source_dir()
@@ -58,13 +58,13 @@ class COSMICProcessor:
 
         logger.info(f"Output directory: {self.output_dir}")
 
-        # COSMIC公開データのURL（認証不要のデータセット）
+        # COSMIC public data URL (dataset that does not require authentication)
         self.cosmic_urls = {
             "census": "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v97/Cancer_Gene_Census.csv",
             "mutations": "https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v97/CosmicMutantExport.tsv.gz",
         }
 
-        # 癌の重要度分類
+        # Cancer severity classification
         self.cancer_significance_map = {
             "pathogenic": ["pathogenic", "likely_pathogenic", "oncogenic"],
             "benign": ["benign", "likely_benign", "neutral"],
@@ -73,10 +73,10 @@ class COSMICProcessor:
 
     def download_cosmic_data(self, dataset_type="census"):
         """
-        COSMICデータをダウンロード
+        Download COSMIC data
 
         Args:
-            dataset_type (str): データセットタイプ ('census', 'mutations')
+            dataset_type (str): dataset type ('census', 'mutations')
         """
         if dataset_type not in self.cosmic_urls:
             raise ValueError(f"Unknown dataset type: {dataset_type}")
@@ -103,17 +103,17 @@ class COSMICProcessor:
 
     def create_sample_cosmic_data(self, num_samples=20):
         """
-        サンプルCOSMICデータを作成（テスト用）
+        Create sample COSMIC data (for testing)
 
         Args:
-            num_samples (int): 作成するサンプル数
+            num_samples (int): Number of samples to create
         """
         logger.info(f"Creating sample COSMIC data with {num_samples} samples")
 
-        # 実際のCOSMIC変異パターンに基づくサンプルデータ
+        # Sample data based on actual COSMIC mutation patterns
         sample_data = []
 
-        # 既知の癌関連遺伝子と変異パターン
+        # Known cancer-related genes and mutation patterns
         cancer_genes = [
             "TP53",
             "KRAS",
@@ -135,32 +135,32 @@ class COSMICProcessor:
             gene = np.random.choice(cancer_genes)
             mutation_type = np.random.choice(mutation_types)
 
-            # DNA配列の生成（100bp）
+            # Generate DNA sequence (100bp)
             bases = ["A", "T", "G", "C"]
             ref_sequence = "".join(np.random.choice(bases, 100))
 
-            # 変異の導入
+            # Introducing mutations
             var_sequence = list(ref_sequence)
-            mutation_pos = np.random.randint(45, 55)  # 中央付近に変異
+            mutation_pos = np.random.randint(45, 55)  # Mutation near the center
 
             if "Missense" in mutation_type or "Nonsense" in mutation_type:
-                # 点変異
+                # point mutation
                 original_base = var_sequence[mutation_pos]
                 possible_bases = [b for b in bases if b != original_base]
                 var_sequence[mutation_pos] = np.random.choice(possible_bases)
             elif "Deletion" in mutation_type:
-                # 欠失
+                # deletion
                 del_length = np.random.randint(1, 4)
                 del var_sequence[mutation_pos : mutation_pos + del_length]
             elif "Insertion" in mutation_type:
-                # 挿入
+                # insert
                 ins_length = np.random.randint(1, 4)
                 insert_bases = "".join(np.random.choice(bases, ins_length))
                 var_sequence.insert(mutation_pos, insert_bases)
 
             var_sequence = "".join(var_sequence)
 
-            # 癌関連度の決定（遺伝子と変異タイプに基づく）
+            # Determination of cancer relevance (based on gene and mutation type)
             if gene in ["TP53", "BRCA1", "BRCA2"] and "Nonsense" in mutation_type:
                 significance = "pathogenic"
                 oncogenic = 1
@@ -191,10 +191,10 @@ class COSMICProcessor:
                 }
             )
 
-        # DataFrameに変換
+        # convert to DataFrame
         df = pd.DataFrame(sample_data)
 
-        # CSVファイルとして保存
+        # Save as CSV file
         output_file = self.output_dir / "cosmic_evaluation_dataset.csv"
         df.to_csv(output_file, index=False)
 
@@ -205,13 +205,13 @@ class COSMICProcessor:
 
     def parse_cosmic_vcf(self, vcf_file):
         """
-        COSMIC VCFファイルを解析
+        Analyze COSMIC VCF files
 
         Args:
-            vcf_file (str): VCFファイルのパス
+            vcf_file (str): VCF file path
 
         Returns:
-            pd.DataFrame: 解析されたデータ
+            pd.DataFrame: parsed data
         """
         logger.info(f"Parsing COSMIC VCF file: {vcf_file}")
 
@@ -234,7 +234,7 @@ class COSMICProcessor:
                     alt = parts[4]
                     info = parts[7]
 
-                    # INFOフィールドから情報を抽出
+                    # extract information from INFO field
                     info_dict = {}
                     for item in info.split(";"):
                         if "=" in item:
@@ -255,8 +255,8 @@ class COSMICProcessor:
                         }
                     )
 
-                    # メモリ使用量制限
-                    if line_num > 100000:  # 最初の10万行のみ処理
+                    # Memory usage limit
+                    if line_num > 100000:  # Process only the first 100,000 lines
                         logger.info("Limiting to first 100k variants for memory efficiency")
                         break
 
@@ -268,14 +268,14 @@ class COSMICProcessor:
 
     def generate_sequences_from_variants(self, df, sequence_length=100):
         """
-        変異情報から参照配列と変異配列を生成
+        Generate reference and mutant sequences from mutation information
 
         Args:
-            df (pd.DataFrame): 変異データ
-            sequence_length (int): 生成する配列長
+            df (pd.DataFrame): variant data
+            sequence_length (int): length of the sequence to generate
 
         Returns:
-            pd.DataFrame: 配列情報が追加されたデータ
+            pd.DataFrame: Data with array information added
         """
         logger.info(f"Generating sequences of length {sequence_length}")
 
@@ -283,18 +283,18 @@ class COSMICProcessor:
         bases = ["A", "T", "G", "C"]
 
         for _, row in df.iterrows():
-            # ランダムなコンテキスト配列を生成
+            # Generate random context array
             half_len = sequence_length // 2
 
-            # 参照配列の生成
+            # Generate reference array
             prefix = "".join(np.random.choice(bases, half_len - len(row["reference_allele"]) // 2))
             suffix = "".join(np.random.choice(bases, half_len - len(row["reference_allele"]) // 2))
             ref_sequence = prefix + row["reference_allele"] + suffix
 
-            # 変異配列の生成
+            # Generate mutant array
             var_sequence = prefix + row["alternate_allele"] + suffix
 
-            # 長さの調整
+            # Adjust length
             if len(ref_sequence) < sequence_length:
                 ref_sequence += "".join(np.random.choice(bases, sequence_length - len(ref_sequence)))
             elif len(ref_sequence) > sequence_length:
@@ -307,7 +307,7 @@ class COSMICProcessor:
 
             sequences.append({"reference_sequence": ref_sequence, "variant_sequence": var_sequence})
 
-        # 元のDataFrameに配列情報を追加
+        # Add array information to the original DataFrame
         sequence_df = pd.DataFrame(sequences)
         result_df = pd.concat([df.reset_index(drop=True), sequence_df], axis=1)
 
@@ -315,7 +315,7 @@ class COSMICProcessor:
 
 
 def main():
-    """メイン処理"""
+    """Main processing"""
     parser = argparse.ArgumentParser(
         description="COSMIC data preparation for genome sequence evaluation",
         epilog="Note: LEARNING_SOURCE_DIR environment variable must be set.",
@@ -339,7 +339,6 @@ def main():
     processor = COSMICProcessor(args.output_dir)
 
     if args.create_sample_data:
-        # サンプルデータの作成
         logger.info("Creating sample COSMIC data")
         processor.create_sample_cosmic_data(args.max_samples)
     else:

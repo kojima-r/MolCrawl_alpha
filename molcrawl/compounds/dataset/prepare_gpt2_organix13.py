@@ -1,13 +1,13 @@
 """
-GPT-2学習用データセット準備スクリプト（全化合物データセット統合版）
+GPT-2 training dataset preparation script (all compound dataset integrated version)
 
-v2のデータセット構成に対応し、個別のトークナイズ済みparquetファイルから
-GPT-2学習用のHuggingFace Dataset形式に変換します。
+Supports v2 dataset configuration and from separate tokenized parquet files.
+Convert to HuggingFace Dataset format for GPT-2 training.
 
-出力パス: {compounds_dir}/organix13/compounds/training_ready_hf_dataset
-  - GPT-2学習設定（train_gpt2_config.py）がこのパスを参照しています。
+Output path: {compounds_dir}/organix13/compounds/training_ready_hf_dataset
+- GPT-2 training configuration (train_gpt2_config.py) references this path.
 
-使用方法:
+How to use:
   LEARNING_SOURCE_DIR=learning_source_YYYYMMDD python src/compounds/dataset/prepare_gpt2_organix13.py assets/configs/compounds.yaml
 """
 
@@ -28,24 +28,24 @@ from sklearn.model_selection import train_test_split
 
 def prepare_gpt2_dataset(compounds_dir: str):
     """
-    v2の個別トークナイズ済みparquetを統合し、GPT-2学習用データセットを作成する。
+    Integrate v2's individual tokenized parquet and create a GPT-2 training dataset.
 
-    処理内容:
-      1. tokenized/ ディレクトリから全データセットのparquetを読み込み
-      2. tokens列を抽出して統合
-      3. tokens → input_ids にリネーム
-      4. train/valid/test に分割 (80/10/10)
-      5. HuggingFace Dataset形式で保存
+    Processing details:
+    1. Load parquet of all datasets from tokenized/ directory
+    2. Extract and integrate the tokens column
+    3. Rename tokens → input_ids
+    4. Split into train/valid/test (80/10/10)
+    5. Save in HuggingFace Dataset format
 
-    Args:
-        compounds_dir: compoundsディレクトリのパス
+        Args:
+    compounds_dir: compounds directorypath of
     """
     compounds_path = Path(compounds_dir)
 
-    # GPT-2用ではないGuacaMolを除外した全データセットを対象とする
+    # Target all datasets excluding GuacaMol which is not for GPT-2
     target_datasets = [dt for dt in DATASET_DEFINITIONS.keys() if dt != CompoundDatasetType.GUACAMOL]
 
-    # トークナイズ済みparquetを収集
+    # Collect tokenized parquet
     all_tokens = []
     loaded_datasets = []
 
@@ -73,12 +73,12 @@ def prepare_gpt2_dataset(compounds_dir: str):
             f"python src/preparation/preparation_script_compounds.py assets/configs/compounds.yaml"
         )
 
-    # 統合
+    # Integration
     print(f"\nCombining {len(loaded_datasets)} datasets: {loaded_datasets}")
     combined_df = pd.concat(all_tokens, ignore_index=True)
     print(f"Total combined samples: {len(combined_df)}")
 
-    # tokens → input_ids にリネーム (GPT-2学習が input_ids を期待するため)
+    # Rename tokens → input_ids (because GPT-2 learning expects input_ids)
     combined_df = combined_df.rename(columns={"tokens": "input_ids"})
 
     # Split into train/valid/test (80/10/10)
@@ -119,8 +119,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # configは互換性のために受け取るが、v2ではトークナイズ済みデータを直接使うため
-    # vocab_path / max_length は不要
+    # config is received for compatibility, but v2 uses tokenized data directly
+    # vocab_path / max_length is not required
     _ = CompoundConfig.from_file(args.config)
 
     # Get compounds directory from LEARNING_SOURCE_DIR

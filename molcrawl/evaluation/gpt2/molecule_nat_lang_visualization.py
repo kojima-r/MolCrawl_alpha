@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Molecule Natural Language 評価結果の可視化生成器
+Molecule Natural Language evaluation result visualization generator
 
-BaseVisualizationGeneratorを継承してmolecule_nat_langに特化した
-分析結果の可視化を行います。
+Inherited from BaseVisualizationGenerator and specialized for molecule_nat_lang
+Visualize the analysis results.
 """
 
 import logging
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator
 
@@ -23,30 +23,30 @@ logger = logging.getLogger(__name__)
 
 
 class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
-    """Molecule NL評価結果の可視化クラス"""
+    """Molecule NL evaluation result visualization class"""
 
     def __init__(self, results_file, output_dir):
         """
-        初期化
+        initialization
 
         Args:
-            results_file (str): 評価結果CSVファイルのパス
-            output_dir (str): 出力ディレクトリ
+            results_file (str): Path of evaluation results CSV file
+            output_dir (str): Output directory
         """
         self.results_file = results_file
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # ベースクラス初期化用のダミー辞書
+        # Dummy dictionary for base class initialization
         dummy_results = {"dummy": "data"}
         super().__init__(dummy_results, output_dir)
 
         self.evaluation_type = "molecule_nat_lang"
 
-        # データの読み込み
+        # Load data
         self.load_and_validate_data()
 
-        # Molecule NL特有の設定
+        # Molecule NL specific settings
         self.colors = {
             "primary": "#2E8B57",  # SeaGreen
             "secondary": "#32CD32",  # LimeGreen
@@ -57,23 +57,23 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         }
 
     def load_and_validate_data(self):
-        """データの読み込みと検証（オーバーライド）"""
+        """Data loading and validation (override)"""
         try:
             logger.info(f"Loading Molecule NL evaluation results from {self.results_file}")
             self.df = pd.read_csv(self.results_file)
 
-            # 必要な列の確認
+            # Check required columns
             required_columns = ["perplexity", "text_length", "token_length"]
             missing_columns = [col for col in required_columns if col not in self.df.columns]
 
             if missing_columns:
                 raise ValueError(f"Missing required columns: {missing_columns}")
 
-            # データクリーニング
+            # data cleaning
             initial_count = len(self.df)
             self.df = self.df.dropna(subset=["perplexity"])
 
-            # 無限大値の処理
+            # Handling infinite values
             infinite_mask = np.isinf(self.df["perplexity"])
             if infinite_mask.any():
                 logger.warning(f"Found {infinite_mask.sum()} samples with infinite perplexity")
@@ -87,10 +87,10 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
             return False
 
     def create_domain_specific_plot(self):
-        """Molecule NL特有のプロット作成（抽象メソッドの実装）"""
+        """Plot creation specific to Molecule NL (implementation of abstract methods)"""
         logger.info("Creating Molecule NL specific visualization")
 
-        # パープレキシティの詳細解析プロット
+        # Detailed perplexity analysis plot
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         fig.suptitle(
             "Molecule NL Model - Detailed Perplexity Analysis",
@@ -98,7 +98,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
             fontweight="bold",
         )
 
-        # 1. パープレキシティ分布（線形スケール）
+        # 1. Perplexity distribution (linear scale)
         axes[0, 0].hist(
             self.df["perplexity"],
             bins=50,
@@ -111,7 +111,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         axes[0, 0].set_title("Perplexity Distribution (Linear Scale)")
         axes[0, 0].grid(True, alpha=0.3)
 
-        # 2. パープレキシティ分布（対数スケール）
+        # 2. Perplexity distribution (logarithmic scale)
         axes[0, 1].hist(
             self.df["perplexity"],
             bins=50,
@@ -125,7 +125,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         axes[0, 1].set_yscale("log")
         axes[0, 1].grid(True, alpha=0.3)
 
-        # 3. テキスト長とパープレキシティの関係
+        # 3. Relationship between text length and perplexity
         axes[0, 2].scatter(
             self.df["text_length"],
             self.df["perplexity"],
@@ -134,7 +134,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
             s=20,
         )
 
-        # 傾向線を追加
+        # add trend line
         z = np.polyfit(self.df["text_length"], self.df["perplexity"], 1)
         p = np.poly1d(z)
         axes[0, 2].plot(
@@ -150,7 +150,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         axes[0, 2].set_title("Text Length vs Perplexity")
         axes[0, 2].grid(True, alpha=0.3)
 
-        # 4. トークン長とパープレキシティの関係
+        # 4. Relationship between token length and perplexity
         axes[1, 0].scatter(
             self.df["token_length"],
             self.df["perplexity"],
@@ -159,7 +159,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
             s=20,
         )
 
-        # 傾向線を追加
+        # add trend line
         z_token = np.polyfit(self.df["token_length"], self.df["perplexity"], 1)
         p_token = np.poly1d(z_token)
         axes[1, 0].plot(
@@ -175,24 +175,24 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         axes[1, 0].set_title("Token Length vs Perplexity")
         axes[1, 0].grid(True, alpha=0.3)
 
-        # 5. パープレキシティのボックスプロット（四分位数別）
-        # テキスト長でビンを作成（重複を許可）
+        # 5. Box plot of perplexity (by quartiles)
+        # Create bin by text length (duplicates allowed)
         try:
-            # duplicates='drop'を使用すると、ラベルが自動生成される
+            # If you use duplicates='drop', labels will be automatically generated
             self.df["length_quartile"] = pd.qcut(self.df["text_length"], 4, duplicates="drop")
 
-            # 実際に生成されたカテゴリを取得
+            # Get the actual generated category
             unique_quartiles = sorted(self.df["length_quartile"].unique())
 
             box_data = [self.df[self.df["length_quartile"] == q]["perplexity"].values for q in unique_quartiles]
 
-            # ラベルを生成（Q1, Q2, ... または範囲表示）
+            # Generate labels (Q1, Q2, ... or display range)
             box_labels = [f"Q{i + 1}" for i in range(len(unique_quartiles))]
 
             if len(box_data) > 0:
                 box_plot = axes[1, 1].boxplot(box_data, labels=box_labels, patch_artist=True)
 
-                # ボックスプロットの色設定
+                # Color setting for box plot
                 colors_box = [
                     self.colors["primary"],
                     self.colors["secondary"],
@@ -212,7 +212,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
                     transform=axes[1, 1].transAxes,
                 )
         except (ValueError, TypeError) as e:
-            # 四分位数が計算できない場合（全ての値が同じなど）
+            # If quartiles cannot be calculated (all values are the same, etc.)
             logger.warning(f"Could not create quartiles: {e}")
             axes[1, 1].text(
                 0.5,
@@ -228,8 +228,8 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         axes[1, 1].set_title("Perplexity by Text Length Quartile")
         axes[1, 1].grid(True, alpha=0.3)
 
-        # 6. パフォーマンス範囲の分析
-        # パープレキシティ範囲別のサンプル数
+        # 6. Performance Range Analysis
+        # Number of samples by perplexity range
         perplexity_ranges = [
             (0, 10, "Excellent"),
             (10, 50, "Good"),
@@ -268,7 +268,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         axes[1, 2].set_xticklabels(range_labels, rotation=45, ha="right")
         axes[1, 2].grid(True, alpha=0.3)
 
-        # 数値をバーの上に表示
+        # display numbers above bars
         for bar, count in zip(bars, range_counts):
             height = bar.get_height()
             axes[1, 2].text(
@@ -282,7 +282,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
 
         plt.tight_layout()
 
-        # ファイル保存
+        # save file
         output_path = self.output_dir / "molecule_nat_lang_detailed_analysis.png"
         plt.savefig(output_path, dpi=300, bbox_inches="tight")
         logger.info(f"Detailed analysis plot saved: {output_path}")
@@ -291,7 +291,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         return str(output_path)
 
     def generate_statistics_summary(self):
-        """統計サマリーの生成（オーバーライド）"""
+        """Generate statistics summary (override)"""
         logger.info("Generating Molecule NL statistics summary")
 
         stats = {
@@ -321,16 +321,16 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         return stats
 
     def plot_confusion_matrix(self):
-        """混同行列プロットの生成（抽象メソッドの実装）"""
+        """Generation of confusion matrix plot (implementation of abstract method)"""
         logger.info("Confusion matrix not applicable for perplexity-based evaluation")
 
     def plot_performance_metrics(self):
-        """性能指標プロットの生成（抽象メソッドの実装）"""
+        """Generation of performance index plot (implementation of abstract method)"""
         logger.info("Creating performance metrics visualization")
 
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        # パープレキシティの統計指標をバープロット
+        # Barplot statistical indicators of perplexity
         metrics = ["Mean", "Median", "Min", "Max", "25th %ile", "75th %ile"]
         values = [
             self.df["perplexity"].mean(),
@@ -346,7 +346,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         ax.set_title("Perplexity Performance Metrics")
         ax.grid(True, alpha=0.3)
 
-        # 値をバーの上に表示
+        # display the value above the bar
         for bar, value in zip(bars, values):
             height = bar.get_height()
             ax.text(
@@ -368,26 +368,26 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         return str(output_path)
 
     def create_summary_dashboard(self):
-        """サマリーダッシュボードの生成（抽象メソッドの実装）"""
+        """Generation of summary dashboard (implementation of abstract method)"""
         logger.info("Creating summary dashboard")
         return self.create_domain_specific_plot()
 
     def generate_all_visualizations(self):
-        """全ての可視化の生成（抽象メソッドの実装）"""
+        """Generation of all visualizations (implementation of abstract methods)"""
         logger.info("Generating all Molecule NL visualizations")
 
         generated_plots = []
 
         try:
-            # ドメイン特有の詳細分析
+            # Detailed domain-specific analysis
             plot_path = self.create_domain_specific_plot()
             generated_plots.append(plot_path)
 
-            # 性能指標プロット
+            # performance index plot
             metrics_path = self.plot_performance_metrics()
             generated_plots.append(metrics_path)
 
-            # 包括的ダッシュボード
+            # Comprehensive dashboard
             dashboard_path = self._create_comprehensive_evaluation_dashboard()
             if dashboard_path:
                 generated_plots.append(dashboard_path)
@@ -401,38 +401,39 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
 
     def _create_comprehensive_evaluation_dashboard(self):
         """
-        Molecule NL特有の包括的評価ダッシュボードを作成
+        Create a comprehensive evaluation dashboard specific to Molecule NL
 
-        BaseVisualizationGeneratorの_create_comprehensive_dashboard()を呼び出して
-        6つのプロットを作成し、Molecule NL用のサンプルデータを生成します。
+        Call _create_comprehensive_dashboard() of BaseVisualizationGenerator
+        Create six plots and generate sample data for Molecule NL.
         """
         logger.info("Creating comprehensive Molecule NL evaluation dashboard")
 
-        # サンプルデータの生成（Molecule NL特有）
         np.random.seed(42)
         n_samples = len(self.df) if hasattr(self, "df") and self.df is not None else 1000
 
-        # パープレキシティベースのスコア（低いほど良い→高いほど良いに変換）
+        # Perplexity-based score (lower is better → higher is better)
         perplexity_scores = (
             self.df["perplexity"].values
             if hasattr(self, "df") and self.df is not None
             else np.random.lognormal(2, 1, n_samples)
         )
-        # パープレキシティを0-1スケールのスコア（高いほど良い）に変換
-        max_perplexity = np.percentile(perplexity_scores, 95)  # 外れ値を除外
+        # Convert perplexity to a score on a 0-1 scale (higher is better)
+        max_perplexity = np.percentile(perplexity_scores, 95)  # exclude outliers
 
-        # サンプルデータをDataFrameとして作成
+        # Create sample data as a DataFrame
         sample_data = pd.DataFrame(
             {
-                "label": np.random.choice([0, 1], size=n_samples, p=[0.3, 0.7]),  # 分子理解タスクの正解
-                "prediction": np.random.choice([0, 1], size=n_samples, p=[0.25, 0.75]),  # 予測結果
-                "score": 1.0 - np.clip(perplexity_scores / max_perplexity, 0, 1),  # パープレキシティから導出したスコア
-                "confidence": np.random.beta(2, 2, n_samples),  # 信頼度
-                "similarity": np.random.beta(3, 2, n_samples),  # 分子構造類似度
+                "label": np.random.choice(
+                    [0, 1], size=n_samples, p=[0.3, 0.7]
+                ),  # Correct answer for the molecular understanding task
+                "prediction": np.random.choice([0, 1], size=n_samples, p=[0.25, 0.75]),  # Prediction result
+                "score": 1.0 - np.clip(perplexity_scores / max_perplexity, 0, 1),  # Score derived from perplexity
+                "confidence": np.random.beta(2, 2, n_samples),  # confidence
+                "similarity": np.random.beta(3, 2, n_samples),  # Molecular structure similarity
             }
         )
 
-        # BaseVisualizationGeneratorの包括的ダッシュボード作成を呼び出し
+        # Call comprehensive dashboard creation of BaseVisualizationGenerator
         dashboard_path = self._create_comprehensive_dashboard(
             sample_data,
             prediction_score_col="score",
@@ -446,13 +447,13 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         return dashboard_path
 
     def create_html_report(self):
-        """HTML形式の詳細レポート作成（オーバーライド）"""
+        """Create detailed report in HTML format (override)"""
         logger.info("Creating Molecule NL HTML report")
 
-        # 統計情報の取得
+        # Get statistics
         stats = self.generate_statistics_summary()
 
-        # HTMLテンプレートの作成
+        # Create HTML template
         html_content = """
         <!DOCTYPE html>
         <html lang="ja">
@@ -568,22 +569,22 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
             <div class="container">
                 <div class="header">
                     <h1>🧬 Molecule NL Model</h1>
-                    <p>分子自然言語理解モデル - 評価レポート</p>
+                    <p>Molecular natural language understanding model - Evaluation report</p>
                 </div>
 
                 <div class="content">
                     <div class="section">
-                        <h2>📊 評価サマリー</h2>
-                        <p>本レポートは、分子自然言語処理に特化したGPT-2モデルの性能評価結果を示しています。
-                        パープレキシティを主要指標として、モデルの言語理解能力を定量的に分析しました。</p>
+                        <h2>📊 Evaluation summary</h2>
+                        <p>This report shows the performance evaluation results of the GPT-2 model specialized for molecular natural language processing.
+                        We quantitatively analyzed the language understanding ability of the model using perplexity as the main indicator. </p>
                     </div>
 
                     <div class="section">
-                        <h2>📈 統計データ</h2>
+                        <h2>📈 Statistics data</h2>
                         <div class="stats-grid">
         """
 
-        # 統計データの各セクションをHTMLに追加
+        # Add each section of statistical data to HTML
         for section_name, section_data in stats.items():
             html_content += f"""
                             <div class="stat-card">
@@ -603,27 +604,27 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
                     </div>
 
                     <div class="section">
-                        <h2>💡 主要な発見</h2>
+                        <h2>💡 Major discoveries</h2>
                         <ul>
-                            <li><strong>パフォーマンス分析:</strong> パープレキシティの分布から、モデルの言語理解能力を評価</li>
-                            <li><strong>テキスト長の影響:</strong> 入力テキストの長さがモデル性能に与える影響を分析</li>
-                            <li><strong>分子特化性:</strong> 化学・分子に関する自然言語の理解に特化したモデル性能</li>
-                            <li><strong>実用性評価:</strong> 実際の分子情報処理タスクでの適用可能性を検証</li>
+                            <li><strong>Performance analysis:</strong> Evaluate the language understanding ability of the model from the distribution of perplexity</li>
+                            <li><strong>Effect of text length:</strong> Analyze the impact of input text length on model performance</li>
+                            <li><strong>Molecular specialization:</strong> Model performance specialized in understanding natural language related to chemistry and molecules</li>
+                            <li><strong>Practical evaluation:</strong> Verify applicability in actual molecular information processing tasks</li>
                         </ul>
                     </div>
 
                     <div class="section">
-                        <h2>🎯 推奨事項</h2>
+                        <h2>🎯 Recommendations</h2>
                         <ul>
-                            <li>パープレキシティが10未満のサンプルは優秀な理解度を示しています</li>
-                            <li>長いテキストでの性能低下が見られる場合は、入力分割を検討してください</li>
-                            <li>分子構造と自然言語の対応関係の更なる分析を推奨します</li>
-                            <li>ドメイン特化データでの追加ファインチューニングを検討してください</li>
+                            <li>Samples with perplexity less than 10 indicate excellent comprehension</li>
+                            <li>If you see performance degradation with long text, consider input splitting</li>
+                            <li>Further analysis of the correspondence between molecular structure and natural language is recommended</li>
+                            <li>Consider additional fine-tuning with domain-specific data</li>
                         </ul>
                     </div>
 
                     <div class="timestamp">
-                        レポート生成日時: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}
+                        Report generation date and time: {datetime.now().strftime("%Y year %m month %d day %H:%M:%S")}
                     </div>
                 </div>
             </div>
@@ -631,7 +632,7 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
         </html>
         """
 
-        # HTMLファイルの保存
+        # Save HTML file
         html_path = self.output_dir / "molecule_nat_lang_evaluation_report.html"
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(html_content)
@@ -641,10 +642,10 @@ class MoleculeNLVisualizationGenerator(BaseVisualizationGenerator):
 
 
 def main():
-    """メイン実行関数（テスト用）"""
+    """Main execution function (for testing)"""
     import tempfile
 
-    # テスト用のサンプルデータを作成
+    # Create sample data for testing
     test_data = {
         "index": range(100),
         "text_length": np.random.randint(50, 500, 100),
@@ -656,15 +657,15 @@ def main():
 
     df = pd.DataFrame(test_data)
 
-    # 一時ファイルとディレクトリの作成
+    # Create temporary files and directories
     with tempfile.TemporaryDirectory() as temp_dir:
         csv_path = os.path.join(temp_dir, "test_results.csv")
         df.to_csv(csv_path, index=False)
 
-        # 可視化器の初期化とテスト
+        # Initializing and testing the visualizer
         visualizer = MoleculeNLVisualizationGenerator(results_file=csv_path, output_dir=temp_dir)
 
-        # 全ての可視化を生成
+        # generate all visualizations
         visualizer.generate_all_visualizations()
 
         print(f"Test visualizations generated in: {temp_dir}")

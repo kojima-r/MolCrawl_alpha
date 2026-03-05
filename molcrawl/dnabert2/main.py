@@ -1,13 +1,13 @@
 """
 DNABERT-2 Training Script for Genome Sequence Data
 
-DNABERT-2は、DNA配列解析に特化したBERTベースモデルです。
-主な改良点：
-- BPE (Byte Pair Encoding) トークナイゼーション（k-mer不要）
-- より効率的なアテンション機構
-- DNA特有の特性を考慮したアーキテクチャ
+DNABERT-2 is a BERT base model specialized for DNA sequence analysis.
+Main improvements:
+- BPE (Byte Pair Encoding) Tokenization（k-merunnecessary)
+- More efficient attention mechanism
+- Architecture that takes into account the unique characteristics of DNA
 
-参考: DNABERT-2: Efficient Foundation Model and Benchmark for Multi-Species Genome
+reference: DNABERT-2: Efficient Foundation Model and Benchmark for Multi-Species Genome
 https://github.com/MAGICS-LAB/DNABERT_2
 """
 
@@ -31,10 +31,10 @@ except ImportError:
 
 class DNADatasetLoader:
     """
-    DNA配列データセット用のローダー
+    Loader for DNA sequence datasets
 
-    既存のgenome_sequenceデータセットを読み込み、
-    DNABERT-2用に前処理を行います。
+    Load the existing genome_sequence dataset,
+    Perform preprocessing for DNABERT-2.
     """
 
     def __init__(self, data_dir, split="train", test_size=0.1):
@@ -134,9 +134,9 @@ if __name__ == "__main__":
     )
 
     model_path = ""
-    max_length = 512  # DNABERT-2 default: 512 (より長い配列の場合は増やす)
+    max_length = 512  # DNABERT-2 default: 512 (increase for longer sequences)
     dataset_dir = ""
-    learning_rate = 3e-5  # DNABERT-2推奨値
+    learning_rate = 3e-5  # DNABERT-2 recommended value
     weight_decay = 0.01
     warmup_steps = 10000
     max_steps = 200000

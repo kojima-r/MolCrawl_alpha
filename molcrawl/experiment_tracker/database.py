@@ -1,5 +1,5 @@
 """
-実験管理データベース - SQLiteベース
+Experiment management database - SQLite based
 """
 
 import json
@@ -21,12 +21,12 @@ from .models import (
 
 
 class ExperimentDatabase:
-    """実験管理データベース"""
+    """Experiment management database"""
 
     def __init__(self, db_path: str = "experiments.db"):
         """
         Args:
-            db_path: データベースファイルのパス
+            db_path: Database file path
         """
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -34,7 +34,7 @@ class ExperimentDatabase:
 
     @contextmanager
     def get_connection(self):
-        """データベース接続のコンテキストマネージャー"""
+        """Context manager for database connections"""
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
@@ -47,11 +47,11 @@ class ExperimentDatabase:
             conn.close()
 
     def _initialize_database(self):
-        """データベースの初期化"""
+        """Initialize the database"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # 実験テーブル
+            # Experiment table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS experiments (
@@ -77,7 +77,7 @@ class ExperimentDatabase:
             """
             )
 
-            # ステップテーブル
+            # step table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS experiment_steps (
@@ -98,7 +98,7 @@ class ExperimentDatabase:
             """
             )
 
-            # ログテーブル
+            # log table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS experiment_logs (
@@ -113,7 +113,7 @@ class ExperimentDatabase:
             """
             )
 
-            # インデックス作成
+            # create index
             cursor.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_experiments_status
@@ -134,7 +134,7 @@ class ExperimentDatabase:
             )
 
     def save_experiment(self, experiment: Experiment) -> None:
-        """実験を保存"""
+        """Save experiment"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
@@ -171,7 +171,7 @@ class ExperimentDatabase:
                 ),
             )
 
-            # ステップを保存
+            # save step
             cursor.execute(
                 "DELETE FROM experiment_steps WHERE experiment_id = ?",
                 (experiment.experiment_id,),
@@ -201,7 +201,7 @@ class ExperimentDatabase:
                 )
 
     def add_log(self, experiment_id: str, log: ExperimentLog) -> None:
-        """ログを追加"""
+        """Add log"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -220,11 +220,11 @@ class ExperimentDatabase:
             )
 
     def get_experiment(self, experiment_id: str) -> Optional[Experiment]:
-        """実験を取得"""
+        """Get the experiment"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # 実験情報を取得
+            # Get experiment information
             cursor.execute(
                 """
                 SELECT * FROM experiments WHERE experiment_id = ?
@@ -236,7 +236,7 @@ class ExperimentDatabase:
             if not row:
                 return None
 
-            # ステップを取得
+            # get step
             cursor.execute(
                 """
                 SELECT * FROM experiment_steps WHERE experiment_id = ?
@@ -246,7 +246,7 @@ class ExperimentDatabase:
             )
             steps_rows = cursor.fetchall()
 
-            # ログを取得
+            # get log
             cursor.execute(
                 """
                 SELECT * FROM experiment_logs WHERE experiment_id = ?
@@ -256,7 +256,7 @@ class ExperimentDatabase:
             )
             logs_rows = cursor.fetchall()
 
-            # Experimentオブジェクトを構築
+            # Build the Experiment object
             experiment_data = dict(row)
             experiment_data["experiment_type"] = ExperimentType(experiment_data["experiment_type"])
             experiment_data["model_type"] = ModelType(experiment_data["model_type"])
@@ -277,7 +277,7 @@ class ExperimentDatabase:
                 json.loads(experiment_data["environment"]) if experiment_data["environment"] else {}
             )
 
-            # ステップを構築
+            # build step
             steps = []
             for step_row in steps_rows:
                 step_data = dict(step_row)
@@ -287,17 +287,17 @@ class ExperimentDatabase:
                 if step_data.get("end_time"):
                     step_data["end_time"] = datetime.fromisoformat(step_data["end_time"])
                 step_data["metadata"] = json.loads(step_data["metadata"]) if step_data["metadata"] else {}
-                # 不要なフィールドを削除
+                # remove unnecessary fields
                 del step_data["id"]
                 del step_data["experiment_id"]
                 steps.append(ExperimentStep(**step_data))
 
-            # ログを構築
+            # build log
             logs = []
             for log_row in logs_rows:
                 log_data = dict(log_row)
                 log_data["timestamp"] = datetime.fromisoformat(log_data["timestamp"])
-                # 不要なフィールドを削除
+                # remove unnecessary fields
                 del log_data["id"]
                 del log_data["experiment_id"]
                 logs.append(ExperimentLog(**log_data))
@@ -316,7 +316,7 @@ class ExperimentDatabase:
         limit: int = 100,
         offset: int = 0,
     ) -> List[Experiment]:
-        """実験一覧を取得"""
+        """Get experiment list"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
@@ -351,17 +351,17 @@ class ExperimentDatabase:
             return experiments
 
     def get_statistics(self) -> Dict[str, Any]:
-        """統計情報を取得"""
+        """Get statistics"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
             stats = {}
 
-            # 全実験数
+            # Total number of experiments
             cursor.execute("SELECT COUNT(*) as count FROM experiments")
             stats["total_experiments"] = cursor.fetchone()["count"]
 
-            # ステータス別
+            # By status
             cursor.execute(
                 """
                 SELECT status, COUNT(*) as count
@@ -371,7 +371,7 @@ class ExperimentDatabase:
             )
             stats["by_status"] = {row["status"]: row["count"] for row in cursor.fetchall()}
 
-            # タイプ別
+            # By type
             cursor.execute(
                 """
                 SELECT experiment_type, COUNT(*) as count
@@ -381,7 +381,7 @@ class ExperimentDatabase:
             )
             stats["by_type"] = {row["experiment_type"]: row["count"] for row in cursor.fetchall()}
 
-            # モデル別
+            # By model
             cursor.execute(
                 """
                 SELECT model_type, COUNT(*) as count
@@ -391,7 +391,7 @@ class ExperimentDatabase:
             )
             stats["by_model"] = {row["model_type"]: row["count"] for row in cursor.fetchall()}
 
-            # データセット別
+            # By dataset
             cursor.execute(
                 """
                 SELECT dataset_type, COUNT(*) as count

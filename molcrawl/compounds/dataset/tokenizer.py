@@ -1,7 +1,7 @@
 """
-個別データセットトークナイザー
+Individual dataset tokenizer
 
-各データセットを独立してトークナイズするためのクラスを提供します。
+Provides classes for tokenizing each dataset independently.
 """
 
 import logging
@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 
 class DatasetTokenizer:
     """
-    個別データセットトークナイザー
+    Individual dataset tokenizer
 
-    処理済みデータセットをトークナイズします。
+    Tokenize the processed dataset.
     """
 
     def __init__(
@@ -38,11 +38,11 @@ class DatasetTokenizer:
     ):
         """
         Args:
-            dataset_info: データセット情報
-            compounds_dir: compoundsディレクトリのパス
-            vocab_path: 語彙ファイルのパス
-            max_length: 最大トークン長
-            num_processes: 並列処理のプロセス数
+            dataset_info: Dataset information
+            compounds_dir: Path to the compounds directory
+            vocab_path: Vocabulary file path
+            max_length: maximum token length
+            num_processes: Number of parallel processing processes
         """
         self.dataset_info = dataset_info
         self.compounds_dir = Path(compounds_dir)
@@ -50,28 +50,28 @@ class DatasetTokenizer:
         self.max_length = max_length
         self.num_processes = num_processes
 
-        # トークナイザーの初期化
+        # Initialize tokenizer
         self.mol_tokenizer = CompoundsTokenizer(vocab_path, max_length)
         self.scaffolds_tokenizer = ScaffoldsTokenizer(vocab_path, max_length)
 
     def tokenize(self, force: bool = False) -> Optional[pa.Table]:
         """
-        データセットをトークナイズ
+        Tokenize the dataset
 
         Args:
-            force: 強制再処理フラグ
+            force: Force reprocessing flag
 
         Returns:
-            トークナイズ済みテーブル（エラー時はNone）
+            Tokenized table (None in case of error)
         """
         tokenized_path = self.dataset_info.get_tokenized_path(self.compounds_dir)
 
-        # 既にトークナイズ済みの場合はスキップ
+        # Skip if already tokenized
         if not force and tokenized_path.exists():
             logger.info(f"✓ {self.dataset_info.name}: Already tokenized, skipping")
             return pq.read_table(tokenized_path)
 
-        # 処理済みデータを読み込み
+        # load processed data
         processed_path = self.dataset_info.get_processed_path(self.compounds_dir)
         if not processed_path.exists():
             logger.warning(
@@ -82,10 +82,10 @@ class DatasetTokenizer:
         logger.info(f"🔤 {self.dataset_info.name}: Tokenizing...")
 
         try:
-            # データ読み込み
+            # Load data
             table = pq.read_table(processed_path)
 
-            # SMILESのトークナイズ
+            # Tokenize SMILES
             logger.info("  Tokenizing SMILES...")
             table = multiprocess_tokenization(
                 self.mol_tokenizer.bulk_tokenizer_parquet,
@@ -95,7 +95,7 @@ class DatasetTokenizer:
                 processes=self.num_processes,
             )
 
-            # Scaffoldsのトークナイズ
+            # Tokenize Scaffolds
             logger.info("  Tokenizing Scaffolds...")
             table = multiprocess_tokenization(
                 self.scaffolds_tokenizer.bulk_tokenizer_parquet,
@@ -105,10 +105,10 @@ class DatasetTokenizer:
                 processes=self.num_processes,
             )
 
-            # 無効なSMILESの統計を出力
+            # print invalid SMILES statistics
             self._report_invalid_smiles_stats()
 
-            # 保存
+            # keep
             tokenized_path.parent.mkdir(parents=True, exist_ok=True)
             pq.write_table(table, tokenized_path)
 
@@ -120,7 +120,7 @@ class DatasetTokenizer:
             return None
 
     def _report_invalid_smiles_stats(self):
-        """無効なSMILESの統計をログに出力"""
+        """Log invalid SMILES statistics"""
         from molcrawl.compounds.utils.preprocessing import get_invalid_smiles_stats
 
         invalid_count, total_count, invalid_rate, examples = get_invalid_smiles_stats()
@@ -159,22 +159,22 @@ def compute_tokenization_statistics(
     force: bool = False,
 ) -> Dict[CompoundDatasetType, dict]:
     """
-    トークナイズ済みデータセットの統計計算と可視化
+    Statistical calculation and visualization of tokenized datasets
 
-    各データセットについてトークン長分布のヒストグラムを生成し、
-    サンプル数・トークン数の統計を出力します。
+    Generate a histogram of the token length distribution for each dataset,
+    Outputs statistics on the number of samples and number of tokens.
 
     Args:
-        compounds_dir: compoundsディレクトリのパス
-        dataset_types: 統計を計算するデータセット種別のリスト（Noneの場合はトークナイズ済みの全て）
-        force: 強制再計算フラグ
+        compounds_dir: compounds directorypath of
+        dataset_types: List of dataset types to calculate statistics (if None, all tokenized)
+        force: force recalculation flag
 
     Returns:
-        {dataset_type: statistics_dict} の辞書
+        Dictionary of {dataset_type: statistics_dict}
     """
     from molcrawl.compounds.dataset.dataset_config import get_dataset_info, DATASET_DEFINITIONS
 
-    # 対象データセットを決定
+    # Decide target dataset
     if dataset_types is None:
         dataset_types = []
         for dt, info in DATASET_DEFINITIONS.items():
@@ -200,7 +200,7 @@ def compute_tokenization_statistics(
             logger.warning(f"⚠ {info.name}: Tokenized data not found, skipping statistics")
             continue
 
-        # マーカーファイルで冪等性を確保
+        # Ensure idempotency with marker file
         stats_marker = tokenized_path.parent / f"{info.name}_stats.marker"
         if not force and stats_marker.exists():
             logger.info(f"✓ {info.name}: Statistics already computed, skipping")
@@ -222,7 +222,7 @@ def compute_tokenization_statistics(
                     if item.is_valid:
                         series_length.append(len(item))
 
-                # ヒストグラム生成
+                # Generate histogram
                 plt.figure()
                 plt.hist(series_length, bins=np.arange(0, 200, 1))
                 plt.xlabel(f"Length of tokenized {display_name}")
@@ -261,24 +261,24 @@ def tokenize_all_processed_datasets(
     num_processes: int = 2,
 ) -> dict:
     """
-    処理済みの全データセットをトークナイズ
+    Tokenize all processed datasets
 
     Args:
-        compounds_dir: compoundsディレクトリのパス
-        vocab_path: 語彙ファイルのパス
-        max_length: 最大トークン長
-        dataset_types: トークナイズするデータセット種別のリスト（Noneの場合は処理済みの全て）
-        force: 強制再処理フラグ
-        num_processes: 並列処理のプロセス数
+        compounds_dir: compounds directorypath of
+        vocab_path: Vocabulary file path
+        max_length: maximum token length
+        dataset_types: List of dataset types to tokenize (if None, all processed)
+        force: Force reprocessing flag
+        num_processes: Number of parallel processing processes
 
     Returns:
-        {dataset_type: tokenized_table} の辞書
+        Dictionary of {dataset_type: tokenized_table}
     """
     from molcrawl.compounds.dataset.dataset_config import get_dataset_info, DATASET_DEFINITIONS
 
-    # 処理対象のデータセットを決定
+    # Determine the dataset to be processed
     if dataset_types is None:
-        # 処理済みデータが存在するデータセットを取得
+        # Get the dataset with processed data
         dataset_types = []
         for dt, info in DATASET_DEFINITIONS.items():
             processed_path = info.get_processed_path(compounds_dir)
@@ -289,7 +289,7 @@ def tokenize_all_processed_datasets(
             logger.warning("No processed datasets available for tokenization")
             return {}
     else:
-        # 指定されたデータセットが文字列の場合はEnumに変換
+        # If the specified dataset is a string, convert it to an Enum
         if isinstance(dataset_types[0], str):
             dataset_types = [CompoundDatasetType(dt) for dt in dataset_types]
 

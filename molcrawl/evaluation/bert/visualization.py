@@ -25,7 +25,7 @@ from scipy import stats
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore")
 
-# プロジェクトルートを追加
+# add project root
 
 from molcrawl.utils.base_visualization import BaseVisualizationGenerator  # noqa: E402
 
@@ -47,21 +47,21 @@ class BERTVisualizationGenerator(BaseVisualizationGenerator):
         """
         self.results_dir = Path(results_dir)
 
-        # 出力ディレクトリの設定
+        # Set output directory
         if output_dir is None:
             output_dir = str(self.results_dir / "plots")
 
-        # 結果ファイルを探す
+        # find result file
         results_file = self._find_results_file(results_dir)
 
-        # 親クラスの初期化
+        # Initialize parent class
         super().__init__(results_file, output_dir, logger)
 
-        # BERT固有の初期化
+        # BERT-specific initialization
         self._setup_bert_data()
 
     def _find_results_file(self, results_dir: str) -> str:
-        """結果ファイルを探す"""
+        """Find result file"""
         results_path = Path(results_dir)
         possible_files = [
             results_path / "bert_evaluation_results.json",
@@ -73,11 +73,11 @@ class BERTVisualizationGenerator(BaseVisualizationGenerator):
             if file_path.exists():
                 return str(file_path)
 
-        # ファイルが見つからない場合はダミーデータを作成
+        # Create dummy data if the file is not found
         return self._create_dummy_results(results_path)
 
     def _create_dummy_results(self, results_path: Path) -> str:
-        """ダミーの結果データを作成"""
+        """Create dummy result data"""
         dummy_results = {
             "spearman_correlation": 0.72,
             "pearson_correlation": 0.68,
@@ -95,8 +95,8 @@ class BERTVisualizationGenerator(BaseVisualizationGenerator):
         return str(dummy_file)
 
     def _setup_bert_data(self):
-        """BERT固有のデータ設定"""
-        # BERT固有の検証（回帰タスクなので相関を確認）
+        """BERT-specific data settings"""
+        # BERT-specific verification (check correlation as it is a regression task)
         correlation_keys = ["spearman_correlation", "pearson_correlation"]
         available_keys = [key for key in correlation_keys if key in self.results]
 
@@ -620,13 +620,13 @@ The BERT model was evaluated using masked language modeling (MLM) based fitness 
             logger.error(f"❌ Error generating visualizations: {e}")
             raise
 
-    # 抽象メソッドの実装
+    # Implementing abstract methods
     def plot_confusion_matrix(self):
-        """混同行列プロット（BERT回帰タスクでは該当なし）"""
+        """Confusion matrix plot (not applicable for BERT regression tasks)"""
         self.logger.info("Confusion matrix not applicable for BERT regression task")
 
     def plot_performance_metrics(self):
-        """性能指標プロット"""
+        """Performance index plot"""
         self.logger.info("Creating BERT performance metrics plot")
         metrics = ["Spearman", "Pearson", "Kendall", "R²"]
         values = [
@@ -644,7 +644,7 @@ The BERT model was evaluated using masked language modeling (MLM) based fitness 
         self._save_plot("bert_performance_metrics")
 
     def create_summary_dashboard(self):
-        """サマリーダッシュボード"""
+        """Summary Dashboard"""
         self.logger.info("Creating BERT summary dashboard")
         plt.figure(figsize=(12, 8))
         plt.text(
@@ -658,37 +658,37 @@ The BERT model was evaluated using masked language modeling (MLM) based fitness 
         self._save_plot("bert_summary_dashboard")
 
     def _create_comprehensive_evaluation_dashboard(self):
-        """BERT ProteinGym用の包括的評価ダッシュボードを作成"""
+        """Create a comprehensive evaluation dashboard for BERT ProteinGym"""
         self.logger.info("Creating comprehensive BERT ProteinGym evaluation dashboard")
 
-        # BERT ProteinGymの結果から仮想的なDataFrameを作成
+        # Create a virtual DataFrame from BERT ProteinGym results
         import numpy as np
 
         np.random.seed(42)
 
-        # サンプルデータを作成（実際の実装では実データを使用）
+        # Create sample data (actual data will be used in actual implementation)
         n_samples = 1500
 
-        # タンパク質フィットネス予測のスコアを生成
-        # 回帰問題として扱い、高/低フィットネスで二値化
+        # Generate score for protein fitness prediction
+        # Treat it as a regression problem and binarize it by high/low fitness
         continuous_scores = np.random.normal(0, 1, n_samples)
         threshold = np.median(continuous_scores)
         labels = (continuous_scores > threshold).astype(int)
 
-        # 予測スコアに適度なノイズを追加
+        # Add moderate noise to prediction score
         predicted_scores = continuous_scores + np.random.normal(0, 0.2, n_samples)
 
-        # DataFrameを作成
+        # create a DataFrame
         results_df = pd.DataFrame(
             {
                 "label": labels,
                 "score": predicted_scores,
-                "confidence": np.abs(predicted_scores) / np.max(np.abs(predicted_scores)),  # 正規化した絶対値
+                "confidence": np.abs(predicted_scores) / np.max(np.abs(predicted_scores)),  # Normalized absolute value
                 "similarity": np.random.uniform(0.4, 0.9, n_samples),
             }
         )
 
-        # 汎用ダッシュボードを作成
+        # Create a generic dashboard
         self._create_comprehensive_dashboard(
             results_df=results_df,
             prediction_score_col="score",
@@ -699,7 +699,7 @@ The BERT model was evaluated using masked language modeling (MLM) based fitness 
         )
 
     def create_html_report(self):
-        """HTMLレポート作成"""
+        """HTML report creation"""
         self.logger.info("Creating BERT HTML report")
 
         html_content = self._create_html_header("BERT ProteinGym Evaluation Report")

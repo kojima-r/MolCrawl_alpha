@@ -21,11 +21,11 @@ from transformers import (
 
 from molcrawl.compounds.utils.tokenizer import CompoundsTokenizer as Tokenizer
 
-# 共通環境チェックモジュールを追加
+# Add common environment check module
 from molcrawl.utils.environment_check import check_learning_source_dir
 
 # -----------------------------
-# 既存の前処理ヘルパ
+# Existing preprocessing helpers
 # -----------------------------
 params = Chem.SmilesParserParams()
 params.removeHs = True
@@ -54,7 +54,7 @@ def metric_mse(predictions, references):
 
 
 # -----------------------------
-# メトリクス
+# metrics
 # -----------------------------
 
 
@@ -81,7 +81,7 @@ def compute_metrics(eval_pred, std=None):
         # CE: logits shape [B, 2]
         pred_ids = np.argmax(logits, axis=-1)
         acc = metric_acc(predictions=pred_ids, references=labels)["accuracy"]
-        # AUROC（二値）
+        # AUROC (binary)
         try:
             probs_pos = torch.tensor(logits).softmax(dim=-1)[:, 1].numpy()
             auroc = roc_auc_score(labels, probs_pos)
@@ -93,7 +93,6 @@ def compute_metrics(eval_pred, std=None):
         return {"accuracy": acc, "f1": f1, "auroc": auroc}
 
     else:
-        # multi-label: logits [B, K], sigmoid -> probs, 0.5 で閾値
         probs = torch.tensor(logits).sigmoid().numpy()
         pred_mt = (probs >= 0.5).astype(int)  # [B, K]
         labels_mt = labels.astype(int)
@@ -102,12 +101,12 @@ def compute_metrics(eval_pred, std=None):
         f1_micro = f1_score(labels_mt, pred_mt, average="micro", zero_division=0)
         f1_macro = f1_score(labels_mt, pred_mt, average="macro", zero_division=0)
 
-        # 平均 AUROC（列ごとに算出し、NaN は無視）
+        # Average AUROC (calculated for each column, ignoring NaN)
         aucs = []
         for k in range(probs.shape[1]):
             y_true = labels_mt[:, k]
             y_prob = probs[:, k]
-            # 片方しか出ていない列はスキップ
+            # Skip columns where only one side is visible
             if len(np.unique(y_true)) < 2:
                 continue
             try:
@@ -146,7 +145,7 @@ def preprocess_data(data, tasks):
 
 if __name__ == "__main__":
     # -----------------------------
-    # データセット選択（例: tox21 は multi-task）
+    # Dataset selection (e.g. tox21 is multi-task)
     # -----------------------------
 
     for pretrained in [True, False]:
@@ -167,7 +166,7 @@ if __name__ == "__main__":
             ]:
                 if benchmark_name == "bace":
                     tasks, datasets, transformers = molnet.load_bace_classification(featurizer="raw", transforms=[])
-                    task_type = "classification"  # 単一ラベル（0/1）
+                    task_type = "classification"  # Single label (0/1)
                 elif benchmark_name == "bbbp":
                     tasks, datasets, transformers = molnet.load_bbbp(featurizer="raw")
                     task_type = "classification"
@@ -176,7 +175,7 @@ if __name__ == "__main__":
                     task_type = "regression"
                 elif benchmark_name == "clintox":
                     tasks, datasets, transformers = molnet.load_clintox(featurizer="raw")
-                    task_type = "multitask_classification"  # 複数ラベル
+                    task_type = "multitask_classification"  # multiple labels
                 elif benchmark_name == "delaney":
                     tasks, datasets, transformers = molnet.load_delaney(featurizer="raw", transformers=[])
                     task_type = "regression"
@@ -204,7 +203,9 @@ if __name__ == "__main__":
 
                 if task_type == "regression":
                     train, valid, test = datasets
-                    transformers = NormalizationTransformer(transform_y=True, dataset=train)  # 統計はtrainから推定
+                    transformers = NormalizationTransformer(
+                        transform_y=True, dataset=train
+                    )  # Statistics are estimated from train
                     train = transformers.transform(train)
                     valid = transformers.transform(valid)
                     test = transformers.transform(test)
@@ -214,7 +215,7 @@ if __name__ == "__main__":
                 all_df = pd.concat([train_df, valid_df, test_df]).reset_index(drop=True)
 
                 # -----------------------------
-                # 設定
+                # setting
                 # -----------------------------
                 learning_source_dir = check_learning_source_dir()
                 output_dir = (
@@ -239,25 +240,25 @@ if __name__ == "__main__":
                     per_device_eval_batch_size = 128
                 tokenizer = Tokenizer("assets/molecules/vocab.txt", 512)
 
-                # 最大長の自動見積り（安全に 512 にクリップ）
+                # Automatic estimation of maximum length (safely clipped to 512)
                 all_df["token_length"] = all_df["text"].apply(lambda x, tokenizer=tokenizer: len(tokenizer.encode(x)))
                 max_length = int(min(all_df["token_length"].max(), 512))
 
-                # 語彙サイズ（8の倍数へ丸め）
+                # Vocabulary size (rounded to multiple of 8)
                 meta_vocab_size = (len(tokenizer) // 8 + 1) * 8
 
                 # -----------------------------
-                # モデル設定：タスク別に num_labels/problem_type を切替
+                # Model settings: Switch num_labels/problem_type for each task
                 # -----------------------------
                 if task_type == "regression":
                     num_labels = 1
                     problem_type = "regression"
                 elif task_type == "classification":
-                    # 単一バイナリ分類は CrossEntropy 用に num_labels=2 が扱いやすい（labels は int 0/1）
+                    # Single binary classification is easier to handle with num_labels=2 for CrossEntropy (labels is int 0/1)
                     num_labels = 2
                     problem_type = "single_label_classification"
                 elif task_type == "multitask_classification":
-                    num_labels = len(tasks)  # たとえば tox21 は 12
+                    num_labels = len(tasks)  # for example tox21 is 12
                     problem_type = "multi_label_classification"
                 else:
                     raise ValueError(f"unknown task_type: {task_type}")
@@ -280,9 +281,9 @@ if __name__ == "__main__":
                 model.config.problem_type = problem_type
 
                 # -----------------------------
-                # HF Datasets に載せるための前処理
-                # - 入力: train_df/valid_df/test_df （text + label列）
-                # - 出力: tokenized DatasetDict（labels を正しい型/形に）
+                # Preprocessing for posting on HF Datasets
+                # - Input: train_df/valid_df/test_df (text + label column)
+                # - Output: tokenized DatasetDict (labels to correct type/shape)
                 # -----------------------------
 
                 raw_ds = DatasetDict(
@@ -305,16 +306,16 @@ if __name__ == "__main__":
                         truncation=True,
                         max_length=max_length,
                     )
-                    # ラベルの成形
+                    # Forming the label
                     if task_type == "regression":
-                        # float スカラー
-                        # もともと 'label' カラムに入っている想定
+                        # float scalar
+                        # Assumed to be originally in the 'label' column
                         labels = [float(x) for x in examples["label"]]
                     elif task_type == "classification":
-                        # int スカラー（0/1）
+                        # int scalar (0/1)
                         labels = [int(x) for x in examples["label"]]
                     else:  # multi-label
-                        # 各タスク列を float へ（NaN は 0.0 に置換）
+                        # convert each task column to float (NaN is replaced with 0.0)
                         labels = []
                         n = len(examples["text"])
                         for i in range(n):
@@ -334,7 +335,7 @@ if __name__ == "__main__":
                 data_collator = DataCollatorWithPadding(tokenizer=tokenizer, pad_to_multiple_of=None)
 
                 # -----------------------------
-                # 学習設定（epoch ベース）
+                # Learning settings (epoch base)
                 # -----------------------------
                 training_args = TrainingArguments(
                     output_dir=output_dir,
@@ -367,8 +368,8 @@ if __name__ == "__main__":
                 if benchmark_name in ["qm8", "qm9"]:
                     for i in range(len(tasks)):
                         wandb.init(  # type: ignore[attr-defined]
-                            project="molecule-benchmark",  # プロジェクト名（任意）
-                            name=f"{tasks[i]}_pretrained{pretrained}_seed{seed}",  # run名
+                            project="molecule-benchmark",  # Project name (optional)
+                            name=f"{tasks[i]}_pretrained{pretrained}_seed{seed}",  # rungiven name
                             config={
                                 "benchmark": benchmark_name,
                                 "pretrained": pretrained,
@@ -421,8 +422,8 @@ if __name__ == "__main__":
                         wandb.finish()  # type: ignore[attr-defined]
                 else:
                     wandb.init(  # type: ignore[attr-defined]
-                        project="molecule-benchmark",  # プロジェクト名（任意）
-                        name=f"{benchmark_name}_pretrained{pretrained}_seed{seed}",  # run名
+                        project="molecule-benchmark",  # Project name (optional)
+                        name=f"{benchmark_name}_pretrained{pretrained}_seed{seed}",  # rungiven name
                         config={
                             "benchmark": benchmark_name,
                             "pretrained": pretrained,

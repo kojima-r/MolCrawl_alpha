@@ -1,7 +1,7 @@
 """
-マルチデータセットローダー
+Multi dataset loader
 
-複数のデータセットを動的に読み込み、結合して学習に使用するためのユーティリティを提供します。
+Provides utilities for dynamically loading and combining multiple datasets for use in training.
 """
 
 import logging
@@ -21,24 +21,24 @@ logger = logging.getLogger(__name__)
 
 class MultiDatasetLoader:
     """
-    マルチデータセットローダー
+    Multi dataset loader
 
-    複数のデータセットを動的に読み込み、結合します。
+    Dynamically load and combine multiple datasets.
     """
 
     def __init__(self, compounds_dir: Path):
         """
-        Args:
-            compounds_dir: compoundsディレクトリのパス
+                Args:
+        compounds_dir: Path to the compounds directory
         """
         self.compounds_dir = Path(compounds_dir)
 
     def get_available_datasets(self) -> List[CompoundDatasetType]:
         """
-        利用可能なHuggingFace Dataset形式のデータセットを取得
+        Get available HuggingFace Dataset format datasets
 
-        Returns:
-            利用可能なデータセット種別のリスト
+                Returns:
+        List of available dataset types
         """
         available = []
         for dataset_type, info in DATASET_DEFINITIONS.items():
@@ -57,21 +57,21 @@ class MultiDatasetLoader:
         combine: bool = True,
     ) -> Union[DatasetDict, dict]:
         """
-        データセットを読み込み
+        Load dataset
 
-        Args:
-            dataset_types: 読み込むデータセット種別のリスト（Noneの場合は利用可能な全て）
-            splits: 読み込むsplit（train, valid, test）
-            combine: Trueの場合は全データセットを結合、Falseの場合は個別に保持
+                Args:
+        dataset_types: List of dataset types to load (all available if None)
+        splits: read split(train, valid, test)
+        combine: If True, combine all datasets; if False, keep them separate
 
-        Returns:
-            combine=Trueの場合: DatasetDict {split_name: combined_dataset}
-            combine=Falseの場合: dict {dataset_type: DatasetDict}
+                Returns:
+        If combine=True: DatasetDict {split_name: combined_dataset}
+        If combine=False: dict {dataset_type: DatasetDict}
         """
         if splits is None:
             splits = ["train", "valid", "test"]
 
-        # 読み込むデータセットを決定
+        # Decide which dataset to load
         enum_types: List[CompoundDatasetType]
         if dataset_types is None:
             enum_types = self.get_available_datasets()
@@ -81,12 +81,12 @@ class MultiDatasetLoader:
                     "Please run the preparation pipeline first."
                 )
         else:
-            # 文字列の場合はEnumに変換
+            # If it is a string, convert it to Enum
             enum_types = [CompoundDatasetType(dt) if isinstance(dt, str) else dt for dt in dataset_types]  # type: ignore[misc]
 
         logger.info(f"Loading {len(enum_types)} datasets: {[dt.value for dt in enum_types]}")
 
-        # 各データセットを読み込み
+        # load each dataset
         loaded_datasets = {}
         for dataset_type in enum_types:
             info = get_dataset_info(dataset_type)
@@ -112,7 +112,7 @@ class MultiDatasetLoader:
         if not loaded_datasets:
             raise ValueError("No datasets could be loaded")
 
-        # 結合モード
+        # Combine mode
         if combine:
             return self._combine_datasets(loaded_datasets, splits)
         else:
@@ -120,27 +120,27 @@ class MultiDatasetLoader:
 
     def _combine_datasets(self, loaded_datasets: dict, splits: List[str]) -> DatasetDict:
         """
-        複数のデータセットを結合
+        Combine multiple datasets
 
-        Args:
-            loaded_datasets: {dataset_type: DatasetDict} の辞書
-            splits: 結合するsplit
+                Args:
+        loaded_datasets: Dictionary of {dataset_type: DatasetDict}
+        splits: splits to combine
 
-        Returns:
-            結合されたDatasetDict
+                Returns:
+        Combined DatasetDict
         """
         logger.info("Combining datasets...")
 
         combined = {}
         for split in splits:
-            # 各データセットの同じsplitを収集
+            # Collect the same split of each dataset
             split_datasets = []
             for _dataset_type, dataset_dict in loaded_datasets.items():
                 if split in dataset_dict:
                     split_datasets.append(dataset_dict[split])
 
             if split_datasets:
-                # 結合
+                # join
                 combined[split] = concatenate_datasets(split_datasets)
                 logger.info(f"  Combined {split}: {len(combined[split])} samples from {len(split_datasets)} datasets")
 
@@ -148,13 +148,13 @@ class MultiDatasetLoader:
 
     def load_single_dataset(self, dataset_type: Union[str, CompoundDatasetType]) -> DatasetDict:
         """
-        単一のデータセットを読み込み
+        Load a single dataset
 
-        Args:
-            dataset_type: データセット種別
+                Args:
+        dataset_type: Dataset type
 
-        Returns:
-            DatasetDict
+                Returns:
+                    DatasetDict
         """
         if isinstance(dataset_type, str):
             dataset_type = CompoundDatasetType(dataset_type)
@@ -184,16 +184,16 @@ def load_compounds_datasets(
     combine: bool = True,
 ) -> Union[DatasetDict, dict]:
     """
-    化合物データセットを読み込むヘルパー関数
+    Helper function to load compound dataset
 
-    Args:
-        compounds_dir: compoundsディレクトリのパス
-        dataset_types: 読み込むデータセット種別のリスト（Noneの場合は利用可能な全て）
-        splits: 読み込むsplit
-        combine: データセットを結合するか
+        Args:
+    compounds_dir: compounds directorypath of
+    dataset_types: List of dataset types to load (all available if None)
+    splits: read splits
+    combine: whether to combine datasets
 
-    Returns:
-        読み込まれたデータセット
+        Returns:
+    Loaded dataset
     """
     if splits is None:
         splits = ["train", "valid", "test"]

@@ -1,16 +1,16 @@
-# RNAドメイン用GPT2テスト設定
+# GPT2 test settings for RNA domain
 import torch
 
-# 基本設定
+# Basic settings
 domain = "rna"
 max_test_samples = 1000
 convert_to_hf = True
 
-# データセット設定
+# datasetsetting
 dataset_params = {"dataset_dir": "outputs/rna/training_ready_hf_dataset"}
 
-# 出力設定
+# Output settings
 output_dir = "test_results_rna"
 
-# デバイス設定
+# device settings
 device = "cuda" if torch.cuda.is_available() else "cpu"
