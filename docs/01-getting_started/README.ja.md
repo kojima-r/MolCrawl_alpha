@@ -593,21 +593,25 @@ There is a separate readme inside the `gpn` folder, detailling how to train and 
   - Size of the dataset: 221G
   - Samples: 35,822,843
   - Tokens: 90,711,564,293
-  - Samples length size distribution of the full data: ![rna sample dist](../../assets/img/rna_tokenized_lengths_dist.png)
+  - Samples length size distribution of the full data:
+    - ![rna sample dist](../../assets/img/rna_tokenized_lengths_dist.png)
 
 - **Protein Sequence** (UniRef50)
   - Size of the dataset: 18G
   - Samples: 66,000,000
   - Tokens: 19,182,955,286
-  - Samples length size distribution of the full data: ![protein sequence sample dist](../../assets/img/protein_sequence_tokenized_lengths_dist.png)
+  - Samples length size distribution of the full data:
+    - ![protein sequence sample dist](../../assets/img/protein_sequence_tokenized_lengths_dist.png)
 
 - **Compounds**
   - Size of the dataset: 954M
   - Samples: 13,288,710
   - SMILES tokens: 526,014,485
   - Scaffolds tokens: 350,007,581
-  - Samples length size distribution SMILES: ![smiles sample dist](../../assets/img/compounds_tokenized_SMILES_lengths_dist.png)
-  - Samples length size distribution Scaffolds: ![smiles sample dist](../../assets/img/compounds_tokenized_Scaffolds_lengths_dist.png)
+  - Samples length size distribution SMILES:
+    - ![smiles sample dist](../../assets/img/compounds_tokenized_SMILES_lengths_dist.png)
+  - Samples length size distribution Scaffolds:
+    - ![smiles sample dist](../../assets/img/compounds_tokenized_Scaffolds_lengths_dist.png)
 
 - **Molecule-related natural language**
   - Size of the dataset: 8.9G
@@ -619,12 +623,16 @@ There is a separate readme inside the `gpn` folder, detailling how to train and 
   - Test tokens: 4,514,586
   - Total samples: 3,342,414
   - Total tokens: 467,530,577
-  - Samples length size distribution Training Set: ![mol nl sample dist](../../assets/img/molecule_nat_lang_tokenized_train_lengths_dist.png)
-  - Samples length size distribution Validation Set: ![mol nl sample dist](../../assets/img/molecule_nat_lang_tokenized_validation_lengths_dist.png)
-  - Samples length size distribution Test Set: ![mol nl sample dist](../../assets/img/molecule_nat_lang_tokenized_test_lengths_dist.png)
+  - Samples length size distribution Training Set:
+    - ![mol nl sample dist](../../assets/img/molecule_nat_lang_tokenized_train_lengths_dist.png)
+  - Samples length size distribution Validation Set:
+    - ![mol nl sample dist](../../assets/img/molecule_nat_lang_tokenized_validation_lengths_dist.png)
+  - Samples length size distribution Test Set:
+    - ![mol nl sample dist](../../assets/img/molecule_nat_lang_tokenized_test_lengths_dist.png)
 
 - **Genome Sequence** (status: still on going)
   - Number of sequence: 248,678
   - Size of the vocabulary: 4096
   - Number of tokens: 3,025,575,847
-  - Samples length size distribution of the full data: ![genome sequence sample dist](../../assets/img/genome_sequence_tokenized_lengths_dist.png)
+  - Samples length size distribution of the full data:
+    - ![genome sequence sample dist](../../assets/img/genome_sequence_tokenized_lengths_dist.png)
