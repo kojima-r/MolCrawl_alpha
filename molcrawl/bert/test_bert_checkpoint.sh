@@ -9,7 +9,7 @@ set -e
 if [ $# -lt 1 ]; then
     echo "使用方法: $0 <checkpoint_path> [domain]"
     echo "  checkpoint_path: テストするチェックポイントのパス"
-    echo "  domain: compounds, genome, rna, molecule_nat_lang のいずれか（オプション）"
+    echo "  domain: compounds, genome_sequence, rna, molecule_nat_lang のいずれか（オプション）"
     exit 1
 fi
 
@@ -59,14 +59,14 @@ case "$DOMAIN" in
     "compounds")
         DATASET_PATH="$COMPOUNDS_DATASET_DIR"
         ;;
-    "genome")
+    "genome_sequence")
         DATASET_PATH="outputs/genome_sequence/training_ready_hf_dataset"
         ;;
     "rna")
         DATASET_PATH="outputs/rna/training_ready_hf_dataset"
         ;;
     "molecule_nat_lang")
-        DATASET_PATH="outputs/molecule_related_natural_language/training_ready_hf_dataset"
+        DATASET_PATH="outputs/molecule_nat_lang/training_ready_hf_dataset"
         ;;
 esac
 
