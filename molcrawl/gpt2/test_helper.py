@@ -51,7 +51,7 @@ def get_domain_info():
             "dataset_dir": COMPOUNDS_DATASET_DIR,
         },
         "molecule_nat_lang": {"vocab_path": None, "dataset_dir": MOLECULE_NAT_LANG_DATASET_DIR},
-        "genome": {
+        "genome_sequence": {
             "vocab_path": None,  # SentencePiece model path required
             "dataset_dir": "outputs/genome_sequence/training_ready_hf_dataset",
         },
@@ -75,7 +75,7 @@ def detect_domain_from_path(checkpoint_path):
     elif "molecule" in path_lower and "nl" in path_lower:
         return "molecule_nat_lang"
     elif "genome" in path_lower:
-        return "genome"
+        return "genome_sequence"
     elif "protein" in path_lower:
         return "protein_sequence"
     elif "rna" in path_lower:
@@ -133,7 +133,7 @@ def main():
     parser.add_argument("--checkpoint_path", help="Specific checkpoint path")
     parser.add_argument(
         "--domain",
-        choices=["compounds", "molecule_nat_lang", "genome", "protein_sequence", "rna"],
+        choices=["compounds", "molecule_nat_lang", "genome_sequence", "protein_sequence", "rna"],
         help="Forcibly specify domain",
     )
     parser.add_argument("--output_dir", help="output directory")

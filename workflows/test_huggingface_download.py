@@ -70,7 +70,7 @@ example:
     parser.add_argument(
         "--domain",
         type=str,
-        choices=["rna", "genome", "protein_sequence", "compounds", "molecule_nat_lang"],
+        choices=["rna", "genome_sequence", "protein_sequence", "compounds", "molecule_nat_lang"],
         help="Model domain (for tokenizer selection)",
     )
     parser.add_argument("--max-tokens", type=int, default=50, help="Maximum number of tokens to generate")
@@ -231,7 +231,7 @@ def load_tokenizer(domain: str):
             from rna.utils.bert_tokenizer import create_bert_rna_tokenizer
 
             tokenizer = create_bert_rna_tokenizer()
-        elif domain == "genome":
+        elif domain == "genome_sequence":
             from genome_sequence.utils.tokenizer import create_genome_tokenizer
 
             tokenizer = create_genome_tokenizer()

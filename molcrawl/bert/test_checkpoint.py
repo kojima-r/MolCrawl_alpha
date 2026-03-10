@@ -43,7 +43,7 @@ def load_domain_tokenizer(domain, vocab_path=None):
 
             return create_bert_molecule_nat_lang_tokenizer()
 
-        elif domain == "genome":
+        elif domain == "genome_sequence":
             # SentencePiece tokenizer for genome sequences
             from molcrawl.genome_sequence.utils.tokenizer import create_genome_tokenizer
 
@@ -482,12 +482,12 @@ def main():
     parser.add_argument("--dataset_path", help="Evaluation dataset path (optional)")
     parser.add_argument(
         "--domain",
-        choices=["compounds", "molecule_nat_lang", "genome", "protein_sequence", "rna"],
-        help="Domain to use (compounds, molecule_nat_lang, genome, protein_sequence, rna)",
+        choices=["compounds", "molecule_nat_lang", "genome_sequence", "protein_sequence", "rna"],
+        help="Domain to use (compounds, molecule_nat_lang, genome_sequence, protein_sequence, rna)",
     )
     parser.add_argument(
         "--vocab_path",
-        help="Vocabulary file path (compounds: vocab.txt, genome: spm_tokenizer.model)",
+        help="Vocabulary file path (compounds: vocab.txt, genome_sequence: spm_tokenizer.model)",
     )
     parser.add_argument(
         "--test_texts",
@@ -516,7 +516,7 @@ def main():
                 "AKLRDPSFDENIQKALKIAKQLQAEKQAKKQVEQIKLKQQKQVKLAKQEAKLQELQEKLQAKK",
                 "MGSSHHHHHHSSGLVPRGSHMKTFRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIL",
             ]
-        elif args.domain == "genome":
+        elif args.domain == "genome_sequence":
             args.test_texts = [
                 "ATCGATCGATCGATCG",
                 "GCTAGCTAGCTAGCTA",
