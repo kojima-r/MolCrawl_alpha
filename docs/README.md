@@ -70,3 +70,12 @@
 ## 10 – File Tree
 
 - [Repository File Tree](10-file-tree/FILE_TREE.md)
+
+## 11 – Web Interface
+
+- [MolCrawl Web – Overview & Quick Start](11-web_interface/README.md)
+- [MolCrawl Web – Troubleshooting Guide](11-web_interface/TROUBLESHOOTING.md)
+- [GPT-2 Model Inference Feature](11-web_interface/INFERENCE_FEATURE.md)
+- [GPT-2 Inference – Implementation Summary](11-web_interface/INFERENCE_IMPLEMENTATION_SUMMARY.md)
+- [GPT-2 Inference – Visual Guide](11-web_interface/INFERENCE_VISUAL_GUIDE.md)
+- [ESLint & Prettier Setup](11-web_interface/ESLINT_SETUP.md)
