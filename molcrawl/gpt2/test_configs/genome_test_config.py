@@ -2,7 +2,7 @@
 import torch
 
 # Basic settings
-domain = "genome"
+domain = "genome_sequence"
 max_test_samples = 1000
 convert_to_hf = True
 

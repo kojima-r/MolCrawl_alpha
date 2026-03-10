@@ -19,11 +19,11 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from molcrawl.gpt2.model import GPT, GPTConfig
 from tqdm import tqdm
 from transformers import GPT2Config, GPT2LMHeadModel, PreTrainedTokenizerFast
 
 from molcrawl.core.dataset import PreparedDataset
+from molcrawl.gpt2.model import GPT, GPTConfig
 
 # Add the project's src directory to the path
 # import GPT2 model class
@@ -173,7 +173,7 @@ def load_domain_tokenizer(domain, vocab_path=None):
 
             return MoleculeNatLangTokenizer()
 
-        elif domain == "genome":
+        elif domain == "genome_sequence":
             from molcrawl.genome_sequence.utils.tokenizer import create_genome_tokenizer
 
             model_path = vocab_path
@@ -494,7 +494,7 @@ def main():
     )
     parser.add_argument(
         "--domain",
-        choices=["compounds", "molecule_nat_lang", "genome", "protein_sequence", "rna"],
+        choices=["compounds", "molecule_nat_lang", "genome_sequence", "protein_sequence", "rna"],
         help="Domain to use",
     )
     parser.add_argument("--vocab_path", help="Vocabulary file path")
