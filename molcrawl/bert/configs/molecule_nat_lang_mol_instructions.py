@@ -8,6 +8,12 @@
 
 
 from molcrawl.config.paths import MOL_INSTRUCTIONS_DATASET_DIR, get_bert_output_path
+from molcrawl.molecule_nat_lang.utils.tokenizer import MoleculeNatLangTokenizer
+
+# bert/main.py looks for a `tokenizer` variable in globals() to build the
+# DataCollatorForLanguageModeling.  MoleculeNatLangTokenizer wraps the actual
+# HuggingFace tokenizer in .tokenizer; main.py handles that unwrapping.
+tokenizer = MoleculeNatLangTokenizer()
 
 # Use the vocab size reported by MoleculeNatLangTokenizer.
 # - CodeLlama-7b-hf: 32016
@@ -19,6 +25,8 @@ meta_vocab_size = 50002
 model_size = "small"
 # Fine-tuning checkpoint output — separate from pretraining output
 model_path = get_bert_output_path("molecule_nat_lang_mol_instructions", model_size)
+# Pretraining checkpoint to initialise weights from when no fine-tune checkpoint exists.
+pretrain_model_path = get_bert_output_path("molecule_nat_lang", model_size)
 
 max_length = 1024
 dataset_dir = MOL_INSTRUCTIONS_DATASET_DIR
