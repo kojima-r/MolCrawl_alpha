@@ -38,6 +38,7 @@ import gzip
 import logging
 import re
 import shutil
+import urllib.request
 from functools import partial
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -84,6 +85,59 @@ def _create_chunks(examples: Dict, context_length: int) -> Dict:
 # ---------------------------------------------------------------------------
 # ClinVar CSV download / generation
 # ---------------------------------------------------------------------------
+
+
+# NCBI FTP URL for GRCh38.p13 (GCA_000001405.28) reference genome FASTA
+_GRCh38_FTP_URL = (
+    "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/"
+    "GCA_000001405.28_GRCh38.p13/"
+    "GCA_000001405.28_GRCh38.p13_genomic.fna.gz"
+)
+
+
+def download_grch38_fasta(dest_fasta: Union[str, Path]) -> Path:
+    """Download the GRCh38.p13 reference FASTA from NCBI FTP if not already present.
+
+    Downloads the ``.fna.gz`` file and decompresses it to *dest_fasta*
+    (the uncompressed ``.fna`` path).  If *dest_fasta* already exists the
+    function returns immediately.
+
+    Args:
+        dest_fasta: Destination path for the uncompressed FASTA
+                    (e.g. ``dataset/GCA_000001405.28_GRCh38.p13_genomic.fna``).
+
+    Returns:
+        Path to the uncompressed FASTA file.
+    """
+    dest_fasta = Path(dest_fasta)
+    dest_gz = Path(str(dest_fasta) + ".gz")
+
+    if dest_fasta.exists():
+        logger.info("GRCh38 reference FASTA already exists at %s — skipping download.", dest_fasta)
+        return dest_fasta
+
+    dest_fasta.parent.mkdir(parents=True, exist_ok=True)
+
+    if not dest_gz.exists():
+        logger.info("Downloading GRCh38 reference FASTA (~3 GB) from NCBI FTP …")
+        logger.info("  URL : %s", _GRCh38_FTP_URL)
+        logger.info("  Dest: %s", dest_gz)
+
+        def _reporthook(block_num, block_size, total_size):
+            if total_size > 0 and block_num % 500 == 0:
+                downloaded = block_num * block_size
+                pct = min(downloaded / total_size * 100, 100)
+                logger.info("  … %.1f%%  (%d / %d bytes)", pct, downloaded, total_size)
+
+        urllib.request.urlretrieve(_GRCh38_FTP_URL, dest_gz, reporthook=_reporthook)
+        logger.info("Download complete: %s", dest_gz)
+
+    logger.info("Decompressing %s …", dest_gz)
+    with gzip.open(dest_gz, "rb") as f_in, open(dest_fasta, "wb") as f_out:
+        shutil.copyfileobj(f_in, f_out)
+    logger.info("Decompression complete: %s", dest_fasta)
+
+    return dest_fasta
 
 
 def _build_chrom_mapping(ref_genome) -> Dict[str, str]:
@@ -265,11 +319,12 @@ def prepare_clinvar(
         if not fasta_path.exists() and Path(str(fasta_path) + ".gz").exists():
             fasta_path = Path(str(fasta_path) + ".gz")
         if not fasta_path.exists():
-            raise FileNotFoundError(
-                f"ClinVar source CSV not found: {source_file}\n"
-                f"Attempted to generate it, but GRCh38 reference FASTA not found: {fasta_path}\n"
-                "Please provide the reference FASTA or download it from NCBI."
+            # FASTA が未存在の場合は NCBI FTP から自動ダウンロードする
+            logger.info(
+                "GRCh38 reference FASTA not found at %s — downloading from NCBI FTP …",
+                fasta_path,
             )
+            fasta_path = download_grch38_fasta(Path(GRCh38_REF_FASTA))
         logger.info(
             "ClinVar source CSV not found at %s — generating from HuggingFace + %s",
             source_file,
