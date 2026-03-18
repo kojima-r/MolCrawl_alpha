@@ -17,7 +17,7 @@ log_interval = 100
 save_steps = 100  # Save checkpoint every 100 steps instead of default 1000
 
 batch_size = 8
-per_device_eval_batch_size = 1
+per_device_eval_batch_size = 8
 
 gradient_accumulation_steps = 5 * 16
 

@@ -45,7 +45,7 @@ log_interval: int = 100
 save_steps: int = 100  # Save checkpoint every 100 steps instead of default 1000
 
 batch_size: int = 8
-per_device_eval_batch_size: int = 1
+per_device_eval_batch_size: int = 8
 gradient_accumulation_steps: int = 5 * 16
 
 # Parallel preprocessing for attention_mask creation

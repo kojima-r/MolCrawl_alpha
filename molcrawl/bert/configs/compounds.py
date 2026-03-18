@@ -18,6 +18,6 @@ weight_decay = 1e-1
 log_interval = 100
 
 batch_size = 8
-per_device_eval_batch_size = 1
+per_device_eval_batch_size = 8
 
 gradient_accumulation_steps = 5 * 16

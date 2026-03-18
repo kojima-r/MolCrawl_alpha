@@ -118,6 +118,25 @@ class RNADatasetForBERT:
 
 
 if __name__ == "__main__":
+    # PyTorch >= 2.6 changed the default of torch.load to weights_only=True.
+    # Older HuggingFace checkpoints (optimizer states, RNG states) contain
+    # arbitrary Python objects that cannot be enumerated upfront.  Patch
+    # torch.load to restore the pre-2.6 behaviour for this process only.
+    # This is safe because we only load checkpoints from our own training runs.
+    try:
+        import torch as _torch
+
+        _orig_torch_load = _torch.load
+
+        def _patched_torch_load(*args, **kwargs):
+            kwargs.setdefault("weights_only", False)
+            return _orig_torch_load(*args, **kwargs)
+
+        _torch.load = _patched_torch_load
+        del _torch  # _orig_torch_load must NOT be deleted — the closure captures it by name
+    except Exception:
+        pass
+
     model_size = None
     use_custom_rna_dataset = False
     tokenizer = None
@@ -148,7 +167,7 @@ if __name__ == "__main__":
     batch_size = 10
 
     gradient_accumulation_steps = 5 * 8
-    per_device_eval_batch_size = 1
+    per_device_eval_batch_size = 8
     log_interval = 100
     save_steps = 1000  # Default value, can be overridden in config
     # -----------------------------------------------------------------------------
@@ -229,8 +248,9 @@ if __name__ == "__main__":
     # Initialize wandb if enabled
     wandb_run = None
     if use_wandb:
-        import wandb
         from datetime import datetime
+
+        import wandb
 
         # Generate run name if not provided
         if wandb_run_name is None:
@@ -532,9 +552,22 @@ if __name__ == "__main__":
     try:
         trainer.train(resume_from_checkpoint=resume_checkpoint)
     except Exception as e:
-        if "checkpoint" in str(e).lower() and resume_checkpoint:
+        if resume_checkpoint and (
+            "checkpoint" in str(e).lower() or "weights only" in str(e).lower() or "weightsunpickler" in str(e).lower()
+        ):
             print(f"⚠️  Failed to resume from checkpoint: {e}")
-            print("   Starting training from scratch instead...")
+            # Re-initialise the model with pretrain weights (if available) so
+            # we don't accidentally train from random weights.
+            if pretrain_model_path and os.path.exists(pretrain_model_path):
+                _ckpt_dirs = sorted(
+                    [d for d in os.listdir(pretrain_model_path) if d.startswith("checkpoint-")],
+                    key=lambda x: int(x.split("-")[1]),
+                )
+                _load_path = os.path.join(pretrain_model_path, _ckpt_dirs[-1]) if _ckpt_dirs else pretrain_model_path
+                print(f"   Reloading pretrain weights from {_load_path} and restarting fine-tuning...")
+                trainer.model = BertForMaskedLM.from_pretrained(_load_path, config=model_config, ignore_mismatched_sizes=True)
+            else:
+                print("   No pretrain_model_path available — starting from current model weights...")
             trainer.train(resume_from_checkpoint=None)
         else:
             raise

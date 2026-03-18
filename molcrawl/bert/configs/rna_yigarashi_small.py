@@ -165,7 +165,7 @@ data_collator = RNADataCollator(tokenizer, mlm=True, mlm_probability=0.15)
 # Training parameters optimized for RNA transcriptome data
 max_length = 512  # Reasonable context length for BERT
 batch_size = 4  # RNA data can be large, so smaller batch size
-per_device_eval_batch_size = 1
+per_device_eval_batch_size = 4
 gradient_accumulation_steps = 16  # Compensate for smaller batch size
 
 # Training schedule
