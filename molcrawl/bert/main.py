@@ -148,7 +148,7 @@ if __name__ == "__main__":
     batch_size = 10
 
     gradient_accumulation_steps = 5 * 8
-    per_device_eval_batch_size = 1
+    per_device_eval_batch_size = 8
     log_interval = 100
     save_steps = 1000  # Default value, can be overridden in config
     # -----------------------------------------------------------------------------
