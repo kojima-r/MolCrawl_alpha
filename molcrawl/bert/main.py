@@ -118,6 +118,25 @@ class RNADatasetForBERT:
 
 
 if __name__ == "__main__":
+    # PyTorch >= 2.6 changed the default of torch.load to weights_only=True.
+    # Older HuggingFace checkpoints (optimizer states, RNG states) contain
+    # arbitrary Python objects that cannot be enumerated upfront.  Patch
+    # torch.load to restore the pre-2.6 behaviour for this process only.
+    # This is safe because we only load checkpoints from our own training runs.
+    try:
+        import torch as _torch
+
+        _orig_torch_load = _torch.load
+
+        def _patched_torch_load(*args, **kwargs):
+            kwargs.setdefault("weights_only", False)
+            return _orig_torch_load(*args, **kwargs)
+
+        _torch.load = _patched_torch_load
+        del _torch  # _orig_torch_load must NOT be deleted — the closure captures it by name
+    except Exception:
+        pass
+
     model_size = None
     use_custom_rna_dataset = False
     tokenizer = None
