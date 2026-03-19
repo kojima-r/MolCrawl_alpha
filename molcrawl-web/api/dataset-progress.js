@@ -57,6 +57,15 @@ const DATASETS = {
         ],
         description: 'GPT-2学習用にチャンク化されたデータセットを生成 (context_length=1024, train/valid/test splits)',
       },
+      {
+        id: 'ft_proteingym_prepare',
+        name: 'Fine-tune: ProteinGym Dataset Preparation',
+        marker: null,
+        checkFiles: ['proteingym/proteingym_prepare_complete.marker'],
+        outputDirs: ['proteingym', 'proteingym/training_ready_hf_dataset'],
+        outputFiles: ['proteingym/proteingym_prepare_complete.marker'],
+        description: 'ProteinGym DMS変異データのダウンロードとGPT-2/BERT微調整用データセット作成 (protein_sequence_proteingym)',
+      },
     ],
     outputs: {
       plot: '../assets/img/protein_sequence_tokenized_lengths_dist.png',
@@ -246,6 +255,18 @@ const DATASETS = {
         ],
         description: 'GPT-2学習用にチャンク化されたHuggingFace Dataset形式で保存 (context_length=1024, 50k samples)',
       },
+      {
+        id: 'ft_mol_instructions_prepare',
+        name: 'Fine-tune: Mol-Instructions Dataset Preparation',
+        marker: null,
+        checkFiles: [
+          'mol_instructions/zjunlp_Mol-Instructions',
+          'mol_instructions/training_ready_hf_dataset/train',
+        ],
+        outputDirs: ['mol_instructions', 'mol_instructions/training_ready_hf_dataset'],
+        outputFiles: ['mol_instructions/training_ready_hf_dataset/dataset_dict.json'],
+        description: 'zjunlp/Mol-Instructionsデータのダウンロードとファインチューニング用データセット作成 (molecule_nat_lang_mol_instructions)',
+      },
     ],
     outputs: {
       plot: '../assets/img/molecule_nat_lang_tokenized_train_lengths_dist.png',
@@ -326,50 +347,38 @@ const DATASETS = {
         ],
         description: 'GPT-2学習用にOrganiX13データをチャンク化 (context_length=256, 1064万/133万/133万 samples)',
       },
+      {
+        id: 'ft_chembl_download',
+        name: 'Fine-tune: ChEMBL Dataset Preparation',
+        marker: null,
+        checkFiles: ['chembl/prepare_complete.marker'],
+        outputDirs: ['chembl', 'chembl/chembl_db', 'chembl/training_ready_hf_dataset'],
+        outputFiles: ['chembl/prepare_complete.marker'],
+        description: 'ChEMBLデータのダウンロードとGPT-2/BERT微調整用データセット作成 (compounds_chembl)',
+      },
+      {
+        id: 'ft_guacamol_download',
+        name: 'Fine-tune: GuacaMol Dataset Preparation',
+        marker: null,
+        checkFiles: [
+          'benchmark/GuacaMol/guacamol_v1_train.smiles',
+          'benchmark/GuacaMol/compounds/training_ready_hf_dataset/train',
+        ],
+        outputDirs: ['benchmark/GuacaMol', 'benchmark/GuacaMol/compounds', 'benchmark/GuacaMol/compounds/training_ready_hf_dataset'],
+        outputFiles: [
+          'benchmark/GuacaMol/guacamol_v1_train.smiles',
+          'benchmark/GuacaMol/guacamol_v1_valid.smiles',
+          'benchmark/GuacaMol/guacamol_v1_test.smiles',
+          'benchmark/GuacaMol/compounds/training_ready_hf_dataset/dataset_dict.json',
+        ],
+        description: 'GuacaMolベンチマークデータのダウンロードとGPT-2/BERT微調整用データセット作成 (compounds_guacamol)',
+      },
     ],
     outputs: {
       plot: '../assets/img/compounds_tokenized_SMILES_lengths_dist.png',
       scaffoldPlot: '../assets/img/compounds_tokenized_Scaffolds_lengths_dist.png',
       statistics: null,
       parquetFiles: 'parquet_files',
-    },
-  },
-  compounds_guacamol: {
-    name: 'Compounds (GuacaMol Benchmark)',
-    baseDir: 'compounds/benchmark/GuacaMol',
-    steps: [
-      {
-        id: 'download',
-        name: 'GuacaMol Dataset Download',
-        marker: null,
-        checkFiles: ['guacamol_v1_train.smiles', 'guacamol_v1_valid.smiles', 'guacamol_v1_test.smiles'],
-        outputDirs: [],
-        outputFiles: ['guacamol_v1_train.smiles', 'guacamol_v1_valid.smiles', 'guacamol_v1_test.smiles'],
-        description: 'GuacaMolベンチマークデータ（train/valid/test splits）をFigshareからダウンロード',
-      },
-      {
-        id: 'gpt2_prepare',
-        name: 'GPT-2 Training Dataset Preparation',
-        marker: null,
-        checkFiles: ['compounds/training_ready_hf_dataset/train', 'compounds/training_ready_hf_dataset/valid'],
-        outputDirs: ['compounds', 'compounds/training_ready_hf_dataset', 'compounds/training_ready_hf_dataset/train', 'compounds/training_ready_hf_dataset/valid', 'compounds/training_ready_hf_dataset/test'],
-        outputFiles: [
-          'compounds/training_ready_hf_dataset/dataset_dict.json',
-          'compounds/training_ready_hf_dataset/train/dataset_info.json',
-          'compounds/training_ready_hf_dataset/train/state.json',
-          'compounds/training_ready_hf_dataset/valid/dataset_info.json',
-          'compounds/training_ready_hf_dataset/valid/state.json',
-          'compounds/training_ready_hf_dataset/test/dataset_info.json',
-          'compounds/training_ready_hf_dataset/test/state.json',
-        ],
-        description: 'GPT-2学習用にGuacaMol SMILESデータをチャンク化 (context_length=256 for molecular generation)',
-      },
-    ],
-    outputs: {
-      plot: null,
-      scaffoldPlot: null,
-      statistics: null,
-      parquetFiles: null,
     },
   },
 };
@@ -390,9 +399,9 @@ function checkExists(fullPath) {
  */
 function checkDirHasFiles(dirPath) {
   try {
-    if (!fs.existsSync(dirPath)) return false;
+    if (!fs.existsSync(dirPath)) {return false;}
     const stats = fs.statSync(dirPath);
-    if (!stats.isDirectory()) return false;
+    if (!stats.isDirectory()) {return false;}
     const files = fs.readdirSync(dirPath);
     return files.length > 0;
   } catch (error) {
@@ -741,10 +750,10 @@ router.get('/:datasetKey', (req, res) => {
 function getFilesRecursively(dirPath, baseDir = '', maxDepth = 5, currentDepth = 0) {
   const files = [];
 
-  if (currentDepth >= maxDepth) return files;
+  if (currentDepth >= maxDepth) {return files;}
 
   try {
-    if (!fs.existsSync(dirPath)) return files;
+    if (!fs.existsSync(dirPath)) {return files;}
 
     const items = fs.readdirSync(dirPath);
 
@@ -789,7 +798,7 @@ function getFilesRecursively(dirPath, baseDir = '', maxDepth = 5, currentDepth =
  * ファイルサイズを人間が読みやすい形式に変換
  */
 function formatFileSize(bytes) {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) {return '0 Bytes';}
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));

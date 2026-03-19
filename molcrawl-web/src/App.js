@@ -31,14 +31,6 @@ const DATASET_TABS = [
     progressKey: 'compounds'
   },
   {
-    id: 'compounds_guacamol',
-    nameKey: 'tabs.compoundsGuacamol',
-    icon: '🧪',
-    descriptionKey: 'tabDescriptions.compoundsGuacamol',
-    path: 'compounds/benchmark/GuacaMol',
-    progressKey: 'compounds_guacamol'
-  },
-  {
     id: 'genome_sequence',
     nameKey: 'tabs.genomeSequence',
     icon: '🧬',
@@ -520,21 +512,21 @@ function App() {
                 {/* GPT-2 Training Status - Show for all dataset tabs */}
                 {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
                   <GPT2TrainingStatus
-                    dataset={DATASET_TABS.find(tab => tab.id === activeTab).progressKey.replace('_guacamol', '')}
+                    dataset={DATASET_TABS.find(tab => tab.id === activeTab).progressKey}
                   />
                 )}
 
                 {/* BERT Training Status - Show for all dataset tabs */}
                 {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
                   <BERTTrainingStatus
-                    dataset={DATASET_TABS.find(tab => tab.id === activeTab).progressKey.replace('_guacamol', '')}
+                    dataset={DATASET_TABS.find(tab => tab.id === activeTab).progressKey}
                   />
                 )}
 
                 {/* Logs Viewer - Show for all dataset tabs */}
                 {DATASET_TABS.find(tab => tab.id === activeTab)?.progressKey && (
                   <LogsViewer
-                    modelPath={DATASET_TABS.find(tab => tab.id === activeTab).progressKey.replace('_guacamol', '')}
+                    modelPath={DATASET_TABS.find(tab => tab.id === activeTab).progressKey}
                   />
                 )}
 
