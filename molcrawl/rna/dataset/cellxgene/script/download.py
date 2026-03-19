@@ -1,5 +1,6 @@
 from typing import Any, List, Sequence, Tuple, Union
 import os
+import socket
 from pathlib import Path
 import logging
 import concurrent.futures
@@ -10,6 +11,15 @@ from argparse import ArgumentParser
 from rich.progress import track
 
 from molcrawl.rna.utils.config import RnaConfig
+
+# Prevent CellxGene API calls from hanging indefinitely.
+# Each socket operation (connect, read) will raise socket.timeout after this.
+_SOCKET_TIMEOUT_SEC = 300  # 5 minutes
+# Wall-clock timeout for the entire download+write of one chunk.
+# Needed because socket.setdefaulttimeout only bounds individual recv() calls,
+# not the total transfer time when the API trickles data slowly.
+_DOWNLOAD_TOTAL_TIMEOUT_SEC = 600  # 10 minutes per attempt
+_DOWNLOAD_MAX_RETRY = 5
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -61,17 +71,30 @@ def retrieve_adata(
     return adata
 
 
+def _do_download_and_write(
+    save_filename: Path,
+    version: str,
+    id_list: List[int],
+    target_gene_ids: Sequence[int],
+) -> None:
+    """Download one chunk from CellxGene and write to h5ad. Runs in a helper thread."""
+    socket.setdefaulttimeout(_SOCKET_TIMEOUT_SEC)
+    target_adata = retrieve_adata(version, id_list, target_gene_ids)
+    target_adata.write_h5ad(save_filename, compression="gzip")
+
+
 def run(output_dir: Path, version, argv: Tuple[str, int, int, List[int]]) -> None:
     import pandas as pd
-    import scanpy as sc
 
     name, start_l, end_l, id_list = argv
     save_filename = output_dir / f"download_dir/{name}.{start_l:08d}-{end_l:08d}.h5ad"
     if save_filename.exists():
         try:
-            if len(sc.read(save_filename)):
-                logging.info(f"{save_filename} exists, skipping download")
-                return
+            import h5py
+            with h5py.File(save_filename, "r") as _f:
+                pass  # header check only — avoids loading full data into memory
+            logging.info(f"{save_filename} exists, skipping download")
+            return
         except Exception as e:
             logging.warning(f"{save_filename} is corrupt ({e}), re-downloading")
             save_filename.unlink()
@@ -79,11 +102,48 @@ def run(output_dir: Path, version, argv: Tuple[str, int, int, List[int]]) -> Non
     tsv_file = output_dir / "metadata_preparation_dir" / f"{name}.var.tsv"
     target_var = pd.read_csv(tsv_file, sep="\t", index_col=0)
     target_gene_ids = target_var["soma_joinid"].to_numpy()
-    target_adata = retrieve_adata(version, id_list, target_gene_ids)
 
-    target_adata.write_h5ad(save_filename, compression="gzip")
-    # joblib.dump(target_adata, save_filename, compress=3)
-    # time.sleep(1)
+    for attempt in range(1, _DOWNLOAD_MAX_RETRY + 1):
+        # Each attempt runs in a dedicated thread so we can apply a hard wall-clock
+        # timeout via future.result(timeout=…).  The abandoned thread will terminate
+        # on its own once _SOCKET_TIMEOUT_SEC fires on the next socket recv().
+        _exec = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        fut = _exec.submit(
+            _do_download_and_write, save_filename, version, id_list, target_gene_ids
+        )
+        timed_out = failed = False
+        try:
+            fut.result(timeout=_DOWNLOAD_TOTAL_TIMEOUT_SEC)
+        except concurrent.futures.TimeoutError:
+            timed_out = True
+            logging.warning(
+                f"[Timeout] Download exceeded {_DOWNLOAD_TOTAL_TIMEOUT_SEC}s wall-clock "
+                f"(attempt {attempt}/{_DOWNLOAD_MAX_RETRY}): {save_filename}"
+            )
+        except Exception as exc:
+            failed = True
+            logging.warning(
+                f"[Error] Download failed: {exc} "
+                f"(attempt {attempt}/{_DOWNLOAD_MAX_RETRY}): {save_filename}"
+            )
+        finally:
+            _exec.shutdown(wait=False)  # don't block; stuck thread ends via socket timeout
+
+        if not timed_out and not failed:
+            logging.info(f"Downloaded {save_filename} ({len(id_list)} cells)")
+            return  # success
+
+        # Remove any partial file before retrying
+        if save_filename.exists():
+            try:
+                save_filename.unlink()
+            except OSError:
+                pass
+
+        if attempt < _DOWNLOAD_MAX_RETRY:
+            time.sleep(10)
+
+    raise RuntimeError(f"All {_DOWNLOAD_MAX_RETRY} download attempts failed for {save_filename}")
 
 
 def divide_workload(path: Union[str, Path], size_workload: int) -> List[Tuple[str, int, int, List[int]]]:
