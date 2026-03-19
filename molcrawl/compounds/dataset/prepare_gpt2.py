@@ -46,7 +46,7 @@ def tokenize_batch_dataset(compounds_dir, vocab_path, max_length):
         # Use relative path from compounds directory
         smiles_file = benchmark_dir / f"guacamol_v1_{split}.smiles"
 
-        if not smiles_file.exists():
+        if not smiles_file.exists() or smiles_file.stat().st_size == 0:
             raise FileNotFoundError(
                 f"GuacaMol benchmark file not found: {smiles_file}\n\n"
                 f"Please download GuacaMol data by running:\n"
@@ -64,6 +64,11 @@ def tokenize_batch_dataset(compounds_dir, vocab_path, max_length):
 
         df = pd.DataFrame(lines, columns=["smiles"])
         df["tokens"] = df["smiles"].apply(tokenizer.tokenize_text)
+        if df.empty:
+            raise ValueError(
+                f"No valid SMILES found in {smiles_file}. "
+                "The file may be empty or all entries were filtered out."
+            )
         print(f"{split} - First molecule decoded: {tokenizer.decode(df['tokens'].iloc[0])}")
         dataset_dic[split] = df
 

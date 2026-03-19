@@ -27,26 +27,56 @@ GUACAMOL_URLS = {
 }
 
 
+def _find_existing_smiles(filename):
+    """
+    Search sibling learning_source_* directories for an existing non-empty
+    copy of *filename*.  Returns the first match or None.
+    """
+    import glob as _glob
+
+    workspace = Path(__file__).resolve().parents[2]  # repo root
+    candidates = sorted(_glob.glob(str(workspace / "learning_source_*")), reverse=True)
+    for ls_dir in candidates:
+        candidate = Path(ls_dir) / "compounds" / "benchmark" / "GuacaMol" / filename
+        if candidate.exists() and candidate.stat().st_size > 0:
+            return candidate
+    return None
+
+
 def download_file(url, output_path, chunk_size=8192):
     """
-    Download and save file from URL
+    Download and save file from URL.
+
+    Falls back to copying from a sibling learning_source_* directory when the
+    remote server blocks automated downloads (e.g. Figshare WAF challenge).
 
     Args:
         url: Download source URL
         output_path: save the first file
         chunk_size: Chunk size (bytes)
     """
+    import shutil as _shutil
+
     output_path = Path(output_path)
 
-    # Skip if already exists
-    if output_path.exists():
+    # Skip if already exists and has content (0-byte files are treated as missing)
+    if output_path.exists() and output_path.stat().st_size > 0:
         print(f"✓ Already exists: {output_path.name}")
         return True
+    if output_path.exists() and output_path.stat().st_size == 0:
+        print(f"⚠ Found 0-byte file, re-downloading: {output_path.name}")
+        output_path.unlink()
 
     print(f"Downloading {output_path.name}...")
 
     try:
-        response = requests.get(url, stream=True, timeout=30)
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            )
+        }
+        response = requests.get(url, stream=True, timeout=60, headers=headers)
         response.raise_for_status()
 
         # get file size
@@ -68,14 +98,35 @@ def download_file(url, output_path, chunk_size=8192):
                     f.write(chunk)
                     pbar.update(len(chunk))
 
+        # Verify we actually got content (WAF blocks return 0 bytes with 200/202)
+        if output_path.stat().st_size == 0:
+            output_path.unlink()
+            raise requests.exceptions.RequestException(
+                "Server returned 0 bytes — possible WAF/bot-protection block."
+            )
+
         print(f"✓ Downloaded: {output_path.name}")
         return True
 
     except requests.exceptions.RequestException as e:
-        print(f"✗ Error downloading {output_path.name}: {e}", file=sys.stderr)
+        print(f"✗ HTTP download failed: {e}", file=sys.stderr)
         # delete failed files
         if output_path.exists():
             output_path.unlink()
+
+        # Fallback: copy from an existing learning_source_* directory
+        existing = _find_existing_smiles(output_path.name)
+        if existing:
+            print(f"  ↪ Copying from existing dataset: {existing}", file=sys.stderr)
+            _shutil.copy2(existing, output_path)
+            print(f"✓ Copied: {output_path.name} ({output_path.stat().st_size:,} bytes)")
+            return True
+
+        print(
+            f"  No local fallback found for {output_path.name}.\n"
+            f"  Download manually from {url} and place in {output_path.parent}/",
+            file=sys.stderr,
+        )
         return False
 
 
