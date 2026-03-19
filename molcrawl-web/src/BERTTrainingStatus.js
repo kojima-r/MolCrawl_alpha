@@ -358,8 +358,18 @@ const BERTTrainingStatus = ({ dataset }) => {
 
             <div className="datasets-container">
                 {dataset ? (
-                    // Single dataset view
-                    renderDatasetSection(dataset, trainingData)
+                    // Single dataset view — pretraining + fine-tuning sections
+                    <div>
+                        {renderDatasetSection(dataset, trainingData)}
+                        {trainingData.finetuning && (
+                            <div className="finetuning-section">
+                                <h3 className="finetuning-header">🎯 Fine-tuning Models</h3>
+                                {Object.entries(trainingData.finetuning).map(([ftKey, ftData]) =>
+                                    renderDatasetSection(ftKey, ftData)
+                                )}
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     // All datasets view
                     Object.entries(trainingData).map(([datasetKey, datasetData]) =>

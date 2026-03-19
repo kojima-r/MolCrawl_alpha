@@ -15,7 +15,7 @@ const MODEL_BASE_DIR = path.join(__dirname, '..', '..', LEARNING_SOURCE_DIR);
  */
 const BERT_CONFIGS = {
     compounds: {
-        name: 'Compounds',
+        name: 'Compounds (OrganiX13) — Pretraining',
         sizes: ['small', 'medium', 'large'],
         outputDirs: {
             small: 'compounds/bert-output/compounds-small',
@@ -23,8 +23,22 @@ const BERT_CONFIGS = {
             large: 'compounds/bert-output/compounds-large',
         },
     },
+    compounds_chembl: {
+        name: 'Compounds — Fine-tune (ChEMBL)',
+        sizes: ['small'],
+        outputDirs: {
+            small: 'compounds_chembl/bert-output/compounds_chembl-small',
+        },
+    },
+    compounds_guacamol: {
+        name: 'Compounds — Fine-tune (GuacaMol)',
+        sizes: ['small'],
+        outputDirs: {
+            small: 'compounds_guacamol/bert-output/compounds_guacamol-small',
+        },
+    },
     genome_sequence: {
-        name: 'Genome Sequence',
+        name: 'Genome Sequence — Pretraining',
         sizes: ['small', 'medium', 'large'],
         outputDirs: {
             small: 'genome_sequence/bert-output/genome_sequence-small',
@@ -33,7 +47,7 @@ const BERT_CONFIGS = {
         },
     },
     protein_sequence: {
-        name: 'Protein Sequence',
+        name: 'Protein Sequence (UniRef50) — Pretraining',
         sizes: ['small', 'medium', 'large'],
         outputDirs: {
             small: 'protein_sequence/bert-output/protein_sequence-small',
@@ -41,8 +55,15 @@ const BERT_CONFIGS = {
             large: 'protein_sequence/bert-output/protein_sequence-large',
         },
     },
+    protein_sequence_proteingym: {
+        name: 'Protein Sequence — Fine-tune (ProteinGym)',
+        sizes: ['small'],
+        outputDirs: {
+            small: 'protein_sequence_proteingym/bert-output/protein_sequence_proteingym-small',
+        },
+    },
     rna: {
-        name: 'RNA',
+        name: 'RNA — Pretraining',
         sizes: ['small', 'medium', 'large'],
         outputDirs: {
             small: 'rna/bert-output/rna-small',
@@ -51,7 +72,7 @@ const BERT_CONFIGS = {
         },
     },
     molecule_nat_lang: {
-        name: 'Molecule NL',
+        name: 'Molecule NL (SMolInstruct) — Pretraining',
         sizes: ['small', 'medium', 'large'],
         outputDirs: {
             small: 'molecule_nat_lang/bert-output/molecule_nat_lang-small',
@@ -59,6 +80,22 @@ const BERT_CONFIGS = {
             large: 'molecule_nat_lang/bert-output/molecule_nat_lang-large',
         },
     },
+    molecule_nat_lang_mol_instructions: {
+        name: 'Molecule NL — Fine-tune (Mol-Instructions)',
+        sizes: ['small'],
+        outputDirs: {
+            small: 'molecule_nat_lang_mol_instructions/bert-output/molecule_nat_lang_mol_instructions-small',
+        },
+    },
+};
+
+/**
+ * Fine-tuning relations: parent dataset key → list of fine-tuning config keys
+ */
+const FINETUNE_RELATIONS = {
+    compounds: ['compounds_chembl', 'compounds_guacamol'],
+    protein_sequence: ['protein_sequence_proteingym'],
+    molecule_nat_lang: ['molecule_nat_lang_mol_instructions'],
 };
 
 /**
@@ -354,7 +391,7 @@ router.get('/', async (req, res) => {
 
 /**
  * GET /api/bert-training-status/:dataset
- * Get training status for a specific dataset
+ * Get training status for a specific dataset (including related fine-tuning models)
  */
 router.get('/:dataset', async (req, res) => {
     const { dataset } = req.params;
@@ -374,6 +411,18 @@ router.get('/:dataset', async (req, res) => {
             models[size] = status;
         }
 
+        // Also collect related fine-tuning models
+        const finetuning = {};
+        const relatedKeys = FINETUNE_RELATIONS[dataset] || [];
+        for (const ftKey of relatedKeys) {
+            const ftConfig = BERT_CONFIGS[ftKey];
+            if (!ftConfig) {continue;}
+            finetuning[ftKey] = { name: ftConfig.name, models: {} };
+            for (const size of ftConfig.sizes) {
+                finetuning[ftKey].models[size] = await getModelStatus(ftKey, size);
+            }
+        }
+
         res.json({
             success: true,
             learning_source_dir: LEARNING_SOURCE_DIR,
@@ -381,6 +430,7 @@ router.get('/:dataset', async (req, res) => {
                 dataset,
                 name: config.name,
                 models,
+                finetuning: Object.keys(finetuning).length > 0 ? finetuning : undefined,
             },
         });
     } catch (error) {
