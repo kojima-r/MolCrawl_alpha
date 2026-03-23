@@ -35,10 +35,8 @@ learning_rate = 6e-6  # max learning rate
 min_lr = learning_rate / 10  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 
 # eval stuff
-eval_interval = 1
-# eval_interval = 1000
-eval_iters = 1
-# eval_iters = 200
+eval_interval = 1000
+eval_iters = 200
 log_interval = 10
 
 # init from checkpoint
