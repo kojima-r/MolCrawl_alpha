@@ -95,7 +95,7 @@ class _SimpleGeneVocab:
 
     def __init__(self, gene_list: List[str]):
         # Deduplicate while preserving order, then assign sequential IDs
-        seen = {}
+        seen: dict[str, int] = {}
         for gene in gene_list:
             if gene not in seen:
                 seen[gene] = len(seen)
