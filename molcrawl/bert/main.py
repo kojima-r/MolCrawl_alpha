@@ -327,7 +327,7 @@ if __name__ == "__main__":
         warmup_steps=warmup_steps,
         learning_rate=learning_rate,
         weight_decay=weight_decay,
-        report_to="wandb" if use_wandb else "none",  # Enable wandb if configured, otherwise disable integrations
+        report_to="none",  # Disable wandb integration to prevent artifact bloat
         load_best_model_at_end=early_stopping,  # Load best model at end when early stopping is enabled
         metric_for_best_model="eval_loss",  # Use eval_loss to determine best model
         greater_is_better=False,  # Lower loss is better
