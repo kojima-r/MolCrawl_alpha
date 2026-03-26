@@ -151,22 +151,15 @@ riken-dataset-fundational-model/
 │       └── FILE_TREE.md                      # (this file) Full repository file tree with descriptions
 │
 ├── misc/
-│   ├── experiment_tracker_sample.py          # Sample script demonstrating experiment tracker usage
-│   └── torchruntest.py                       # Quick test script for torch.distributed / torchrun
+│   └── experiment_tracker_sample.py          # Sample script demonstrating experiment tracker usage
 │
 ├── molcrawl/                                 # Main Python package
 │   ├── __init__.py                           # Package initializer
 │   ├── omim_real_data_processor.py           # Data processor for OMIM real-data evaluation
-│   ├── update_ncbi.py                        # Script to update NCBI taxonomy data
-│   ├── update_taxonomy_complete.py           # Script to rebuild the complete taxonomy database
-│   ├── validate_rna_encoding.py              # Validation script for RNA encoding correctness
 │   ├── bert/
 │   │   ├── __init__.py
 │   │   ├── configurator.py                   # Builds training configs for BERT models
-│   │   ├── fine-tuning.py                    # BERT fine-tuning entry point
 │   │   ├── main.py                           # BERT pre-training entry point
-│   │   ├── molecule_nat_lang_bert_config.py  # Ad-hoc BERT config for molecule NL experiments
-│   │   ├── test_bert_checkpoint.sh           # Shell script to test a saved BERT checkpoint
 │   │   ├── test_checkpoint.py                # Python script to verify a BERT checkpoint loads correctly
 │   │   ├── test_molecule_nat_lang_20251125_config.py  # Experiment config for mol-NL BERT test (2025-11-25)
 │   │   └── configs/
@@ -224,7 +217,6 @@ riken-dataset-fundational-model/
 │   │   └── dataset.py                        # Base dataset class for all modalities
 │   ├── debug/
 │   │   ├── __init__.py
-│   │   ├── check_uniprot_dataset.py          # Debug script to inspect UniProt dataset contents
 │   │   └── test_experiment_system.py         # Debug test for the experiment tracking system
 │   ├── dnabert2/
 │   │   ├── __init__.py
@@ -242,7 +234,6 @@ riken-dataset-fundational-model/
 │   │       └── protein_sequence.py           # ESM-2 training config for protein sequence modality
 │   ├── evaluation/
 │   │   ├── __init__.py
-│   │   ├── molecule_nat_lang_validator_viz.py  # Visualization for molecule NL validation results
 │   │   ├── bert/
 │   │   │   ├── __init__.py
 │   │   │   ├── clinvar_evaluation.py         # BERT evaluation against ClinVar variants
@@ -302,8 +293,6 @@ riken-dataset-fundational-model/
 │   │   ├── __init__.py
 │   │   ├── configurator.py                   # Builds training configs for GPT-2 models
 │   │   ├── model.py                          # GPT-2 model definition and customizations
-│   │   ├── molecule_nat_lang_gpt2_config.py  # Ad-hoc GPT-2 config for molecule NL experiments
-│   │   ├── sample_compound.py                # Script to sample / generate compounds with GPT-2
 │   │   ├── test_checkpoint.py                # Verifies a GPT-2 checkpoint loads and runs correctly
 │   │   ├── test_helper.py                    # Common helpers shared across GPT-2 test scripts
 │   │   ├── test_molecule_nat_lang_20251125_config.py  # Experiment config for mol-NL GPT-2 test (2025-11-25)
@@ -367,7 +356,6 @@ riken-dataset-fundational-model/
 │   │       └── tokenizer.py                  # Custom tokenizer for molecule NL text
 │   ├── preparation/
 │   │   ├── __init__.py
-│   │   ├── compare_arrow_structures.py       # Compares Arrow dataset schemas for compatibility
 │   │   ├── convert_parquet_to_arrow.py       # Converts Parquet files to Arrow format
 │   │   ├── download_guacamol.py              # Downloads the GuacaMol compound benchmark dataset
 │   │   ├── download_smolinstruct.sh          # Shell script to download SMolInstruct dataset
@@ -380,7 +368,6 @@ riken-dataset-fundational-model/
 │   ├── protein_sequence/
 │   │   ├── __init__.py
 │   │   ├── launch_data_preparation.sh        # Shell script to launch protein sequence data preparation
-│   │   ├── preparation_dataset.py            # Orchestrates protein sequence dataset preparation
 │   │   ├── dataset/
 │   │   │   ├── prepare_gpt2.py               # Prepares protein sequence dataset for GPT-2 training
 │   │   │   ├── tokenizer.py                  # Custom tokenizer for protein sequences
@@ -395,7 +382,6 @@ riken-dataset-fundational-model/
 │   ├── rna/
 │   │   ├── __init__.py
 │   │   ├── requirements.txt                  # Additional Python dependencies for RNA modality
-│   │   ├── validate_rna_encoding.py          # (see root-level) RNA encoding validation
 │   │   ├── dataset/
 │   │   │   ├── prepare_gpt2.py               # Prepares RNA dataset for GPT-2 training
 │   │   │   ├── rna_dataset.py                # RNA dataset class (loading + iteration)
@@ -437,9 +423,7 @@ riken-dataset-fundational-model/
 │   │   ├── get_model_images.py               # Retrieves model card images from disk
 │   │   ├── image_manager.py                  # Manages image storage and retrieval for the web UI
 │   │   └── model_evaluator.py                # Common evaluation loop used across modalities
-│   └── verification/
-│       ├── __init__.py
-│       └── test_genome_sequence_compatibility.py  # Verifies genome sequence dataset compatibility
+
 │
 ├── molcrawl-web/                             # Web-based dataset browser (React + Express)
 │   ├── package.json                          # npm dependencies and scripts for the monorepo root
@@ -457,9 +441,6 @@ riken-dataset-fundational-model/
 │   ├── start-dev.sh                          # Development start script with NFS auto-detection
 │   ├── start-new.sh                          # Alternative start script (newer variant)
 │   ├── start.sh                              # Simple start script
-│   ├── test-preparation-runner.sh            # Tests the preparation runner API endpoints
-│   ├── test-process-status.html             # Static HTML page to test process status API
-│   ├── test-zinc.js                          # Node script to test the ZINC20 checker API
 │   ├── api/
 │   │   ├── bert-inference.js                 # API handler for BERT model inference requests
 │   │   ├── bert-training-status.js           # API handler for BERT training status queries
