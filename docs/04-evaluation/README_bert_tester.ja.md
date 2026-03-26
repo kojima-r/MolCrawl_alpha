@@ -4,10 +4,7 @@ BERT チェックポイントの読み込み・推論・MLM・簡易評価を行
 
 ## 対象スクリプト
 
-- `molcrawl/bert/test_checkpoint.py` (メイン)
-- `molcrawl/bert/test_bert_checkpoint.sh` (補助スクリプト)
-
-補助スクリプトは古いパス参照を含むため、**`python molcrawl/bert/test_checkpoint.py` の直接実行を推奨**します。
+- `molcrawl/bert/test_checkpoint.py`
 
 ## 基本実行
 

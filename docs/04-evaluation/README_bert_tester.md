@@ -4,10 +4,7 @@ This document explains how to use the BERT checkpoint tester for loading, infere
 
 ## Target Scripts
 
-- `molcrawl/bert/test_checkpoint.py` (main)
-- `molcrawl/bert/test_bert_checkpoint.sh` (helper script)
-
-The helper script still contains outdated path references, so direct execution of `python molcrawl/bert/test_checkpoint.py` is recommended.
+- `molcrawl/bert/test_checkpoint.py`
 
 ## Basic Run
 
