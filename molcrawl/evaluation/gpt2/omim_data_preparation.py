@@ -24,36 +24,13 @@ import os
 import random
 import sys
 from datetime import datetime
-from importlib import import_module
 from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
 
-# scripts directory
-scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-# import real data processor
-import_error_message = None
-try:
-    from omim_real_data_processor import process_omim_real_data
-except ImportError as e:
-    process_omim_real_data = None
-    import_error_message = str(e)
-    # Display debug information on standard error output
-    import traceback
-
-    print("=" * 80, file=sys.stderr)
-    print("DEBUG: Failed to import omim_real_data_processor", file=sys.stderr)
-    print("=" * 80, file=sys.stderr)
-    print(f"Error: {e}", file=sys.stderr)
-    print("", file=sys.stderr)
-    print("Traceback:", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
-    print("=" * 80, file=sys.stderr)
-
-# Add common environment check module
-check_learning_source_dir = import_module("utils.environment_check").check_learning_source_dir
+from molcrawl.omim_real_data_processor import process_omim_real_data
+from molcrawl.utils.environment_check import check_learning_source_dir
 
 
 def setup_logging(output_dir: str) -> logging.Logger:
@@ -346,34 +323,6 @@ def main():
             # real data mode
             if not args.config:
                 raise ValueError("Real data mode requires --config parameter")
-
-            if process_omim_real_data is None:
-                print("=" * 80, file=sys.stderr)
-                print("ERROR: Real data processor not available", file=sys.stderr)
-                print("=" * 80, file=sys.stderr)
-                print("", file=sys.stderr)
-                print(
-                    "The omim_real_data_processor module could not be imported.",
-                    file=sys.stderr,
-                )
-                print("This is likely due to:", file=sys.stderr)
-                print(
-                    "  1. Missing Python dependencies (pandas, numpy, requests, pyyaml, etc.)",
-                    file=sys.stderr,
-                )
-                print("  2. Incorrect Python environment", file=sys.stderr)
-                print("", file=sys.stderr)
-                print("Debug information:", file=sys.stderr)
-                print(f"  - Python executable: {sys.executable}", file=sys.stderr)
-                print(f"  - Scripts directory: {scripts_dir}", file=sys.stderr)
-                print(f"  - sys.path: {sys.path[:3]}...", file=sys.stderr)
-                print("", file=sys.stderr)
-                print(
-                    "Please ensure you're using the correct Python environment with all dependencies installed.",
-                    file=sys.stderr,
-                )
-                print("=" * 80, file=sys.stderr)
-                sys.exit(1)
 
             print("Processing real OMIM data...")
             output_file = process_omim_real_data(
