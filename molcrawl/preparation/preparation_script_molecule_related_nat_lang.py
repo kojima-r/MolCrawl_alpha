@@ -347,7 +347,7 @@ if __name__ == "__main__":
     total_num_tokens = 0
 
     # Compute statistics by task type if available
-    task_stats = {}
+    task_stats: dict[str, dict[str, int]] = {}
 
     for split in processed_dataset.keys():
         logger.info(msg=f"{split}")
@@ -358,7 +358,7 @@ if __name__ == "__main__":
         total_num_tokens += num_tokens
 
         # Collect task-specific statistics - DISABLED for performance
-        # (Too slow for large datasets - can be computed separately if needed)
+        # (Too slow for large datasets - can be computed separately if needed)git
         # if "task_type" in processed_dataset[split].features:
         #     task_types = processed_dataset[split]["task_type"]
         #     for task_type in set(task_types):
