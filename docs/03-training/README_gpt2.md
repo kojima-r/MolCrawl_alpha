@@ -49,18 +49,6 @@ Single node, 4 GPUs:
 
 `torchrun --standalone --nproc_per_node=4 config_file.py`
 
-### 4. Generate samples from a trained checkpoint
-
-Run:
-
-`python gpt2/sample.py {config.py}`
-
-Use the same config file used in training.
-
-Example:
-
-`python gpt2/sample.py gpt2/configs/molecule_nat_lang/train_gpt2_large_config.py`
-
 ## Configuration Parameters
 
 Set these in:

@@ -455,8 +455,6 @@ To run with DDP on 4 gpus across 2 nodes, example:
   `torchrun --nproc_per_node=8 --nnodes=2 --node_rank=1 --master_addr=123.456.123.456 --master_port=1234 config_file.py`
   (If your cluster does not have Infiniband interconnect prepend NCCL_IB_DISABLE=1)
 
-1. Generate a sample from the trained checkpoint running `python gpt2/sample.py {config.py}`. This should be the same config file that you used for trainig, for example `python gpt2/sample.py gpt2/configs/molecule_nat_lang/train_gpt2_large_config.py` for the exmaple in step 2.
-
 ## Data Preparation
 
 In order to train a GPT-2 model with one the dataset, you will need to run the `prepare_gpt2.py` script in
@@ -550,16 +548,6 @@ python molcrawl/gpt2/train.py molcrawl/gpt2/configs/rna/train_gpt2_config.py
 This will train a model and save it in outputdir.
 
 FOR MORE INFORMATION REGARDING THE CONFIG FILES, PLEASE REFER TO THE [GPT-2 README](../03-training/README_gpt2.md).
-
-## Sampling
-
-In a similar way, using the same config files, you can sample some example with the following:
-
-```bash
-python molcrawl/gpt2/sample.py molcrawl/gpt2/configs/<dataset>/train_gpt2_config.py
-```
-
-For more information, check the README in the folder `molcrawl/gpt2`.
 
 ## Training of the BERT model
 
