@@ -28,10 +28,10 @@ Data source: [ProteinGym download page](https://proteingym.org/download) (v1.3).
 
 ### Main scripts
 
-- `scripts/proteingym_evaluation.py` - Main evaluation script
-- `scripts/proteingym_data_preparation.py` - Dataset download and preprocessing
-- `scripts/proteingym_visualization.py` - Result visualization
-- `run_proteingym_evaluation.sh` - End-to-end runner
+- `molcrawl/evaluation/gpt2/proteingym_evaluation.py` - Main evaluation script
+- `molcrawl/evaluation/gpt2/proteingym_data_preparation.py` - Dataset download and preprocessing
+- `molcrawl/evaluation/gpt2/proteingym_visualization.py` - Result visualization
+- `workflows/run_gpt2_proteingym_evaluation.sh` - End-to-end runner (run from repo root)
 
 ### Documentation
 
@@ -57,7 +57,7 @@ pip install torch numpy pandas scikit-learn sentencepiece scipy matplotlib seabo
 
 ```bash
 # Evaluate a trained model on one ProteinGym assay file
-./run_proteingym_evaluation.sh \
+./workflows/run_gpt2_proteingym_evaluation.sh \
     --model_path gpt2-output/protein_sequence-small/ckpt.pt \
     --data_path proteingym_data/YOUR_ASSAY.csv
 ```
@@ -65,7 +65,7 @@ pip install torch numpy pandas scikit-learn sentencepiece scipy matplotlib seabo
 ### 2. Quick test with sample data
 
 ```bash
-./run_proteingym_evaluation.sh \
+./workflows/run_gpt2_proteingym_evaluation.sh \
     --model_path gpt2-output/protein_sequence-small/ckpt.pt \
     --create-sample \
     --data_path sample_data.csv \
@@ -75,7 +75,7 @@ pip install torch numpy pandas scikit-learn sentencepiece scipy matplotlib seabo
 ### 3. Auto-download and evaluate
 
 ```bash
-./run_proteingym_evaluation.sh \
+./workflows/run_gpt2_proteingym_evaluation.sh \
     --model_path gpt2-output/protein_sequence-small/ckpt.pt \
     --download-data \
     --visualize
@@ -87,26 +87,26 @@ pip install torch numpy pandas scikit-learn sentencepiece scipy matplotlib seabo
 
 ```bash
 # Download recommended datasets
-python scripts/proteingym_data_preparation.py --download recommended --data_dir proteingym_data/
+python molcrawl/evaluation/gpt2/proteingym_data_preparation.py --download recommended --data_dir proteingym_data/
 
 # List available assays
-python scripts/proteingym_data_preparation.py --list_assays --data_type substitutions
+python molcrawl/evaluation/gpt2/proteingym_data_preparation.py --list_assays --data_type substitutions
 
 # Get a small set of test assays
-python scripts/proteingym_data_preparation.py --get_test_assays 5
+python molcrawl/evaluation/gpt2/proteingym_data_preparation.py --get_test_assays 5
 
 # Prepare a specific assay
-python scripts/proteingym_data_preparation.py --prepare_assay ASSAY_ID --max_variants 1000
+python molcrawl/evaluation/gpt2/proteingym_data_preparation.py --prepare_assay ASSAY_ID --max_variants 1000
 
 # Download individual dataset categories
-python scripts/proteingym_data_preparation.py --download substitutions --data_dir proteingym_data/
-python scripts/proteingym_data_preparation.py --download clinical_substitutions --data_dir proteingym_data/
+python molcrawl/evaluation/gpt2/proteingym_data_preparation.py --download substitutions --data_dir proteingym_data/
+python molcrawl/evaluation/gpt2/proteingym_data_preparation.py --download clinical_substitutions --data_dir proteingym_data/
 ```
 
 #### Evaluation
 
 ```bash
-python scripts/proteingym_evaluation.py \
+python molcrawl/evaluation/gpt2/proteingym_evaluation.py \
     --model_path gpt2-output/protein_sequence-small/ckpt.pt \
     --proteingym_data proteingym_data/ASSAY_ID.csv \
     --output_dir results/ \
@@ -117,7 +117,7 @@ python scripts/proteingym_evaluation.py \
 #### Visualization
 
 ```bash
-python scripts/proteingym_visualization.py \
+python molcrawl/evaluation/gpt2/proteingym_visualization.py \
     --results_json results/proteingym_results.json \
     --output_dir results/plots
 ```
