@@ -85,7 +85,7 @@ WANDB_PROJECT=chemberta2-compounds \
 ## Directory Structure
 
 ```text
-chemberta2/
+molcrawl/chemberta2/
 ├── main.py                      # Main training script
 ├── configurator.py              # Config loader
 └── configs/
