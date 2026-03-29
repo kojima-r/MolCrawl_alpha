@@ -5,39 +5,41 @@ The main idea is to intentionally overfit on a small training subset to confirm 
 
 ## Usage
 
-### 1. Prepare a dataset subset
+### 1. Prepare a dataset for training
 
-Run:
+Run the per-modality preparation script to build the batched training dataset:
 
-`python gpt2/configs/<dataset>/prepare.py path/to/the/tokenized/dataset`
+```bash
+python molcrawl/<task>/dataset/prepare_gpt2.py assets/configs/<task>.yaml
+```
+
+Examples:
+
+```bash
+python molcrawl/genome_sequence/dataset/prepare_gpt2.py assets/configs/genome_sequence.yaml
+python molcrawl/protein_sequence/dataset/prepare_gpt2.py assets/configs/protein_sequence.yaml
+python molcrawl/compounds/dataset/prepare_gpt2.py assets/configs/compounds.yaml
+python molcrawl/molecule_nat_lang/dataset/prepare_gpt2.py assets/configs/molecule_nat_lang_config.yaml
+python molcrawl/rna/dataset/prepare_gpt2.py assets/configs/rna.yaml
+```
 
 This step:
 
-- loads the dataset,
-- samples a subset, and
-- creates batches of the same length.
-
-Subset size is controlled by:
-
-- `--training-set-subset-len`
-- `--test-set-subset-len`
-
-Rules:
-
-- if value `< 1`: interpreted as a fraction of the full dataset
-- if value `>= 1`: interpreted as the number of samples (`1` means one sample)
+- loads the tokenized dataset,
+- creates fixed-length batches (filling the full context window), and
+- writes the training-ready dataset to disk.
 
 ### 2. Train GPT-2
 
 Run:
 
-`python gpt2/train.py path/to/corresponding/dataset/train_gpt2_config.py`
+`python molcrawl/gpt2/train.py molcrawl/gpt2/configs/<dataset>/train_gpt2_small_config.py`
 
-Each dataset has a corresponding `train_gpt2_config.py` that defines training parameters.
+Each dataset has a corresponding config that defines training parameters.
 
 Example:
 
-`python gpt2/train.py gpt2/configs/molecule_nat_lang/train_gpt2_large_config.py`
+`python molcrawl/gpt2/train.py molcrawl/gpt2/configs/molecule_nat_lang/train_gpt2_large_config.py`
 
 This starts training and writes checkpoints (for example, `out/ckpt.pt`).
 

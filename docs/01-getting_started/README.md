@@ -429,16 +429,19 @@ The is 4 separate scripts for CELLxGENE downloading.
 
 ## Usage Overview
 
-1. Prepare your dataset subset by running `python gpt2/configs/<dataset>/prepare.py path/to/the/tokenized/dataset`
+1. Prepare the training dataset by running:
 
-This will load the dataset, sample a subset, and create batches of the same length.
-Note: the parameters `--training-set-subset-len` and `--test-set-subset-len` can be used to select the subset size. If < 1 taken as fracation of full data. If > 1 taken as number of samples.
+   `python molcrawl/<task>/dataset/prepare_gpt2.py assets/configs/<task>.yaml`
 
-1. Train the model by running `python gpt2/train.py path/to/corresponding/dataset/train_gpt2_config.py`
+   This will load the tokenized dataset and create fixed-length batches filling the full context window.
 
-Inside each `data/<dataset>` folder, there is a file named `train_gpt2_config.py`, which contains parameters to train GPT-2 in that dataset. For example: `python gpt2/train.py gpt2/configs/molecule_nat_lang/train_gpt2_large_config.py` will train the large GPT-2 model on the molecule_nat_lang dataset.
+2. Train the model by running:
 
-Running this will lunch a training job, and output results in the path `out/ckpt.pt`
+   `python molcrawl/gpt2/train.py molcrawl/gpt2/configs/<dataset>/train_gpt2_small_config.py`
+
+   Inside each `molcrawl/gpt2/configs/<dataset>/` folder there are config files for each model size. For example: `python molcrawl/gpt2/train.py molcrawl/gpt2/configs/molecule_nat_lang/train_gpt2_large_config.py` will train the large GPT-2 model on the molecule_nat_lang dataset.
+
+   Running this will launch a training job and output results in the path specified by `out_dir` in the config.
 
 > [!NOTE]
 > If you have `torchrun`, you can run the model over multiple GPUs like:
