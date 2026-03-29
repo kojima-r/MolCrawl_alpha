@@ -187,6 +187,12 @@ Adjust `batch_size` or `gradient_accumulation_steps` accordingly to maintain rep
 
 ---
 
+> **Note:** Steps 4–6 can also be run collectively using the workflow scripts in the `workflows/` directory.
+> These scripts batch-process multiple modalities (data preparation, dataset building, and training) in a single command.
+> See **[workflows/README.md](workflows/README.md)** for details.
+
+---
+
 ### 7. Testing
 
 #### GPT-2
