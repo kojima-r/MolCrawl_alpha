@@ -167,7 +167,7 @@ Make sure the GPT-2 dataset preparation step (`prepare_gpt2.py`) has been comple
 
 #### Multi-GPU (Single Node, for GPT-2 and BERT)
 
-Both GPT-2 and BERT support Distributed Data Parallel (DDP) via `torchrun`.
+Both GPT-2 and BERT support Distributed Data Parallel (DDP) via `torchrun` (use GPU 0 and 2 on a 3-GPU machine).
 
 ```bash
 # GPT2
