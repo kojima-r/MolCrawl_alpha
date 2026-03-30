@@ -29,7 +29,7 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-from molcrawl.omim_real_data_processor import process_omim_real_data
+from molcrawl.evaluation.gpt2.omim_real_data_processor import process_omim_real_data
 from molcrawl.utils.environment_check import check_learning_source_dir
 
 

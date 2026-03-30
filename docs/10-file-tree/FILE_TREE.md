@@ -155,7 +155,6 @@ riken-dataset-fundational-model/
 │
 ├── molcrawl/                                 # Main Python package
 │   ├── __init__.py                           # Package initializer
-│   ├── omim_real_data_processor.py           # Data processor for OMIM real-data evaluation
 │   ├── bert/
 │   │   ├── __init__.py
 │   │   ├── configurator.py                   # Builds training configs for BERT models
@@ -254,6 +253,7 @@ riken-dataset-fundational-model/
 │   │   │   ├── molecule_nat_lang_evaluation.py    # GPT-2 evaluation on molecule NL task
 │   │   │   ├── molecule_nat_lang_visualization.py # Visualization of GPT-2 molecule NL results
 │   │   │   ├── omim_data_preparation.py      # Prepares OMIM data for GPT-2 evaluation
+│   │   │   ├── omim_real_data_processor.py   # Data processor for OMIM real-data evaluation
 │   │   │   ├── omim_evaluation.py            # GPT-2 evaluation against OMIM phenotypes
 │   │   │   ├── omim_visualization.py         # Visualization of GPT-2 OMIM evaluation results
 │   │   │   ├── prepare_clinvar_sequences.py  # Extracts sequences from raw ClinVar VCF
