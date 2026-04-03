@@ -27,6 +27,59 @@ GUACAMOL_URLS = {
 }
 
 
+def _download_from_huggingface(output_dir):
+    """
+    Fallback: download GuacaMol SMILES from HuggingFace ``MolGen/GuacaMol-raw``.
+
+    Used when Figshare downloads are blocked by WAF challenge (HTTP 202,
+    content-length 0).  Requires the ``datasets`` package.
+
+    Args:
+        output_dir: Directory where ``guacamol_v1_{train,valid,test}.smiles``
+            will be written.
+
+    Returns:
+        True if all three splits were written successfully, False otherwise.
+    """
+    try:
+        from datasets import load_dataset
+    except ImportError:
+        print("  datasets package not available — skipping HuggingFace fallback.", file=sys.stderr)
+        return False
+
+    output_dir = Path(output_dir)
+    # HF split name → Figshare-compatible filename
+    SPLIT_MAP = {
+        "train": "guacamol_v1_train.smiles",
+        "valid": "guacamol_v1_valid.smiles",
+        "test": "guacamol_v1_test.smiles",
+    }
+
+    print("  ↪ Trying HuggingFace fallback: MolGen/GuacaMol-raw ...")
+    try:
+        ds = load_dataset("MolGen/GuacaMol-raw", trust_remote_code=True)
+    except Exception as e:
+        print(f"  ✗ HuggingFace load failed: {e}", file=sys.stderr)
+        return False
+
+    success = True
+    for hf_split, filename in SPLIT_MAP.items():
+        out_path = output_dir / filename
+        if out_path.exists() and out_path.stat().st_size > 0:
+            print(f"  ✓ Already exists: {filename}")
+            continue
+        if hf_split not in ds:
+            print(f"  ✗ Split '{hf_split}' not found in HF dataset.", file=sys.stderr)
+            success = False
+            continue
+        smiles_list = ds[hf_split]["SMILES"]
+        with open(out_path, "w") as f:
+            f.write("\n".join(smiles_list))
+        print(f"  ✓ Written {len(smiles_list):,} lines → {filename}")
+
+    return success
+
+
 def _find_existing_smiles(filename):
     """
     Search sibling learning_source_* directories for an existing non-empty
@@ -161,9 +214,18 @@ def download_guacamol(compounds_dir):
             success_count += 1
 
     if success_count < total_count:
-        raise RuntimeError(f"GuacaMol download incomplete: {success_count}/{total_count} files downloaded")
-
-    logger.info(f"✓ GuacaMol: All {total_count} files downloaded successfully")
+        logger.warning(
+            f"Figshare download incomplete ({success_count}/{total_count}). "
+            "Trying HuggingFace fallback..."
+        )
+        if not _download_from_huggingface(output_dir):
+            raise RuntimeError(
+                f"GuacaMol download incomplete: {success_count}/{total_count} files downloaded "
+                "and HuggingFace fallback also failed."
+            )
+        logger.info("✓ GuacaMol: All files obtained via HuggingFace fallback.")
+    else:
+        logger.info(f"✓ GuacaMol: All {total_count} files downloaded successfully")
 
 
 def main():
