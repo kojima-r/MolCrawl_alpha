@@ -13,17 +13,38 @@ How to use:
 
 import os
 from argparse import ArgumentParser
+from functools import partial
 from pathlib import Path
 
 import pandas as pd
 import pyarrow.parquet as pq
+from datasets import Dataset, DatasetDict
+from sklearn.model_selection import train_test_split
+
 from molcrawl.compounds.dataset.dataset_config import (
     DATASET_DEFINITIONS,
     CompoundDatasetType,
 )
 from molcrawl.compounds.utils.config import CompoundConfig
-from datasets import Dataset, DatasetDict
-from sklearn.model_selection import train_test_split
+
+
+def _concat_with_eos(examples, eos_token_id):
+    """Concatenate all input_ids sequences, appending eos_token_id after each."""
+    concatenated_ids = []
+    for input_ids in examples["input_ids"]:
+        concatenated_ids.extend(list(input_ids) + [eos_token_id])
+    return {"input_ids": [concatenated_ids]}
+
+
+def _create_chunks(examples, context_length):
+    """Split a flat input_ids list into fixed-length chunks."""
+    concatenated_ids = examples["input_ids"]
+    total_length = len(concatenated_ids)
+    num_chunks = total_length // context_length
+    total_length = num_chunks * context_length
+    concatenated_ids = concatenated_ids[:total_length]
+    input_ids = [concatenated_ids[i : i + context_length] for i in range(0, total_length, context_length)]
+    return {"input_ids": input_ids}
 
 
 def prepare_gpt2_dataset(compounds_dir: str):
@@ -81,18 +102,46 @@ def prepare_gpt2_dataset(compounds_dir: str):
     # Rename tokens → input_ids (because GPT-2 learning expects input_ids)
     combined_df = combined_df.rename(columns={"tokens": "input_ids"})
 
-    # Split into train/valid/test (80/10/10)
+    # Split into train/valid/test (80/10/10) at molecule level (before chunking)
     train_df, temp_df = train_test_split(combined_df, test_size=0.2, random_state=42)
     valid_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
 
-    print(f"Split: Train={len(train_df)}, Valid={len(valid_df)}, Test={len(test_df)}")
+    print(f"Split (molecules): Train={len(train_df)}, Valid={len(valid_df)}, Test={len(test_df)}")
 
-    # Create HuggingFace Dataset
+    # Strip padding/[CLS]/[SEP] from each padded BERT sequence:
+    #   [12(CLS), t1..tn, 13(SEP), 0(PAD)..] → [t1..tn]
+    # Then concatenate with [SEP](id=13) as EOS and chunk into 1024-token blocks,
+    # matching the genome_sequence / protein_sequence pretraining pipeline.
+    def _strip_special(ids, cls_id=12, sep_id=13, pad_id=0):
+        ids = list(ids)
+        if ids and ids[0] == cls_id:
+            ids = ids[1:]  # remove leading [CLS]
+        while ids and ids[-1] == pad_id:
+            ids.pop()  # remove trailing [PAD]
+        if ids and ids[-1] == sep_id:
+            ids.pop()  # remove [SEP] (re-added by _concat_with_eos)
+        return ids
+
+    from molcrawl.compounds.utils.tokenizer import CompoundsTokenizer
+
+    tokenizer = CompoundsTokenizer("assets/molecules/vocab.txt", 256)
+    eos_id = tokenizer.eos_token_id  # 13 ([SEP])
+    context_length = 1024
+
+    def _make_chunked_split(df):
+        raw = [_strip_special(row) for row in df["input_ids"]]
+        raw = [ids for ids in raw if ids]  # drop any empty sequences
+        ds = Dataset.from_dict({"input_ids": raw})
+        ds = ds.map(partial(_concat_with_eos, eos_token_id=eos_id), batched=True, batch_size=-1)
+        ds = ds.map(partial(_create_chunks, context_length=context_length), batched=True, batch_size=-1)
+        return ds
+
+    print("\nConcatenating and chunking into 1024-token blocks …")
     dataset = DatasetDict(
         {
-            "train": Dataset.from_pandas(train_df, preserve_index=False),
-            "valid": Dataset.from_pandas(valid_df, preserve_index=False),
-            "test": Dataset.from_pandas(test_df, preserve_index=False),
+            "train": _make_chunked_split(train_df),
+            "valid": _make_chunked_split(valid_df),
+            "test": _make_chunked_split(test_df),
         }
     )
 
@@ -105,9 +154,9 @@ def prepare_gpt2_dataset(compounds_dir: str):
     dataset.save_to_disk(str(output_path))
 
     # Print statistics
-    print("\nDataset statistics:")
+    print("\nDataset statistics (1024-token chunks):")
     for split in ["train", "valid", "test"]:
-        print(f"  {split}: {len(dataset[split])} samples")
+        print(f"  {split}: {len(dataset[split])} chunks")
     print("\nThis path matches train_gpt2_config.py → dataset_dir parameter.")
 
 

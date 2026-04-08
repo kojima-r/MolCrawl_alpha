@@ -34,10 +34,7 @@ def create_chunks(examples, context_length):
     concatenated_ids = examples["input_ids"]
     total_length = (len(concatenated_ids) // context_length) * context_length
     concatenated_ids = concatenated_ids[:total_length]
-    input_ids = [
-        concatenated_ids[i : i + context_length]
-        for i in range(0, total_length, context_length)
-    ]
+    input_ids = [concatenated_ids[i : i + context_length] for i in range(0, total_length, context_length)]
     return {"input_ids": input_ids}
 
 
@@ -92,11 +89,9 @@ def tokenize_batch_dataset(compounds_dir, vocab_path, max_length):
 
         if not encoded:
             raise ValueError(
-                f"No valid SMILES encoded from {smiles_file}. "
-                "The file may be empty or all entries were filtered out."
+                f"No valid SMILES encoded from {smiles_file}. The file may be empty or all entries were filtered out."
             )
-        print(f"{split} - {len(encoded)} molecules encoded; "
-              f"first decoded: {tokenizer.decode(encoded[0])}")
+        print(f"{split} - {len(encoded)} molecules encoded; first decoded: {tokenizer.decode(encoded[0])}")
         dataset_dic[split] = encoded
 
     d = {
