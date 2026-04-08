@@ -18,6 +18,7 @@ out_dir = get_gpt2_output_path("compounds", "medium")
 
 tokenizer = Tokenizer("assets/molecules/vocab.txt", 256)
 meta_vocab_size = tokenizer.vocab_size
+eos_token_id = tokenizer.eos_token_id  # 13 ([SEP])
 
 # these make the total batch size be ~0.5M
 # 12 batch size * 1024 block size * 5 gradaccum * 8 GPUs = 491,520

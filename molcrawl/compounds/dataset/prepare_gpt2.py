@@ -21,29 +21,51 @@ from molcrawl.compounds.utils.config import CompoundConfig
 from molcrawl.compounds.utils.tokenizer import CompoundsTokenizer
 
 
-def tokenize_batch_dataset(compounds_dir, vocab_path, max_length):
-    import pandas as pd
-    from datasets import Dataset, DatasetDict
+def concatenate_texts(examples, eos_token_id):
+    """Concatenate all input_ids sequences, appending eos_token_id after each."""
+    concatenated_ids = []
+    for input_ids in examples["input_ids"]:
+        concatenated_ids.extend(list(input_ids) + [eos_token_id])
+    return {"input_ids": concatenated_ids}
 
+
+def create_chunks(examples, context_length):
+    """Split a flat input_ids list into fixed-length chunks."""
+    concatenated_ids = examples["input_ids"]
+    total_length = (len(concatenated_ids) // context_length) * context_length
+    concatenated_ids = concatenated_ids[:total_length]
+    input_ids = [
+        concatenated_ids[i : i + context_length]
+        for i in range(0, total_length, context_length)
+    ]
+    return {"input_ids": input_ids}
+
+
+def tokenize_batch_dataset(compounds_dir, vocab_path, max_length):
     """
     Tokenize GuacaMol benchmark data for GPT-2 training.
+
+    Each SMILES is encoded without padding; all sequences are concatenated with
+    [SEP] (eos_token_id=13) as the end-of-sequence marker and chunked into
+    blocks of 1024 tokens — matching the genome_sequence / protein_sequence
+    preparation pipeline.
 
     Args:
         compounds_dir: Base directory for compounds data (from LEARNING_SOURCE_DIR)
         vocab_path: Path to vocabulary file
-        max_length: Maximum token length
+        max_length: Maximum token length per SMILES (used for truncation)
     """
-    tokenizer = CompoundsTokenizer(
-        vocab_path,
-        max_length,
-    )
+    from functools import partial
+
+    from datasets import Dataset, DatasetDict
+
+    tokenizer = CompoundsTokenizer(vocab_path, max_length)
 
     # GuacaMol benchmark data directory
     benchmark_dir = Path(compounds_dir) / "benchmark" / "GuacaMol"
 
     dataset_dic = {}
     for split in ["train", "valid", "test"]:
-        # Use relative path from compounds directory
         smiles_file = benchmark_dir / f"guacamol_v1_{split}.smiles"
 
         if not smiles_file.exists() or smiles_file.stat().st_size == 0:
@@ -59,26 +81,45 @@ def tokenize_batch_dataset(compounds_dir, vocab_path, max_length):
 
         print(f"Loading {split} data from: {smiles_file}")
         with open(smiles_file) as f:
-            lines = f.readlines()
-            lines = [line.strip() for line in lines if line]
+            lines = [line.strip() for line in f if line.strip()]
 
-        df = pd.DataFrame(lines, columns=["smiles"])
-        df["tokens"] = df["smiles"].apply(tokenizer.tokenize_text)
-        if df.empty:
+        # Encode without padding; [SEP] is appended per-sequence by concatenate_texts
+        encoded = []
+        for smi in lines:
+            ids = tokenizer.encode(smi, add_special_tokens=False, truncation=True, max_length=max_length)
+            if ids:
+                encoded.append(ids)
+
+        if not encoded:
             raise ValueError(
-                f"No valid SMILES found in {smiles_file}. "
+                f"No valid SMILES encoded from {smiles_file}. "
                 "The file may be empty or all entries were filtered out."
             )
-        print(f"{split} - First molecule decoded: {tokenizer.decode(df['tokens'].iloc[0])}")
-        dataset_dic[split] = df
+        print(f"{split} - {len(encoded)} molecules encoded; "
+              f"first decoded: {tokenizer.decode(encoded[0])}")
+        dataset_dic[split] = encoded
 
     d = {
-        "train": Dataset.from_dict({"input_ids": dataset_dic["train"]["tokens"].to_numpy()}),
-        "valid": Dataset.from_dict({"input_ids": dataset_dic["valid"]["tokens"].to_numpy()}),
-        "test": Dataset.from_dict({"input_ids": dataset_dic["test"]["tokens"].to_numpy()}),
+        "train": Dataset.from_dict({"input_ids": dataset_dic["train"]}),
+        "valid": Dataset.from_dict({"input_ids": dataset_dic["valid"]}),
+        "test": Dataset.from_dict({"input_ids": dataset_dic["test"]}),
     }
-
     dataset = DatasetDict(d)
+
+    # Concatenate sequences with [SEP] (id=13) as EOS, then chunk into 1024-token blocks
+    context_length = 1024
+    eos_id = tokenizer.eos_token_id  # 13 ([SEP])
+
+    concatenated = dataset.map(
+        partial(concatenate_texts, eos_token_id=eos_id),
+        batched=True,
+        batch_size=-1,
+    )
+    chunked = concatenated.map(
+        partial(create_chunks, context_length=context_length),
+        batched=True,
+        batch_size=-1,
+    )
 
     # Save to compounds directory structure
     output_path = benchmark_dir / "compounds" / "training_ready_hf_dataset"
@@ -86,12 +127,12 @@ def tokenize_batch_dataset(compounds_dir, vocab_path, max_length):
 
     print(f"Saving dataset to: {output_path}")
     print("Match this path to the train_gpt2_config.py->dataset_dir parameter.")
-    dataset.save_to_disk(str(output_path))
+    chunked.save_to_disk(str(output_path))
 
     # Print statistics
     print("\nDataset statistics:")
     for split in ["train", "valid", "test"]:
-        print(f"  {split}: {len(dataset[split])} samples")
+        print(f"  {split}: {len(chunked[split])} chunks of {context_length} tokens")
 
 
 if __name__ == "__main__":

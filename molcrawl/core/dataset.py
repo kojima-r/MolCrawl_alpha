@@ -18,11 +18,17 @@ class PreparedDataset:
             try:
                 self.data = load_from_disk(str(dataset_path))[split]
             except Exception:
-                # Try direct path (no split subdirectory)
-                print(f"Trying to load from {dataset_path} directly...")
-                self.data = load_from_disk(str(dataset_path))
-                if hasattr(self.data, "keys") and split in self.data:
-                    self.data = self.data[split]
+                # Try split subdirectory (e.g., {dataset_dir}/train/)
+                split_path = dataset_path / split
+                if split_path.exists():
+                    print(f"Trying to load from split subdirectory {split_path}...")
+                    self.data = load_from_disk(str(split_path))
+                else:
+                    # Try direct path (no split subdirectory)
+                    print(f"Trying to load from {dataset_path} directly...")
+                    self.data = load_from_disk(str(dataset_path))
+                    if hasattr(self.data, "keys") and split in self.data:
+                        self.data = self.data[split]
 
     def __len__(self):
         return len(self.data)

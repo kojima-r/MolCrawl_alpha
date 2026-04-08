@@ -558,8 +558,8 @@ def save_checkpoint_hf(
         "layer_norm_epsilon": 1e-5,
         "initializer_range": 0.02,
         "use_cache": True,
-        "bos_token_id": 0,
-        "eos_token_id": 0,
+        "bos_token_id": config.get("bos_token_id", 0),
+        "eos_token_id": config.get("eos_token_id", config.get("eos_token", 0)),
         "transformers_version": "4.0.0",
         # Custom fields for our training
         "_name_or_path": "riken-gpt2",
