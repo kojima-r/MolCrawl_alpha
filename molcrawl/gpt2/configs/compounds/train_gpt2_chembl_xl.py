@@ -25,6 +25,7 @@ pretrain_dir = get_gpt2_output_path("compounds", "xl")
 tokenizer_path = "assets/molecules/vocab.txt"
 tokenizer = Tokenizer(tokenizer_path, 256)
 meta_vocab_size = tokenizer.vocab_size
+eos_token_id = tokenizer.eos_token_id  # 13 ([SEP])
 
 dataset_dir = CHEMBL_DATASET_DIR
 

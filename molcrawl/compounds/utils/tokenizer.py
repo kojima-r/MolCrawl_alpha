@@ -56,7 +56,7 @@ class SmilesTokenizer(BertTokenizer):
         super().__init__(vocab_file, **kwargs)
 
         self.sos = "[CLS]"
-        self.eos = "[CLS]"
+        self.eos = "[SEP]"
 
         if not os.path.isfile(vocab_file):
             raise ValueError("Can't find a vocab file at path '{}'.".format(vocab_file))

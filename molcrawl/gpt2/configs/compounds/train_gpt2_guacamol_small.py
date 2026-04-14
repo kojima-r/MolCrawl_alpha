@@ -19,6 +19,7 @@ pretrain_dir = get_gpt2_output_path("compounds", "small")
 
 tokenizer = Tokenizer("assets/molecules/vocab.txt", 256)
 meta_vocab_size = tokenizer.vocab_size
+eos_token_id = tokenizer.eos_token_id  # 13 ([SEP])
 
 dataset_dir = GUACAMOL_DATASET_DIR
 

@@ -16,22 +16,22 @@ $ torchrun --nproc_per_node=8 --nnodes=2 --node_rank=1 --master_addr=123.456.123
 (If your cluster does not have Infiniband interconnect prepend NCCL_IB_DISABLE=1)
 """
 
+import glob
+import json
 import math
 import os
-import time
-import json
 import shutil
-import glob
+import time
 from contextlib import nullcontext
 from datetime import datetime
 
 import numpy as np
 import torch
-from molcrawl.gpt2.model import GPT, GPTConfig
 from torch.distributed import destroy_process_group, init_process_group
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from molcrawl.core.dataset import PreparedDataset
+from molcrawl.gpt2.model import GPT, GPTConfig
 from molcrawl.rna.dataset.rna_dataset import RNADataset
 
 dataset_params: dict[str, object] = {}
@@ -558,8 +558,8 @@ def save_checkpoint_hf(
         "layer_norm_epsilon": 1e-5,
         "initializer_range": 0.02,
         "use_cache": True,
-        "bos_token_id": 0,
-        "eos_token_id": 0,
+        "bos_token_id": config.get("bos_token_id", 0),
+        "eos_token_id": config.get("eos_token_id", config.get("eos_token", 0)),
         "transformers_version": "4.0.0",
         # Custom fields for our training
         "_name_or_path": "riken-gpt2",

@@ -25,6 +25,7 @@ Usage
 
 import logging
 import sys
+from functools import partial
 from pathlib import Path
 from typing import List, Optional
 
@@ -35,13 +36,39 @@ MAX_LEN = 256
 BATCH_SIZE = 50_000  # rows per batch when tokenising
 
 
+def _concat_with_eos(examples, eos_token_id):
+    """Concatenate all input_ids sequences, appending eos_token_id after each."""
+    concatenated_ids = []
+    for input_ids in examples["input_ids"]:
+        concatenated_ids.extend(list(input_ids) + [eos_token_id])
+    return {"input_ids": [concatenated_ids]}
+
+
+def _create_chunks(examples, context_length):
+    """Split a flat input_ids list into fixed-length chunks."""
+    concatenated_ids = examples["input_ids"]
+    total_length = len(concatenated_ids)
+    num_chunks = total_length // context_length
+    total_length = num_chunks * context_length
+    concatenated_ids = concatenated_ids[:total_length]
+    input_ids = [concatenated_ids[i : i + context_length] for i in range(0, total_length, context_length)]
+    return {"input_ids": input_ids}
+
+
 def _tokenize_batch(smiles_list: List[str], tokenizer) -> List[Optional[List[int]]]:
-    """Tokenise a list of SMILES strings; returns ``None`` for invalid ones."""
+    """Tokenise SMILES without padding; returns raw token ids (no [CLS]/[SEP]).
+    ``None`` entries indicate invalid/empty SMILES."""
     results = []
     for smi in smiles_list:
         try:
-            ids = tokenizer.tokenize_text(smi.strip())
-            results.append(ids)
+            # encode without special tokens or padding; concatenation pipeline adds [SEP]
+            ids = tokenizer.encode(
+                smi.strip(),
+                add_special_tokens=False,
+                truncation=True,
+                max_length=tokenizer.max_len,
+            )
+            results.append(ids if ids else None)
         except Exception:
             results.append(None)
     return results
@@ -141,15 +168,29 @@ def prepare_chembl(
 
     logger.info(f"Split: train={len(train_ds):,}, valid={len(valid_ds):,}, test={len(test_ds):,}")
 
-    dataset_dict = DatasetDict({"train": train_ds, "valid": valid_ds, "test": test_ds})
+    # ── 3b. Concatenate with [SEP] as EOS and chunk into 1024-token blocks ────
+    # Matches the genome_sequence / protein_sequence pretraining pipeline.
+    from molcrawl.compounds.utils.tokenizer import CompoundsTokenizer as _Tok
 
-    # ── 4. Save ───────────────────────────────────────────────────────────────
+    _tok = _Tok(vocab_file, max_len)
+    eos_id = _tok.eos_token_id  # 13 ([SEP])
+    context_length = 1024
+
+    logger.info(f"Concatenating and chunking into {context_length}-token blocks (eos_id={eos_id}) …")
+    chunked_splits = {}
+    for split_name, split_ds in [("train", train_ds), ("valid", valid_ds), ("test", test_ds)]:
+        split_ds = split_ds.map(partial(_concat_with_eos, eos_token_id=eos_id), batched=True, batch_size=-1)
+        split_ds = split_ds.map(partial(_create_chunks, context_length=context_length), batched=True, batch_size=-1)
+        chunked_splits[split_name] = split_ds
+        logger.info(f"  {split_name}: {len(split_ds):,} chunks")
+    dataset_dict = DatasetDict(chunked_splits)
+
+    # ── 4. Save ──────────────────────────────────────────────────────────────
     hf_path = out / "training_ready_hf_dataset"
     logger.info(f"Saving dataset to {hf_path} …")
+    dataset_dict.save_to_disk(str(hf_path))
     for split_name, split_ds in dataset_dict.items():
-        split_path = hf_path / split_name
-        split_ds.save_to_disk(str(split_path))
-        logger.info(f"  Saved {split_name}: {len(split_ds):,} samples → {split_path}")
+        logger.info(f"  Saved {split_name}: {len(split_ds):,} chunks → {hf_path / split_name}")
 
     marker.touch()
     logger.info(f"ChEMBL preparation complete. Marker written to {marker}")
